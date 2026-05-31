@@ -1,6 +1,7 @@
 import { ScrollView, Text, View, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
+import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
 import { StyleSheet } from "react-native";
 
@@ -61,9 +62,7 @@ export default function DashboardScreen() {
           onPress={() => router.push("/chat")}
         >
           <View style={styles.chatCtaContent}>
-            <View style={styles.chatCtaIcon}>
-              <Text style={styles.chatCtaIconText}>H</Text>
-            </View>
+            <HigginsAvatar size={40} style={{ marginRight: 0 }} />
             <View style={{ flex: 1 }}>
               <Text style={styles.chatCtaTitle}>Spreek met Higgins</Text>
               <Text style={styles.chatCtaSubtitle}>Stel een vraag of geef een opdracht</Text>

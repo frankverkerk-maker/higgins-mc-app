@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
 
 type Message = {
@@ -82,9 +83,7 @@ export default function ChatScreen() {
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
         {!isUser && (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>H</Text>
-          </View>
+          <HigginsAvatar size={32} />
         )}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
           <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>
@@ -107,9 +106,7 @@ export default function ChatScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>H</Text>
-          </View>
+          <HigginsAvatar size={42} />
           <View>
             <Text style={styles.headerName}>Higgins</Text>
             <View style={styles.headerStatus}>
@@ -133,9 +130,7 @@ export default function ChatScreen() {
         {/* Typing indicator */}
         {isLoading && (
           <View style={styles.typingRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>H</Text>
-            </View>
+            <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
               <ActivityIndicator size="small" color={colors.primary} />
             </View>
