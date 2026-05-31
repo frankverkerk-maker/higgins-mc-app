@@ -1,14 +1,16 @@
 /** @type {const} */
 const themeColors = {
-  primary:    { light: '#0D9488', dark: '#14B8A6' },
-  background: { light: '#F8FAFC', dark: '#0F1117' },
-  surface:    { light: '#FFFFFF', dark: '#1A1D27' },
-  foreground: { light: '#0F172A', dark: '#E2E8F0' },
-  muted:      { light: '#64748B', dark: '#94A3B8' },
-  border:     { light: '#E2E8F0', dark: '#1E293B' },
-  success:    { light: '#10B981', dark: '#34D399' },
-  warning:    { light: '#F59E0B', dark: '#FBBF24' },
-  error:      { light: '#EF4444', dark: '#F87171' },
+  // Luxury Dark — Higgins MC Brand
+  primary:    { light: '#00D4D4', dark: '#00D4D4' },   // Cyaan / teal glow
+  background: { light: '#0A0C0E', dark: '#0A0C0E' },   // Deep black
+  surface:    { light: '#111418', dark: '#111418' },   // Dark charcoal card
+  foreground: { light: '#E8EDF2', dark: '#E8EDF2' },   // Off-white text
+  muted:      { light: '#5A6472', dark: '#5A6472' },   // Muted grey
+  border:     { light: '#1E2530', dark: '#1E2530' },   // Subtle dark border
+  success:    { light: '#00D4A0', dark: '#00D4A0' },   // Cyaan-green
+  warning:    { light: '#F5A623', dark: '#F5A623' },   // Amber
+  error:      { light: '#FF4D6A', dark: '#FF4D6A' },   // Red
+  tint:       { light: '#00D4D4', dark: '#00D4D4' },   // Tab active tint
 };
 
 module.exports = { themeColors };

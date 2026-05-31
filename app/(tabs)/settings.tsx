@@ -1,120 +1,167 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Switch } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Switch, Platform } from "react-native";
 import { useState } from "react";
 import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const C = {
+  bg:         "#0A0C0E",
+  surface:    "#111418",
+  surface2:   "#161B21",
+  border:     "#1E2530",
+  cyan:       "#00D4D4",
+  cyanDim:    "rgba(0,212,212,0.12)",
+  cyanBorder: "rgba(0,212,212,0.25)",
+  text:       "#E8EDF2",
+  muted:      "#5A6472",
+  green:      "#00D4A0",
+  greenDim:   "rgba(0,212,160,0.15)",
+  red:        "#F87171",
+  redDim:     "rgba(248,113,113,0.12)",
+  redBorder:  "rgba(248,113,113,0.25)",
+};
+const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
+const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 export default function SettingsScreen() {
-  const colors = useColors();
-  const styles = makeStyles(colors);
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
 
   return (
-    <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Instellingen</Text>
+    <ScreenContainer containerClassName="bg-background">
+      <ScrollView
+        style={{ flex: 1, backgroundColor: C.bg }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* ── Header ── */}
+        <View style={s.header}>
+          <Text style={s.headerLabel}>CONFIGURATIE</Text>
+          <Text style={s.headerTitle}>Instellingen</Text>
         </View>
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>CD</Text>
+        {/* ── Profiel kaart ── */}
+        <View style={s.profileCard}>
+          <View style={s.profileAvatar}>
+            <Text style={s.profileAvatarText}>CD</Text>
           </View>
-          <View>
-            <Text style={styles.profileName}>Carpe Diem GmbH</Text>
-            <Text style={styles.profileEmail}>admin@carpediem.com</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.profileName}>Carpe Diem GmbH</Text>
+            <Text style={s.profileEmail}>admin@carpediem.com</Text>
           </View>
-        </View>
-
-        {/* Connection Status */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Verbinding</Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <View>
-                <Text style={styles.rowLabel}>Mission Control</Text>
-                <Text style={styles.rowSub}>Manus API · Cloud</Text>
-              </View>
-              <View style={styles.connectedBadge}>
-                <View style={styles.connectedDot} />
-                <Text style={styles.connectedText}>Verbonden</Text>
-              </View>
-            </View>
-            <View style={[styles.row, styles.rowBorder]}>
-              <View>
-                <Text style={styles.rowLabel}>Hermes Agent</Text>
-                <Text style={styles.rowSub}>Mac Mini · Tailscale</Text>
-              </View>
-              <View style={styles.connectedBadge}>
-                <View style={styles.connectedDot} />
-                <Text style={styles.connectedText}>Verbonden</Text>
-              </View>
-            </View>
-            <View style={[styles.row, styles.rowBorder]}>
-              <View>
-                <Text style={styles.rowLabel}>Slack</Text>
-                <Text style={styles.rowSub}>Workspace integratie</Text>
-              </View>
-              <View style={[styles.connectedBadge, { backgroundColor: colors.border }]}>
-                <View style={[styles.connectedDot, { backgroundColor: colors.muted }]} />
-                <Text style={[styles.connectedText, { color: colors.muted }]}>Binnenkort</Text>
-              </View>
-            </View>
+          <View style={s.profileBadge}>
+            <Text style={s.profileBadgeText}>Admin</Text>
           </View>
         </View>
 
-        {/* Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Voorkeuren</Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Notificaties</Text>
+        {/* ── Verbinding ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Verbinding</Text>
+          <View style={s.card}>
+            {/* Mission Control */}
+            <View style={s.row}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
+                  <Text style={{ fontSize: 14 }}>☁️</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Mission Control</Text>
+                  <Text style={s.rowSub}>Manus API · Cloud</Text>
+                </View>
+              </View>
+              <View style={s.connectedBadge}>
+                <View style={[s.statusDot, { backgroundColor: C.green }]} />
+                <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
+              </View>
+            </View>
+
+            {/* Hermes Agent */}
+            <View style={[s.row, s.rowBorder]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(167,139,250,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>🖥️</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Hermes Agent</Text>
+                  <Text style={s.rowSub}>Mac Mini · Tailscale</Text>
+                </View>
+              </View>
+              <View style={s.connectedBadge}>
+                <View style={[s.statusDot, { backgroundColor: C.green }]} />
+                <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
+              </View>
+            </View>
+
+            {/* Slack */}
+            <View style={[s.row, s.rowBorder]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(245,166,35,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>💬</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Slack</Text>
+                  <Text style={s.rowSub}>Workspace integratie</Text>
+                </View>
+              </View>
+              <View style={[s.connectedBadge, { backgroundColor: "rgba(90,100,114,0.15)" }]}>
+                <View style={[s.statusDot, { backgroundColor: C.muted }]} />
+                <Text style={[s.statusText, { color: C.muted }]}>Binnenkort</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Voorkeuren ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Voorkeuren</Text>
+          <View style={s.card}>
+            <View style={s.row}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
+                  <Text style={{ fontSize: 14 }}>🔔</Text>
+                </View>
+                <Text style={s.rowLabel}>Notificaties</Text>
+              </View>
               <Switch
                 value={notifications}
                 onValueChange={setNotifications}
-                trackColor={{ true: colors.primary, false: colors.border }}
-                thumbColor="#fff"
-              />
-            </View>
-            <View style={[styles.row, styles.rowBorder]}>
-              <Text style={styles.rowLabel}>Donkere modus</Text>
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ true: colors.primary, false: colors.border }}
-                thumbColor="#fff"
+                trackColor={{ true: C.cyan, false: C.border }}
+                thumbColor={notifications ? "#0A0C0E" : "#E8EDF2"}
               />
             </View>
           </View>
         </View>
 
-        {/* App Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Over</Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Versie</Text>
-              <Text style={styles.rowValue}>1.0.0 (Beta)</Text>
+        {/* ── Over ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Over</Text>
+          <View style={s.card}>
+            <View style={s.row}>
+              <Text style={s.rowLabel}>Versie</Text>
+              <Text style={s.rowValue}>1.0.0 (Beta)</Text>
             </View>
-            <View style={[styles.row, styles.rowBorder]}>
-              <Text style={styles.rowLabel}>Product</Text>
-              <Text style={styles.rowValue}>Higgins MC</Text>
+            <View style={[s.row, s.rowBorder]}>
+              <Text style={s.rowLabel}>Product</Text>
+              <Text style={[s.rowValue, { color: C.cyan }]}>Higgins MC</Text>
             </View>
-            <View style={[styles.row, styles.rowBorder]}>
-              <Text style={styles.rowLabel}>Aangedreven door</Text>
-              <Text style={styles.rowValue}>Manus AI</Text>
+            <View style={[s.row, s.rowBorder]}>
+              <Text style={s.rowLabel}>Aangedreven door</Text>
+              <Text style={s.rowValue}>Manus AI</Text>
+            </View>
+            <View style={[s.row, s.rowBorder]}>
+              <Text style={s.rowLabel}>MDM</Text>
+              <View style={[s.connectedBadge, { backgroundColor: "rgba(245,166,35,0.12)" }]}>
+                <View style={[s.statusDot, { backgroundColor: "#F5A623" }]} />
+                <Text style={[s.statusText, { color: "#F5A623" }]}>Nog in te stellen</Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Logout */}
-        <View style={[styles.section, { marginBottom: 32 }]}>
+        {/* ── Uitloggen ── */}
+        <View style={[s.section, { marginBottom: 8 }]}>
           <Pressable
-            style={({ pressed }) => [styles.logoutButton, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [s.logoutButton, pressed && { opacity: 0.75 }]}
           >
-            <Text style={styles.logoutText}>Uitloggen</Text>
+            <Text style={s.logoutText}>Uitloggen</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -122,134 +169,59 @@ export default function SettingsScreen() {
   );
 }
 
-function makeStyles(colors: ReturnType<typeof useColors>) {
-  return StyleSheet.create({
-    header: {
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: "700",
-      color: colors.foreground,
-      letterSpacing: -0.5,
-    },
-    profileCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 14,
-      margin: 16,
-      padding: 16,
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    profileAvatar: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: colors.primary + "22",
-      borderWidth: 1.5,
-      borderColor: colors.primary + "55",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    profileAvatarText: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: colors.primary,
-    },
-    profileName: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.foreground,
-    },
-    profileEmail: {
-      fontSize: 12,
-      color: colors.muted,
-      marginTop: 2,
-    },
-    section: {
-      paddingHorizontal: 16,
-      marginBottom: 20,
-    },
-    sectionTitle: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: colors.muted,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-      marginBottom: 8,
-      marginLeft: 4,
-    },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: "hidden",
-    },
-    row: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-    },
-    rowBorder: {
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    rowLabel: {
-      fontSize: 15,
-      color: colors.foreground,
-      fontWeight: "500",
-    },
-    rowSub: {
-      fontSize: 11,
-      color: colors.muted,
-      marginTop: 2,
-    },
-    rowValue: {
-      fontSize: 14,
-      color: colors.muted,
-    },
-    connectedBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      backgroundColor: "#34D39922",
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 10,
-    },
-    connectedDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: "#34D399",
-    },
-    connectedText: {
-      fontSize: 12,
-      color: "#34D399",
-      fontWeight: "600",
-    },
-    logoutButton: {
-      backgroundColor: "#EF444422",
-      borderWidth: 1,
-      borderColor: "#EF444444",
-      borderRadius: 16,
-      paddingVertical: 14,
-      alignItems: "center",
-    },
-    logoutText: {
-      fontSize: 15,
-      color: "#F87171",
-      fontWeight: "600",
-    },
-  });
-}
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 },
+  headerLabel: { fontSize: 10, color: C.muted, fontFamily: FONT, letterSpacing: 2, textTransform: "uppercase" },
+  headerTitle: { fontSize: 28, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5, marginTop: 4 },
+
+  profileCard: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    marginHorizontal: 16, marginBottom: 24, padding: 16,
+    backgroundColor: C.surface, borderRadius: 20,
+    borderWidth: 1, borderColor: C.cyanBorder,
+  },
+  profileAvatar: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: C.cyanDim, borderWidth: 1.5, borderColor: C.cyanBorder,
+    alignItems: "center", justifyContent: "center",
+  },
+  profileAvatarText: { fontSize: 18, fontWeight: "800", color: C.cyan, fontFamily: FONT_BOLD },
+  profileName: { fontSize: 15, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD },
+  profileEmail: { fontSize: 12, color: C.muted, marginTop: 2, fontFamily: FONT },
+  profileBadge: {
+    backgroundColor: C.cyanDim, paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 10, borderWidth: 1, borderColor: C.cyanBorder,
+  },
+  profileBadgeText: { fontSize: 10, color: C.cyan, fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 0.5 },
+
+  section: { paddingHorizontal: 16, marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 10, fontWeight: "700", color: C.muted, fontFamily: FONT_BOLD,
+    textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginLeft: 4,
+  },
+  card: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
+  row: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  rowBorder: { borderTopWidth: 1, borderTopColor: C.border },
+  rowLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  rowIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  rowLabel: { fontSize: 15, color: C.text, fontWeight: "500", fontFamily: FONT },
+  rowSub: { fontSize: 11, color: C.muted, marginTop: 2, fontFamily: FONT },
+  rowValue: { fontSize: 13, color: C.muted, fontFamily: FONT },
+
+  connectedBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: C.greenDim, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontWeight: "700", fontFamily: FONT_BOLD },
+
+  logoutButton: {
+    backgroundColor: C.redDim, borderWidth: 1, borderColor: C.redBorder,
+    borderRadius: 16, paddingVertical: 14, alignItems: "center",
+  },
+  logoutText: { fontSize: 15, color: C.red, fontWeight: "700", fontFamily: FONT_BOLD },
+});

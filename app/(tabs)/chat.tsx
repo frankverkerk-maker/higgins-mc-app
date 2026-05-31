@@ -14,8 +14,26 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
-import { useColors } from "@/hooks/use-colors";
 import { sendMessageToHiggins } from "@/lib/manus-api";
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const C = {
+  bg:         "#0A0C0E",
+  surface:    "#111418",
+  surface2:   "#161B21",
+  border:     "#1E2530",
+  cyan:       "#00D4D4",
+  cyanDim:    "rgba(0,212,212,0.12)",
+  cyanBorder: "rgba(0,212,212,0.25)",
+  text:       "#E8EDF2",
+  muted:      "#5A6472",
+  userBubble: "#0D2A2A",
+  userBorder: "rgba(0,212,212,0.3)",
+  green:      "#00D4A0",
+  greenDim:   "rgba(0,212,160,0.15)",
+};
+const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
+const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 const API_KEY_STORAGE = "higgins_manus_api_key";
 const TASK_ID_STORAGE = "higgins_task_id";
@@ -31,14 +49,12 @@ const INITIAL_MESSAGES: Message[] = [
   {
     id: "0",
     role: "assistant",
-    content: "Goedemiddag. Ik ben Higgins, uw Chief AI Officer. Hoe kan ik u vandaag van dienst zijn?",
+    content: "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
     timestamp: new Date(),
   },
 ];
 
 export default function ChatScreen() {
-  const colors = useColors();
-  const styles = makeStyles(colors);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +173,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer containerClassName="bg-background">
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -180,7 +196,7 @@ export default function ChatScreen() {
             style={({ pressed }) => [styles.apiButton, pressed && { opacity: 0.7 }]}
             onPress={() => isLive ? disconnectApi() : setShowApiKeyModal(true)}
           >
-            <Text style={[styles.apiButtonText, { color: isLive ? "#34D399" : colors.muted }]}>
+            <Text style={[styles.apiButtonText, { color: isLive ? C.green : C.muted }]}>
               {isLive ? "⚡ Live" : "🔑 Verbind"}
             </Text>
           </Pressable>
@@ -202,7 +218,7 @@ export default function ChatScreen() {
           <View style={styles.typingRow}>
             <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={C.cyan} />
             </View>
           </View>
         )}
@@ -214,7 +230,7 @@ export default function ChatScreen() {
             value={input}
             onChangeText={setInput}
             placeholder="Stel een vraag aan Higgins..."
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={C.muted}
             multiline
             returnKeyType="send"
             onSubmitEditing={sendMessage}
@@ -253,7 +269,7 @@ export default function ChatScreen() {
               value={apiKeyInput}
               onChangeText={setApiKeyInput}
               placeholder="manus-api-key-..."
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={C.muted}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -279,210 +295,39 @@ export default function ChatScreen() {
   );
 }
 
-function makeStyles(colors: ReturnType<typeof useColors>) {
-  return StyleSheet.create({
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerName: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.foreground,
-    },
-    headerStatus: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      marginTop: 2,
-    },
-    headerStatusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    headerStatusText: {
-      fontSize: 11,
-      color: colors.muted,
-    },
-    apiButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 14,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    apiButtonText: {
-      fontSize: 12,
-      fontWeight: "600",
-    },
-    messageList: {
-      padding: 16,
-      gap: 12,
-    },
-    messageRow: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      gap: 8,
-      marginBottom: 8,
-    },
-    messageRowUser: {
-      flexDirection: "row-reverse",
-    },
-    bubble: {
-      maxWidth: "78%",
-      borderRadius: 18,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-    },
-    bubbleAssistant: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderBottomLeftRadius: 4,
-    },
-    bubbleUser: {
-      backgroundColor: colors.primary,
-      borderBottomRightRadius: 4,
-    },
-    bubbleText: {
-      fontSize: 14,
-      color: colors.foreground,
-      lineHeight: 20,
-    },
-    bubbleTextUser: {
-      color: "#fff",
-    },
-    bubbleTime: {
-      fontSize: 10,
-      color: colors.muted,
-      marginTop: 4,
-      textAlign: "right",
-    },
-    bubbleTimeUser: {
-      color: "rgba(255,255,255,0.65)",
-    },
-    typingRow: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      gap: 8,
-      paddingHorizontal: 16,
-      marginBottom: 8,
-    },
-    typingBubble: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-    },
-    inputRow: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      gap: 10,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 22,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      fontSize: 14,
-      color: colors.foreground,
-      maxHeight: 100,
-      lineHeight: 20,
-    },
-    sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    sendButtonDisabled: {
-      backgroundColor: colors.border,
-    },
-    sendButtonText: {
-      fontSize: 24,
-      color: "#fff",
-      fontWeight: "300",
-      marginLeft: 2,
-    },
-    // Modal
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
-      justifyContent: "flex-end",
-    },
-    modalCard: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 28,
-      gap: 16,
-      borderTopWidth: 1,
-      borderColor: colors.border,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: colors.foreground,
-    },
-    modalSubtitle: {
-      fontSize: 13,
-      color: colors.muted,
-      lineHeight: 19,
-    },
-    modalInput: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 14,
-      color: colors.foreground,
-    },
-    modalButtons: {
-      flexDirection: "row",
-      gap: 12,
-      marginTop: 4,
-    },
-    modalButtonCancel: {
-      flex: 1,
-      paddingVertical: 14,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modalButtonCancelText: {
-      fontSize: 15,
-      fontWeight: "600",
-      color: colors.muted,
-    },
-    modalButtonSave: {
-      flex: 1,
-      paddingVertical: 14,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-    },
-    modalButtonSaveText: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: "#fff",
-    },
-  });
-}
+const styles = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+  headerName: { fontSize: 16, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD },
+  headerStatus: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  headerStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  headerStatusText: { fontSize: 11, color: C.cyan, fontFamily: FONT, letterSpacing: 0.3 },
+  apiButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.cyanBorder },
+  apiButtonText: { fontSize: 12, fontWeight: "700", fontFamily: FONT_BOLD },
+  messageList: { padding: 16, gap: 12 },
+  messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginBottom: 8 },
+  messageRowUser: { flexDirection: "row-reverse" },
+  bubble: { maxWidth: "78%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleAssistant: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderBottomLeftRadius: 4 },
+  bubbleUser: { backgroundColor: C.userBubble, borderWidth: 1, borderColor: C.userBorder, borderBottomRightRadius: 4 },
+  bubbleText: { fontSize: 14, color: C.text, lineHeight: 21, fontFamily: FONT },
+  bubbleTextUser: { color: C.cyan },
+  bubbleTime: { fontSize: 10, color: C.muted, marginTop: 4, textAlign: "right", fontFamily: FONT },
+  bubbleTimeUser: { color: "rgba(0,212,212,0.5)" },
+  typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  typingBubble: { paddingVertical: 12, paddingHorizontal: 16 },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  input: { flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.text, maxHeight: 100, lineHeight: 20, fontFamily: FONT },
+  sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center", shadowColor: C.cyan, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8 },
+  sendButtonDisabled: { backgroundColor: C.surface2, shadowOpacity: 0 },
+  sendButtonText: { fontSize: 24, color: "#0A0C0E", fontWeight: "800", marginLeft: 2 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "flex-end" },
+  modalCard: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, gap: 16, borderTopWidth: 1, borderColor: C.cyanBorder },
+  modalTitle: { fontSize: 20, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD },
+  modalSubtitle: { fontSize: 13, color: C.muted, lineHeight: 19, fontFamily: FONT },
+  modalInput: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: C.text, fontFamily: FONT },
+  modalButtons: { flexDirection: "row", gap: 12, marginTop: 4 },
+  modalButtonCancel: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.surface2, alignItems: "center", borderWidth: 1, borderColor: C.border },
+  modalButtonCancelText: { fontSize: 15, fontWeight: "600", color: C.muted, fontFamily: FONT_BOLD },
+  modalButtonSave: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.cyan, alignItems: "center" },
+  modalButtonSaveText: { fontSize: 15, fontWeight: "800", color: "#0A0C0E", fontFamily: FONT_BOLD },
+});

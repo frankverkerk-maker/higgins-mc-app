@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Higgins MC — Luxury Dark Theme */
+:root {
+  font-family: Avenir, 'Avenir Next', 'Century Gothic', Futura, 'Trebuchet MS', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0A0C0E;
+  color: #E8EDF2;
+}
+
+/* Cyaan glow effect for primary elements */
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(0, 212, 212, 0.35), 0 0 24px rgba(0, 212, 212, 0.15);
+}
+
+/* Subtle border glow */
+.border-glow {
+  border-color: rgba(0, 212, 212, 0.4);
+  box-shadow: inset 0 0 8px rgba(0, 212, 212, 0.08);
+}
