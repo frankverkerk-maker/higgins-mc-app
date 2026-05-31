@@ -7,8 +7,8 @@ const AGENTS = [
   {
     id: "higgins",
     name: "Higgins",
-    role: "Chief AI Officer",
-    description: "Centrale orchestrator en primaire gesprekspartner. Coördineert alle agents.",
+    role: "Chief of Staff & Butler",
+    description: "Uw persoonlijke aanspreekpunt voor alles. Coördineert het gehele team en communiceert alle updates terug naar u.",
     status: "active",
     color: "#14B8A6",
     tasks: 12,

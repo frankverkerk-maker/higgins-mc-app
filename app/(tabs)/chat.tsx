@@ -171,8 +171,8 @@ export default function ChatScreen() {
             <View style={styles.headerStatus}>
               <View style={[styles.headerStatusDot, { backgroundColor: isLive ? "#34D399" : "#F59E0B" }]} />
               <Text style={styles.headerStatusText}>
-                {isLive ? "Chief AI Officer · Live" : "Chief AI Officer · Demo modus"}
-              </Text>
+              {isLive ? "Chief of Staff & Butler · Live" : "Chief of Staff & Butler · Demo modus"}
+            </Text>
             </View>
           </View>
           {/* API verbinding knop */}

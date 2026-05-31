@@ -6,7 +6,7 @@ import { useColors } from "@/hooks/use-colors";
 import { StyleSheet } from "react-native";
 
 const AGENTS = [
-  { id: "higgins", name: "Higgins", role: "Chief AI Officer", status: "active", color: "#14B8A6" },
+  { id: "higgins", name: "Higgins", role: "Chief of Staff & Butler", status: "active", color: "#14B8A6" },
   { id: "elena", name: "Elena", role: "Executive Assistant", status: "active", color: "#8B5CF6" },
   { id: "legal", name: "Justitia", role: "Legal Advisor", status: "idle", color: "#F59E0B" },
   { id: "finance", name: "Warren", role: "Finance Analyst", status: "idle", color: "#10B981" },
@@ -86,11 +86,15 @@ export default function DashboardScreen() {
                 style={({ pressed }) => [styles.agentCard, pressed && { opacity: 0.8 }]}
                 onPress={() => router.push("/agents")}
               >
-                <View style={[styles.agentAvatar, { backgroundColor: agent.color + "22", borderColor: agent.color + "44" }]}>
-                  <Text style={[styles.agentAvatarText, { color: agent.color }]}>
-                    {agent.name[0]}
-                  </Text>
-                </View>
+                {agent.id === "higgins" ? (
+                  <HigginsAvatar size={44} style={{ marginBottom: 8 }} />
+                ) : (
+                  <View style={[styles.agentAvatar, { backgroundColor: agent.color + "22", borderColor: agent.color + "44" }]}>
+                    <Text style={[styles.agentAvatarText, { color: agent.color }]}>
+                      {agent.name[0]}
+                    </Text>
+                  </View>
+                )}
                 <Text style={styles.agentName}>{agent.name}</Text>
                 <Text style={styles.agentRole} numberOfLines={1}>{agent.role}</Text>
                 <View style={styles.agentStatusRow}>
