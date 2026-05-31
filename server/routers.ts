@@ -240,6 +240,22 @@ export const appRouter = router({
             day: "numeric",
           });
 
+        // Gebruik gecachede briefing van de cron job als die beschikbaar is (max 12 uur oud)
+        const { getLatestMorningBrief } = await import("./morning-brief-handler");
+        const cached = getLatestMorningBrief();
+        if (cached) {
+          const ageMs = Date.now() - new Date(cached.generatedAt).getTime();
+          if (ageMs < 12 * 60 * 60 * 1000) {
+            return {
+              brief: cached.brief,
+              date: cached.date,
+              generatedAt: cached.generatedAt,
+              topics: cached.topics,
+            };
+          }
+        }
+
+        // Fallback: genereer on-demand als er geen cache is
         const response = await invokeLLM({
           messages: [
             { role: "system", content: HIGGINS_SYSTEM_PROMPT },
@@ -261,6 +277,7 @@ export const appRouter = router({
           brief,
           date,
           generatedAt: new Date().toISOString(),
+          topics: null,
         };
       }),
   }),

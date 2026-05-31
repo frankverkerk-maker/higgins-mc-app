@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from "react-native";
+import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { TEAM } from "@/constants/team";
@@ -67,7 +69,20 @@ const DEPARTMENTS = [
   "Enterprise",
 ];
 
+function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) {
+  if (Platform.OS !== "web") {
+    try { Haptics.impactAsync(style); } catch (_) {}
+  }
+}
+
 export default function TeamPulseScreen() {
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+
+  const handleAgentPress = (name: string) => {
+    haptic(Haptics.ImpactFeedbackStyle.Light);
+    setExpandedAgent(prev => prev === name ? null : name);
+  };
+
   return (
     <ScreenContainer containerClassName="bg-background">
       <ScrollView
@@ -90,14 +105,19 @@ export default function TeamPulseScreen() {
               const act = ACTIVITY[name] ?? { status: "idle", task: "Wacht op opdracht" };
               const agent = TEAM.find(a => a.name === name)!;
               const isHiggins = name === "Higgins";
+              const isExpanded = expandedAgent === name;
               return (
-                <View key={name} style={[s.pulseRow, i > 0 && s.rowBorder]}>
+                <Pressable
+                  key={name}
+                  style={({ pressed }) => [s.pulseRow, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
+                  onPress={() => handleAgentPress(name)}
+                >
                   <View style={[s.statusDot, { backgroundColor: STATUS_COLORS[act.status] }]} />
                   {isHiggins
                     ? <HigginsAvatar size={36} />
                     : (
-                      <View style={[s.agentAvatar, { backgroundColor: DEPT_COLORS[agent.department]?.bg ?? C.surface2 }]}>
-                        <Text style={[s.agentAvatarText, { color: DEPT_COLORS[agent.department]?.text ?? C.muted }]}>
+                      <View style={[s.agentAvatar, { backgroundColor: DEPT_COLORS[agent?.department ?? ""]?.bg ?? C.surface2 }]}>
+                        <Text style={[s.agentAvatarText, { color: DEPT_COLORS[agent?.department ?? ""]?.text ?? C.muted }]}>
                           {agentInitial(name)}
                         </Text>
                       </View>
@@ -106,13 +126,16 @@ export default function TeamPulseScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={s.agentName}>{name}</Text>
                     <Text style={s.agentTask}>{act.task}</Text>
+                    {isExpanded && agent && (
+                      <Text style={[s.agentTask, { color: C.cyan, marginTop: 4 }]}>{agent.role}</Text>
+                    )}
                   </View>
                   <View style={[s.statusBadge, { backgroundColor: STATUS_COLORS[act.status] + "22" }]}>
                     <Text style={[s.statusBadgeText, { color: STATUS_COLORS[act.status] }]}>
                       {act.status === "active" ? "Actief" : act.status === "busy" ? "Bezig" : "Inactief"}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -136,8 +159,13 @@ export default function TeamPulseScreen() {
               <View style={s.card}>
                 {agents.map((agent, i) => {
                   const isHiggins = agent.name === "Higgins";
+                  const isExpanded = expandedAgent === agent.name;
                   return (
-                    <View key={agent.name} style={[s.agentRow, i > 0 && s.rowBorder]}>
+                    <Pressable
+                      key={agent.name}
+                      style={({ pressed }) => [s.agentRow, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
+                      onPress={() => handleAgentPress(agent.name)}
+                    >
                       {isHiggins
                         ? <HigginsAvatar size={38} />
                         : (
@@ -151,8 +179,17 @@ export default function TeamPulseScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={s.agentName}>{agent.name}</Text>
                         <Text style={s.agentRole}>{agent.role}</Text>
+                        {isExpanded && ACTIVITY[agent.name] && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[ACTIVITY[agent.name].status] }]} />
+                            <Text style={[s.agentTask, { color: STATUS_COLORS[ACTIVITY[agent.name].status] }]}>
+                              {ACTIVITY[agent.name].task}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    </View>
+                      <Text style={s.chevron}>›</Text>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -183,6 +220,7 @@ const s = StyleSheet.create({
   // Pulse rijen (actief nu)
   pulseRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
   agentTask: { fontSize: 11, color: C.muted, fontFamily: FONT, marginTop: 2 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusBadgeText: { fontSize: 11, fontWeight: "700", fontFamily: FONT_BOLD },
@@ -193,4 +231,5 @@ const s = StyleSheet.create({
   agentAvatarText: { fontSize: 15, fontWeight: "800", fontFamily: FONT_BOLD },
   agentName: { fontSize: 14, fontWeight: "700", color: C.text, fontFamily: FONT_BOLD },
   agentRole: { fontSize: 11, color: C.muted, fontFamily: FONT, marginTop: 2 },
+  chevron: { fontSize: 18, color: C.muted, marginLeft: 4 },
 });

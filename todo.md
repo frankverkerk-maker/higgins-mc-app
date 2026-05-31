@@ -34,12 +34,16 @@
 - [x] Instellingen scherm in luxury dark stijl
 
 ## Fase 5: Uitbreidingen
-- [ ] iPad layout optimalisatie (grotere schermen, split-view)
+- [x] iPad layout optimalisatie — sidebar navigatie op iPad (≥768pt), tab bar op iPhone
 - [ ] Voice-to-Higgins microfoon knop in chat
 - [x] Naam personalisatie onboarding scherm (welkomst animatie + persoonlijke begroeting)
 - [x] Naam integratie in Dashboard en Chat (Higgins spreekt gebruiker persoonlijk aan)
 - [x] Volledig team overzicht verwerkt (36 agents, 7 departementen, officiële namen en rollen)
 - [ ] Push notificaties (agent heeft bericht)
+- [x] Haptische experience verfijnd — tab bar (iOS+Android), agents (tik voor details), settings (toggle Medium, logout Warning)
+- [x] Settings scherm uitgebreid met Ochtend Briefing toggle en Haptische Feedback toggle
+- [x] Morning Brief cron endpoint — POST /api/scheduled/morning-brief (AI nieuws, crypto, prioriteiten, teamstatus)
+- [x] Morning Brief cron job geconfigureerd — dagelijks 07:00 CET, activeert na deployment
 - [x] Haptic feedback op acties (goedkeuringen, navigatie, berichten)
 - [x] Voice-to-Higgins microfoon knop in chat
 

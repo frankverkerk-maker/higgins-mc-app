@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Switch, Platform } from "react-native";
 import { useState } from "react";
+import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch } from "react-native";
+import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -22,8 +23,31 @@ const C = {
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
+function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) {
+  if (Platform.OS !== "web") {
+    try { Haptics.impactAsync(style); } catch (_) {}
+  }
+}
+
+function hapticNotification(type: Haptics.NotificationFeedbackType) {
+  if (Platform.OS !== "web") {
+    try { Haptics.notificationAsync(type); } catch (_) {}
+  }
+}
+
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
+  const [briefingEnabled, setBriefingEnabled] = useState(true);
+  const [hapticEnabled, setHapticEnabled] = useState(true);
+
+  const handleToggle = (setter: (v: boolean) => void, value: boolean) => {
+    haptic(Haptics.ImpactFeedbackStyle.Medium);
+    setter(!value);
+  };
+
+  const handleLogout = () => {
+    hapticNotification(Haptics.NotificationFeedbackType.Warning);
+  };
 
   return (
     <ScreenContainer containerClassName="bg-background">
@@ -39,7 +63,10 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── Profiel kaart ── */}
-        <View style={s.profileCard}>
+        <Pressable
+          style={({ pressed }) => [s.profileCard, pressed && { opacity: 0.85 }]}
+          onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
+        >
           <View style={s.profileAvatar}>
             <Text style={s.profileAvatarText}>CD</Text>
           </View>
@@ -50,14 +77,17 @@ export default function SettingsScreen() {
           <View style={s.profileBadge}>
             <Text style={s.profileBadgeText}>Admin</Text>
           </View>
-        </View>
+        </Pressable>
 
         {/* ── Verbinding ── */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Verbinding</Text>
           <View style={s.card}>
             {/* Mission Control */}
-            <View style={s.row}>
+            <Pressable
+              style={({ pressed }) => [s.row, pressed && { opacity: 0.75 }]}
+              onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
+            >
               <View style={s.rowLeft}>
                 <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
                   <Text style={{ fontSize: 14 }}>☁️</Text>
@@ -71,10 +101,13 @@ export default function SettingsScreen() {
                 <View style={[s.statusDot, { backgroundColor: C.green }]} />
                 <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
               </View>
-            </View>
+            </Pressable>
 
             {/* Hermes Agent */}
-            <View style={[s.row, s.rowBorder]}>
+            <Pressable
+              style={({ pressed }) => [s.row, s.rowBorder, pressed && { opacity: 0.75 }]}
+              onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
+            >
               <View style={s.rowLeft}>
                 <View style={[s.rowIcon, { backgroundColor: "rgba(167,139,250,0.12)" }]}>
                   <Text style={{ fontSize: 14 }}>🖥️</Text>
@@ -88,10 +121,13 @@ export default function SettingsScreen() {
                 <View style={[s.statusDot, { backgroundColor: C.green }]} />
                 <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
               </View>
-            </View>
+            </Pressable>
 
             {/* Slack */}
-            <View style={[s.row, s.rowBorder]}>
+            <Pressable
+              style={({ pressed }) => [s.row, s.rowBorder, pressed && { opacity: 0.75 }]}
+              onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
+            >
               <View style={s.rowLeft}>
                 <View style={[s.rowIcon, { backgroundColor: "rgba(245,166,35,0.12)" }]}>
                   <Text style={{ fontSize: 14 }}>💬</Text>
@@ -105,7 +141,7 @@ export default function SettingsScreen() {
                 <View style={[s.statusDot, { backgroundColor: C.muted }]} />
                 <Text style={[s.statusText, { color: C.muted }]}>Binnenkort</Text>
               </View>
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -113,18 +149,60 @@ export default function SettingsScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Voorkeuren</Text>
           <View style={s.card}>
+            {/* Notificaties */}
             <View style={s.row}>
               <View style={s.rowLeft}>
                 <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
                   <Text style={{ fontSize: 14 }}>🔔</Text>
                 </View>
-                <Text style={s.rowLabel}>Notificaties</Text>
+                <View>
+                  <Text style={s.rowLabel}>Notificaties</Text>
+                  <Text style={s.rowSub}>Push meldingen</Text>
+                </View>
               </View>
               <Switch
                 value={notifications}
-                onValueChange={setNotifications}
+                onValueChange={(v) => handleToggle(setNotifications, notifications)}
                 trackColor={{ true: C.cyan, false: C.border }}
                 thumbColor={notifications ? "#0A0C0E" : "#E8EDF2"}
+              />
+            </View>
+
+            {/* Ochtend Briefing */}
+            <View style={[s.row, s.rowBorder]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(0,212,160,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>🌅</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Ochtend Briefing</Text>
+                  <Text style={s.rowSub}>Dagelijks 07:00</Text>
+                </View>
+              </View>
+              <Switch
+                value={briefingEnabled}
+                onValueChange={(v) => handleToggle(setBriefingEnabled, briefingEnabled)}
+                trackColor={{ true: C.cyan, false: C.border }}
+                thumbColor={briefingEnabled ? "#0A0C0E" : "#E8EDF2"}
+              />
+            </View>
+
+            {/* Haptische feedback */}
+            <View style={[s.row, s.rowBorder]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(167,139,250,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>📳</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Haptische Feedback</Text>
+                  <Text style={s.rowSub}>Trilpatronen bij acties</Text>
+                </View>
+              </View>
+              <Switch
+                value={hapticEnabled}
+                onValueChange={(v) => handleToggle(setHapticEnabled, hapticEnabled)}
+                trackColor={{ true: C.cyan, false: C.border }}
+                thumbColor={hapticEnabled ? "#0A0C0E" : "#E8EDF2"}
               />
             </View>
           </View>
@@ -159,7 +237,8 @@ export default function SettingsScreen() {
         {/* ── Uitloggen ── */}
         <View style={[s.section, { marginBottom: 8 }]}>
           <Pressable
-            style={({ pressed }) => [s.logoutButton, pressed && { opacity: 0.75 }]}
+            style={({ pressed }) => [s.logoutButton, pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] }]}
+            onPress={handleLogout}
           >
             <Text style={s.logoutText}>Uitloggen</Text>
           </Pressable>
