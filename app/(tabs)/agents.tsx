@@ -1,66 +1,84 @@
-import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
+import { ScrollView, Text, View, StyleSheet } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
 const AGENTS = [
   {
     id: "higgins",
     name: "Higgins",
     role: "Chief of Staff & Butler",
-    description: "Uw persoonlijke aanspreekpunt voor alles. Coördineert het gehele team en communiceert alle updates terug naar u.",
     status: "active",
+    task: "Ochtend briefing voorbereiden",
+    tasksToday: 12,
     color: "#14B8A6",
-    tasks: 12,
+    isHiggins: true,
   },
   {
     id: "elena",
     name: "Elena",
     role: "Executive Assistant",
-    description: "Beheert agenda, e-mail en communicatie. Proactief en gedetailleerd.",
     status: "active",
+    task: "E-mails verwerken en klaarzetten",
+    tasksToday: 8,
     color: "#8B5CF6",
-    tasks: 7,
+    isHiggins: false,
   },
   {
     id: "justitia",
     name: "Justitia",
     role: "Legal Advisor",
-    description: "Juridische analyse, contracten en compliance vraagstukken.",
     status: "idle",
+    task: "Wacht op opdracht",
+    tasksToday: 2,
     color: "#F59E0B",
-    tasks: 2,
+    isHiggins: false,
   },
   {
     id: "warren",
     name: "Warren",
     role: "Finance Analyst",
-    description: "Financiële analyse, rapportages en portfolio monitoring.",
     status: "idle",
+    task: "Wacht op opdracht",
+    tasksToday: 5,
     color: "#10B981",
-    tasks: 4,
+    isHiggins: false,
   },
   {
-    id: "marketing",
+    id: "aria",
     name: "Aria",
-    role: "Marketing Specialist",
-    description: "Content strategie, campagnes en marktanalyse.",
+    role: "Research Specialist",
     status: "idle",
+    task: "Wacht op opdracht",
+    tasksToday: 1,
     color: "#EC4899",
-    tasks: 1,
+    isHiggins: false,
   },
   {
-    id: "medical",
+    id: "medicus",
     name: "Medicus",
-    role: "Medical Advisor",
-    description: "Medische informatie en gezondheidsadvies voor Swiss Vitality Clinics.",
+    role: "Health & Wellness Advisor",
     status: "idle",
+    task: "Wacht op opdracht",
+    tasksToday: 0,
     color: "#3B82F6",
-    tasks: 0,
+    isHiggins: false,
   },
 ];
 
-export default function AgentsScreen() {
+const ACTIVITY_LOG = [
+  { id: "l1", agent: "Warren", action: "Portfolio analyse Q2 afgerond", time: "09:14", type: "done" },
+  { id: "l2", agent: "Elena", action: "4 e-mails klaargezet voor goedkeuring", time: "09:02", type: "pending" },
+  { id: "l3", agent: "Higgins", action: "Dagplanning samengesteld", time: "08:45", type: "done" },
+  { id: "l4", agent: "Justitia", action: "Contract partner clinic gereviewed", time: "Gisteren", type: "done" },
+  { id: "l5", agent: "Aria", action: "Marktonderzoek Baden-Baden voltooid", time: "Gisteren", type: "done" },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function TeamPulseScreen() {
   const colors = useColors();
   const styles = makeStyles(colors);
 
@@ -68,179 +86,148 @@ export default function AgentsScreen() {
 
   return (
     <ScreenContainer>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Agent Team</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{activeCount} actief</Text>
-        </View>
-      </View>
-
-      <FlatList
-        data={AGENTS}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <Pressable
-            style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
-          >
-            <View style={styles.cardTop}>
-              {item.id === "higgins" ? (
-                <HigginsAvatar size={48} />
-              ) : (
-                <View style={[styles.avatar, { backgroundColor: item.color + "22", borderColor: item.color + "55" }]}>
-                  <Text style={[styles.avatarText, { color: item.color }]}>
-                    {item.name[0]}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.agentName}>{item.name}</Text>
-                  <View style={[
-                    styles.statusPill,
-                    { backgroundColor: item.status === "active" ? "#34D39922" : colors.border }
-                  ]}>
-                    <View style={[
-                      styles.statusDot,
-                      { backgroundColor: item.status === "active" ? "#34D399" : colors.muted }
-                    ]} />
-                    <Text style={[
-                      styles.statusText,
-                      { color: item.status === "active" ? "#34D399" : colors.muted }
-                    ]}>
-                      {item.status === "active" ? "Actief" : "Inactief"}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Team Pulse</Text>
+          <View style={styles.activeBadge}>
+            <View style={styles.activeDot} />
+            <Text style={styles.activeText}>{activeCount} actief</Text>
+          </View>
+        </View>
+
+        <Text style={styles.subtitle}>
+          Higgins coördineert uw team. U communiceert uitsluitend via Higgins.
+        </Text>
+
+        {/* Agent Status Cards */}
+        <View style={styles.agentList}>
+          {AGENTS.map((agent) => (
+            <View key={agent.id} style={[styles.agentCard, agent.status === "active" && styles.agentCardActive]}>
+              <View style={styles.agentLeft}>
+                {agent.isHiggins ? (
+                  <HigginsAvatar size={44} />
+                ) : (
+                  <View style={[styles.agentAvatar, { backgroundColor: agent.color + "22", borderColor: agent.color + "55" }]}>
+                    <Text style={[styles.agentAvatarText, { color: agent.color }]}>
+                      {agent.name[0]}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.agentInfo}>
+                <View style={styles.agentNameRow}>
+                  <Text style={styles.agentName}>{agent.name}</Text>
+                  <View style={[styles.statusPill, { backgroundColor: agent.status === "active" ? "#34D39922" : "#94A3B822" }]}>
+                    <View style={[styles.statusPillDot, { backgroundColor: agent.status === "active" ? "#34D399" : "#94A3B8" }]} />
+                    <Text style={[styles.statusPillText, { color: agent.status === "active" ? "#34D399" : "#94A3B8" }]}>
+                      {agent.status === "active" ? "Actief" : "Inactief"}
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.agentRole}>{item.role}</Text>
+                <Text style={styles.agentRole}>{agent.role}</Text>
+                <Text style={styles.agentTask} numberOfLines={1}>{agent.task}</Text>
+              </View>
+              <View style={styles.agentStats}>
+                <Text style={[styles.agentTaskCount, { color: agent.color }]}>{agent.tasksToday}</Text>
+                <Text style={styles.agentTaskLabel}>taken</Text>
               </View>
             </View>
-            <Text style={styles.description}>{item.description}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.taskCount}>{item.tasks} taken uitgevoerd</Text>
-              <Text style={[styles.detailLink, { color: item.color }]}>Details ›</Text>
-            </View>
-          </Pressable>
-        )}
-      />
+          ))}
+        </View>
+
+        {/* Activity Log */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Activiteit vandaag</Text>
+          <View style={styles.logList}>
+            {ACTIVITY_LOG.map((item, index) => (
+              <View key={item.id} style={styles.logItem}>
+                <View style={styles.logTimeline}>
+                  <View style={[styles.logDot, { backgroundColor: item.type === "done" ? "#34D399" : colors.primary }]} />
+                  {index < ACTIVITY_LOG.length - 1 && <View style={styles.logLine} />}
+                </View>
+                <View style={styles.logContent}>
+                  <View style={styles.logHeader}>
+                    <Text style={styles.logAgent}>{item.agent}</Text>
+                    <Text style={styles.logTime}>{item.time}</Text>
+                  </View>
+                  <Text style={styles.logAction}>{item.action}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+      paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8,
     },
-    title: {
-      fontSize: 26,
-      fontWeight: "700",
-      color: colors.foreground,
-      letterSpacing: -0.5,
+    title: { fontSize: 26, fontWeight: "700", color: colors.foreground, letterSpacing: -0.5 },
+    activeBadge: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      backgroundColor: "#34D39922", paddingHorizontal: 10, paddingVertical: 5,
+      borderRadius: 20, borderWidth: 1, borderColor: "#34D39944",
     },
-    badge: {
-      backgroundColor: colors.primary + "22",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.primary + "44",
+    activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#34D399" },
+    activeText: { fontSize: 12, color: "#34D399", fontWeight: "600" },
+    subtitle: {
+      fontSize: 12, color: colors.muted, paddingHorizontal: 20,
+      marginBottom: 20, lineHeight: 17,
     },
-    badgeText: {
-      fontSize: 12,
-      color: colors.primary,
-      fontWeight: "600",
+
+    // Agent list
+    agentList: { paddingHorizontal: 20, gap: 10, marginBottom: 28 },
+    agentCard: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      backgroundColor: colors.surface, borderRadius: 16, padding: 14,
+      borderWidth: 1, borderColor: colors.border,
     },
-    list: {
-      padding: 16,
-      gap: 12,
+    agentCardActive: { borderColor: "#34D39933" },
+    agentLeft: {},
+    agentAvatar: {
+      width: 44, height: 44, borderRadius: 22,
+      borderWidth: 1.5, alignItems: "center", justifyContent: "center",
     },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 10,
-    },
-    cardTop: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      borderWidth: 1.5,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    avatarText: {
-      fontSize: 20,
-      fontWeight: "700",
-    },
-    nameRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    agentName: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: colors.foreground,
-    },
-    agentRole: {
-      fontSize: 12,
-      color: colors.muted,
-      marginTop: 2,
-    },
+    agentAvatarText: { fontSize: 18, fontWeight: "700" },
+    agentInfo: { flex: 1, gap: 2 },
+    agentNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    agentName: { fontSize: 14, fontWeight: "700", color: colors.foreground },
     statusPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
+      flexDirection: "row", alignItems: "center", gap: 4,
+      paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
     },
-    statusDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 3,
-    },
-    statusText: {
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    description: {
-      fontSize: 13,
-      color: colors.muted,
-      lineHeight: 18,
-    },
-    cardFooter: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingTop: 8,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    taskCount: {
-      fontSize: 12,
-      color: colors.muted,
-    },
-    detailLink: {
-      fontSize: 13,
-      fontWeight: "600",
-    },
+    statusPillDot: { width: 5, height: 5, borderRadius: 3 },
+    statusPillText: { fontSize: 10, fontWeight: "600" },
+    agentRole: { fontSize: 11, color: colors.muted },
+    agentTask: { fontSize: 12, color: colors.foreground, opacity: 0.7 },
+    agentStats: { alignItems: "center", minWidth: 36 },
+    agentTaskCount: { fontSize: 20, fontWeight: "700" },
+    agentTaskLabel: { fontSize: 10, color: colors.muted, marginTop: -2 },
+
+    // Activity log
+    section: { paddingHorizontal: 20, marginBottom: 24 },
+    sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.foreground, letterSpacing: -0.3, marginBottom: 16 },
+    logList: { gap: 0 },
+    logItem: { flexDirection: "row", gap: 14 },
+    logTimeline: { alignItems: "center", width: 16 },
+    logDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+    logLine: { width: 2, flex: 1, backgroundColor: colors.border, marginVertical: 4 },
+    logContent: { flex: 1, paddingBottom: 16 },
+    logHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 3 },
+    logAgent: { fontSize: 12, fontWeight: "700", color: colors.primary },
+    logTime: { fontSize: 11, color: colors.muted },
+    logAction: { fontSize: 13, color: colors.foreground, lineHeight: 18 },
   });
 }

@@ -1,42 +1,68 @@
-import { ScrollView, Text, View, Pressable } from "react-native";
+import { ScrollView, Text, View, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
-import { StyleSheet } from "react-native";
 
-const AGENTS = [
-  { id: "higgins", name: "Higgins", role: "Chief of Staff & Butler", status: "active", color: "#14B8A6" },
-  { id: "elena", name: "Elena", role: "Executive Assistant", status: "active", color: "#8B5CF6" },
-  { id: "legal", name: "Justitia", role: "Legal Advisor", status: "idle", color: "#F59E0B" },
-  { id: "finance", name: "Warren", role: "Finance Analyst", status: "idle", color: "#10B981" },
+// ─── Mock data (wordt later vervangen door live Manus API data) ───────────────
+
+const MORNING_BRIEF = {
+  date: "Zaterdag, 31 mei 2026",
+  summary:
+    "Goedemorgen. Vandaag heeft u 2 vergaderingen en 3 openstaande acties. Warren heeft gisteren de portfolio-analyse afgerond. Elena heeft 4 e-mails klaargezet voor uw goedkeuring. Ik adviseer u te beginnen met de Q2-review.",
+  highlight: "Q2-review vereist uw aandacht vandaag.",
+};
+
+const PRIORITIES = [
+  { id: "p1", label: "Q2 financieel rapport goedkeuren", agent: "Warren", urgent: true },
+  { id: "p2", label: "Voorstel nieuwe partner clinic bekijken", agent: "Justitia", urgent: false },
+  { id: "p3", label: "Agenda volgende week bevestigen", agent: "Elena", urgent: false },
 ];
 
-const RECENT_ACTIVITY = [
-  { id: "1", agent: "Higgins", action: "Rapport gegenereerd: Q2 Analyse", time: "2 min geleden" },
-  { id: "2", agent: "Elena", action: "E-mail verstuurd naar 3 contacten", time: "18 min geleden" },
-  { id: "3", agent: "Warren", action: "Portfolio update verwerkt", time: "1 uur geleden" },
+const QUICK_COMMANDS = [
+  { id: "q1", icon: "📋", label: "Dagbriefing" },
+  { id: "q2", icon: "📅", label: "Plan vergadering" },
+  { id: "q3", icon: "📊", label: "Stuur rapport" },
+  { id: "q4", icon: "✉️", label: "Delegeer e-mail" },
+  { id: "q5", icon: "🔍", label: "Zoek informatie" },
+  { id: "q6", icon: "⚡", label: "Snelle actie" },
 ];
+
+const APPROVALS = [
+  { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+  { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
+];
+
+const AGENT_PULSE = [
+  { id: "ag1", name: "Higgins", status: "active", task: "Briefing voorbereiden" },
+  { id: "ag2", name: "Elena", status: "active", task: "E-mails verwerken" },
+  { id: "ag3", name: "Warren", status: "idle", task: "Wacht op opdracht" },
+  { id: "ag4", name: "Justitia", status: "idle", task: "Wacht op opdracht" },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
   const colors = useColors();
   const router = useRouter();
   const styles = makeStyles(colors);
 
-  const activeAgents = AGENTS.filter((a) => a.status === "active").length;
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
 
   return (
     <ScreenContainer>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Goedemiddag</Text>
-            <Text style={styles.title}>Mission Control</Text>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.title}>Command Center</Text>
           </View>
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
@@ -44,89 +70,149 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.statNumber}>{activeAgents}</Text>
-            <Text style={styles.statLabel}>Actieve Agents</Text>
+        {/* ── Morning Brief ── */}
+        <View style={styles.briefCard}>
+          <View style={styles.briefHeader}>
+            <HigginsAvatar size={36} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.briefLabel}>Ochtend Briefing</Text>
+              <Text style={styles.briefDate}>{MORNING_BRIEF.date}</Text>
+            </View>
+            <View style={styles.briefBadge}>
+              <Text style={styles.briefBadgeText}>Nieuw</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.statNumber}>3</Text>
-            <Text style={styles.statLabel}>Taken Vandaag</Text>
+          <Text style={styles.briefSummary}>{MORNING_BRIEF.summary}</Text>
+          <View style={styles.briefHighlight}>
+            <Text style={styles.briefHighlightText}>⚡ {MORNING_BRIEF.highlight}</Text>
           </View>
+          <Pressable
+            style={({ pressed }) => [styles.briefCta, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push("/chat")}
+          >
+            <Text style={styles.briefCtaText}>Bespreek met Higgins →</Text>
+          </Pressable>
         </View>
 
-        {/* Quick Action */}
-        <Pressable
-          style={({ pressed }) => [styles.chatCta, pressed && { opacity: 0.85 }]}
-          onPress={() => router.push("/chat")}
-        >
-          <View style={styles.chatCtaContent}>
-            <HigginsAvatar size={40} style={{ marginRight: 0 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.chatCtaTitle}>Spreek met Higgins</Text>
-              <Text style={styles.chatCtaSubtitle}>Stel een vraag of geef een opdracht</Text>
+        {/* ── Goedkeuringen vereist ── */}
+        {APPROVALS.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Wacht op uw goedkeuring</Text>
+              <View style={styles.approvalBadge}>
+                <Text style={styles.approvalBadgeText}>{APPROVALS.length}</Text>
+              </View>
             </View>
-            <Text style={styles.chatCtaArrow}>›</Text>
-          </View>
-        </Pressable>
-
-        {/* Agent Team */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Agent Team</Text>
-            <Pressable onPress={() => router.push("/agents")}>
-              <Text style={styles.sectionLink}>Alles zien</Text>
-            </Pressable>
-          </View>
-          <View style={styles.agentGrid}>
-            {AGENTS.map((agent) => (
-              <Pressable
-                key={agent.id}
-                style={({ pressed }) => [styles.agentCard, pressed && { opacity: 0.8 }]}
-                onPress={() => router.push("/agents")}
-              >
-                {agent.id === "higgins" ? (
-                  <HigginsAvatar size={44} style={{ marginBottom: 8 }} />
-                ) : (
-                  <View style={[styles.agentAvatar, { backgroundColor: agent.color + "22", borderColor: agent.color + "44" }]}>
-                    <Text style={[styles.agentAvatarText, { color: agent.color }]}>
-                      {agent.name[0]}
-                    </Text>
+            <View style={styles.approvalList}>
+              {APPROVALS.map((item) => (
+                <View key={item.id} style={styles.approvalCard}>
+                  <View style={styles.approvalTop}>
+                    <Text style={styles.approvalAgent}>{item.agent}</Text>
+                    <Text style={styles.approvalTime}>{item.time}</Text>
                   </View>
-                )}
-                <Text style={styles.agentName}>{agent.name}</Text>
-                <Text style={styles.agentRole} numberOfLines={1}>{agent.role}</Text>
-                <View style={styles.agentStatusRow}>
-                  <View style={[styles.agentStatusDot, { backgroundColor: agent.status === "active" ? "#34D399" : "#94A3B8" }]} />
-                  <Text style={[styles.agentStatusText, { color: agent.status === "active" ? "#34D399" : "#94A3B8" }]}>
-                    {agent.status === "active" ? "Actief" : "Inactief"}
+                  <Text style={styles.approvalAction}>{item.action}</Text>
+                  <View style={styles.approvalButtons}>
+                    <Pressable
+                      style={({ pressed }) => [styles.approvalBtn, styles.approvalBtnApprove, pressed && { opacity: 0.8 }]}
+                    >
+                      <Text style={styles.approvalBtnApproveText}>✓ Goedkeuren</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.approvalBtn, styles.approvalBtnReject, pressed && { opacity: 0.8 }]}
+                    >
+                      <Text style={styles.approvalBtnRejectText}>✕ Afwijzen</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ── Prioriteiten van de dag ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Prioriteiten vandaag</Text>
+          <View style={styles.priorityList}>
+            {PRIORITIES.map((item, index) => (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [styles.priorityItem, pressed && { opacity: 0.8 }]}
+                onPress={() => router.push("/chat")}
+              >
+                <View style={[styles.priorityNumber, item.urgent && styles.priorityNumberUrgent]}>
+                  <Text style={[styles.priorityNumberText, item.urgent && styles.priorityNumberTextUrgent]}>
+                    {index + 1}
                   </Text>
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.priorityLabel}>{item.label}</Text>
+                  <Text style={styles.priorityAgent}>via {item.agent}</Text>
+                </View>
+                {item.urgent && (
+                  <View style={styles.urgentTag}>
+                    <Text style={styles.urgentTagText}>Urgent</Text>
+                  </View>
+                )}
+                <Text style={styles.priorityArrow}>›</Text>
               </Pressable>
             ))}
           </View>
         </View>
 
-        {/* Recent Activity */}
+        {/* ── Snelle Opdrachten ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recente Activiteit</Text>
-          <View style={styles.activityList}>
-            {RECENT_ACTIVITY.map((item) => (
-              <View key={item.id} style={styles.activityItem}>
-                <View style={styles.activityDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.activityAction}>{item.action}</Text>
-                  <Text style={styles.activityMeta}>{item.agent} · {item.time}</Text>
+          <Text style={styles.sectionTitle}>Snelle opdrachten</Text>
+          <View style={styles.commandGrid}>
+            {QUICK_COMMANDS.map((cmd) => (
+              <Pressable
+                key={cmd.id}
+                style={({ pressed }) => [styles.commandCard, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
+                onPress={() => router.push("/chat")}
+              >
+                <Text style={styles.commandIcon}>{cmd.icon}</Text>
+                <Text style={styles.commandLabel}>{cmd.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Agent Pulse ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Team Pulse</Text>
+          <View style={styles.pulseList}>
+            {AGENT_PULSE.map((agent) => (
+              <View key={agent.id} style={styles.pulseItem}>
+                <View style={[styles.pulseDot, { backgroundColor: agent.status === "active" ? "#34D399" : "#94A3B8" }]} />
+                <Text style={styles.pulseName}>{agent.name}</Text>
+                <Text style={styles.pulseTask} numberOfLines={1}>{agent.task}</Text>
+                <View style={[styles.pulseStatus, { backgroundColor: agent.status === "active" ? "#34D39922" : "#94A3B822" }]}>
+                  <Text style={[styles.pulseStatusText, { color: agent.status === "active" ? "#34D399" : "#94A3B8" }]}>
+                    {agent.status === "active" ? "Actief" : "Inactief"}
+                  </Text>
                 </View>
               </View>
             ))}
           </View>
         </View>
+
+        {/* ── Spreek met Higgins CTA ── */}
+        <Pressable
+          style={({ pressed }) => [styles.chatCta, pressed && { opacity: 0.85 }]}
+          onPress={() => router.push("/chat")}
+        >
+          <HigginsAvatar size={40} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.chatCtaTitle}>Spreek met Higgins</Text>
+            <Text style={styles.chatCtaSubtitle}>Stel een vraag of geef een opdracht</Text>
+          </View>
+          <Text style={styles.chatCtaArrow}>›</Text>
+        </Pressable>
       </ScrollView>
     </ScreenContainer>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
@@ -138,210 +224,126 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       paddingTop: 16,
       paddingBottom: 20,
     },
-    greeting: {
-      fontSize: 13,
-      color: colors.muted,
-      fontWeight: "400",
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: "700",
-      color: colors.foreground,
-      marginTop: 2,
-      letterSpacing: -0.5,
-    },
+    greeting: { fontSize: 13, color: colors.muted, fontWeight: "400" },
+    title: { fontSize: 26, fontWeight: "700", color: colors.foreground, marginTop: 2, letterSpacing: -0.5 },
     statusBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.surface,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 6,
+      flexDirection: "row", alignItems: "center",
+      backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 6,
+      borderRadius: 20, borderWidth: 1, borderColor: colors.border, gap: 6,
     },
-    statusDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-      backgroundColor: "#34D399",
+    statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#34D399" },
+    statusText: { fontSize: 12, color: "#34D399", fontWeight: "600" },
+
+    // Morning Brief
+    briefCard: {
+      marginHorizontal: 20, marginBottom: 24,
+      backgroundColor: colors.surface, borderRadius: 20,
+      padding: 18, borderWidth: 1, borderColor: colors.border,
+      gap: 12,
     },
-    statusText: {
-      fontSize: 12,
-      color: "#34D399",
-      fontWeight: "600",
+    briefHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+    briefLabel: { fontSize: 13, fontWeight: "700", color: colors.primary, letterSpacing: 0.3 },
+    briefDate: { fontSize: 11, color: colors.muted, marginTop: 1 },
+    briefBadge: {
+      backgroundColor: colors.primary + "22", paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 8, borderWidth: 1, borderColor: colors.primary + "44",
     },
-    statsRow: {
-      flexDirection: "row",
-      paddingHorizontal: 20,
-      marginBottom: 16,
+    briefBadgeText: { fontSize: 10, color: colors.primary, fontWeight: "700" },
+    briefSummary: { fontSize: 13, color: colors.foreground, lineHeight: 20 },
+    briefHighlight: {
+      backgroundColor: colors.primary + "15", borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 8,
+      borderLeftWidth: 3, borderLeftColor: colors.primary,
     },
-    statCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: "center",
+    briefHighlightText: { fontSize: 12, color: colors.primary, fontWeight: "600" },
+    briefCta: {
+      alignSelf: "flex-start", paddingHorizontal: 14, paddingVertical: 8,
+      backgroundColor: colors.primary, borderRadius: 12,
     },
-    statNumber: {
-      fontSize: 32,
-      fontWeight: "700",
-      color: colors.primary,
-      letterSpacing: -1,
+    briefCtaText: { fontSize: 13, color: "#fff", fontWeight: "700" },
+
+    // Sections
+    section: { paddingHorizontal: 20, marginBottom: 24 },
+    sectionHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+    sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.foreground, letterSpacing: -0.3, marginBottom: 12 },
+
+    // Approvals
+    approvalBadge: {
+      width: 20, height: 20, borderRadius: 10,
+      backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
     },
-    statLabel: {
-      fontSize: 12,
-      color: colors.muted,
-      marginTop: 2,
-      fontWeight: "500",
+    approvalBadgeText: { fontSize: 11, color: "#fff", fontWeight: "700" },
+    approvalList: { gap: 10 },
+    approvalCard: {
+      backgroundColor: colors.surface, borderRadius: 16, padding: 14,
+      borderWidth: 1, borderColor: "#EF444433", gap: 8,
     },
+    approvalTop: { flexDirection: "row", justifyContent: "space-between" },
+    approvalAgent: { fontSize: 12, fontWeight: "700", color: colors.primary },
+    approvalTime: { fontSize: 11, color: colors.muted },
+    approvalAction: { fontSize: 13, color: colors.foreground, lineHeight: 19 },
+    approvalButtons: { flexDirection: "row", gap: 8, marginTop: 4 },
+    approvalBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center" },
+    approvalBtnApprove: { backgroundColor: "#34D39922", borderWidth: 1, borderColor: "#34D39944" },
+    approvalBtnApproveText: { fontSize: 13, fontWeight: "700", color: "#34D399" },
+    approvalBtnReject: { backgroundColor: "#EF444422", borderWidth: 1, borderColor: "#EF444444" },
+    approvalBtnRejectText: { fontSize: 13, fontWeight: "700", color: "#EF4444" },
+
+    // Priorities
+    priorityList: { gap: 8 },
+    priorityItem: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      backgroundColor: colors.surface, borderRadius: 14, padding: 14,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    priorityNumber: {
+      width: 28, height: 28, borderRadius: 14,
+      backgroundColor: colors.border, alignItems: "center", justifyContent: "center",
+    },
+    priorityNumberUrgent: { backgroundColor: colors.primary + "22" },
+    priorityNumberText: { fontSize: 13, fontWeight: "700", color: colors.muted },
+    priorityNumberTextUrgent: { color: colors.primary },
+    priorityLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground, lineHeight: 18 },
+    priorityAgent: { fontSize: 11, color: colors.muted, marginTop: 2 },
+    urgentTag: {
+      backgroundColor: "#EF444422", paddingHorizontal: 7, paddingVertical: 3,
+      borderRadius: 6, borderWidth: 1, borderColor: "#EF444444",
+    },
+    urgentTagText: { fontSize: 10, color: "#EF4444", fontWeight: "700" },
+    priorityArrow: { fontSize: 20, color: colors.muted, fontWeight: "300" },
+
+    // Quick Commands
+    commandGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    commandCard: {
+      width: "30%", aspectRatio: 1,
+      backgroundColor: colors.surface, borderRadius: 16,
+      borderWidth: 1, borderColor: colors.border,
+      alignItems: "center", justifyContent: "center", gap: 6,
+    },
+    commandIcon: { fontSize: 24 },
+    commandLabel: { fontSize: 11, fontWeight: "600", color: colors.foreground, textAlign: "center" },
+
+    // Agent Pulse
+    pulseList: { gap: 8 },
+    pulseItem: {
+      flexDirection: "row", alignItems: "center", gap: 10,
+      backgroundColor: colors.surface, borderRadius: 12, padding: 12,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    pulseDot: { width: 8, height: 8, borderRadius: 4 },
+    pulseName: { fontSize: 13, fontWeight: "700", color: colors.foreground, width: 72 },
+    pulseTask: { flex: 1, fontSize: 12, color: colors.muted },
+    pulseStatus: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+    pulseStatusText: { fontSize: 11, fontWeight: "600" },
+
+    // Chat CTA
     chatCta: {
-      marginHorizontal: 20,
-      marginBottom: 24,
-      backgroundColor: colors.primary,
-      borderRadius: 16,
-      padding: 16,
+      marginHorizontal: 20, backgroundColor: colors.primary,
+      borderRadius: 16, padding: 16,
+      flexDirection: "row", alignItems: "center", gap: 12,
     },
-    chatCtaContent: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    chatCtaIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "rgba(255,255,255,0.2)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    chatCtaIconText: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: "#fff",
-    },
-    chatCtaTitle: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: "#fff",
-    },
-    chatCtaSubtitle: {
-      fontSize: 12,
-      color: "rgba(255,255,255,0.75)",
-      marginTop: 2,
-    },
-    chatCtaArrow: {
-      fontSize: 24,
-      color: "rgba(255,255,255,0.7)",
-      fontWeight: "300",
-    },
-    section: {
-      paddingHorizontal: 20,
-      marginBottom: 24,
-    },
-    sectionHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 12,
-    },
-    sectionTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-      color: colors.foreground,
-      letterSpacing: -0.3,
-    },
-    sectionLink: {
-      fontSize: 13,
-      color: colors.primary,
-      fontWeight: "500",
-    },
-    agentGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-    },
-    agentCard: {
-      width: "47%",
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: "center",
-    },
-    agentAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      borderWidth: 1.5,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 8,
-    },
-    agentAvatarText: {
-      fontSize: 18,
-      fontWeight: "700",
-    },
-    agentName: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: colors.foreground,
-    },
-    agentRole: {
-      fontSize: 11,
-      color: colors.muted,
-      marginTop: 2,
-      textAlign: "center",
-    },
-    agentStatusRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      marginTop: 6,
-    },
-    agentStatusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    agentStatusText: {
-      fontSize: 11,
-      fontWeight: "500",
-    },
-    activityList: {
-      gap: 12,
-      marginTop: 4,
-    },
-    activityItem: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 12,
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    activityDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.primary,
-      marginTop: 4,
-    },
-    activityAction: {
-      fontSize: 13,
-      color: colors.foreground,
-      fontWeight: "500",
-      lineHeight: 18,
-    },
-    activityMeta: {
-      fontSize: 11,
-      color: colors.muted,
-      marginTop: 3,
-    },
+    chatCtaTitle: { fontSize: 15, fontWeight: "700", color: "#fff" },
+    chatCtaSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 },
+    chatCtaArrow: { fontSize: 24, color: "rgba(255,255,255,0.7)", fontWeight: "300" },
   });
 }
