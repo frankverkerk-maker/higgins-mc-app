@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
 import { trpc } from "@/lib/trpc";
+import { useLanguage } from "@/lib/language-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -66,6 +67,7 @@ const AGENT_PULSE = [
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [userName, setUserName] = useState<string | null>(null);
   const [approvals, setApprovals] = useState(APPROVALS);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
@@ -117,7 +119,7 @@ export default function DashboardScreen() {
 
   const now = new Date();
   const hour = now.getHours();
-  const greetingWord = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+  const greetingWord = hour < 12 ? t.dashboard.morning : hour < 18 ? t.dashboard.afternoon : t.dashboard.evening;
   const greeting = userName ? `${greetingWord}, ${userName}` : greetingWord;
 
   return (
@@ -131,11 +133,11 @@ export default function DashboardScreen() {
         <View style={s.header}>
           <View>
             <Text style={s.greeting}>{greeting}</Text>
-            <Text style={s.title}>Command Center</Text>
+            <Text style={s.title}>{t.dashboard.title}</Text>
           </View>
           <View style={s.statusBadge}>
             <View style={s.statusDot} />
-            <Text style={s.statusText}>Online</Text>
+            <Text style={s.statusText}>{t.common.online}</Text>
           </View>
         </View>
 
@@ -144,15 +146,15 @@ export default function DashboardScreen() {
           <View style={s.briefHeader}>
             <HigginsAvatar size={38} />
             <View style={{ flex: 1 }}>
-              <Text style={s.briefLabel}>OCHTEND BRIEFING</Text>
+              <Text style={s.briefLabel}>{t.dashboard.morningBriefing}</Text>
               <Text style={s.briefDate}>{briefQuery.data?.date ?? MORNING_BRIEF.date}</Text>
             </View>
             <View style={s.newBadge}>
-              <Text style={s.newBadgeText}>NIEUW</Text>
+              <Text style={s.newBadgeText}>{t.dashboard.morningBriefingNew}</Text>
             </View>
           </View>
           <Text style={s.briefSummary}>
-            {briefQuery.isLoading ? "Higgins bereidt uw briefing voor..." : briefQuery.data?.brief ?? MORNING_BRIEF.summary}
+            {briefQuery.isLoading ? t.dashboard.morningBriefLoading : briefQuery.data?.brief ?? MORNING_BRIEF.summary}
           </Text>
           {!briefQuery.isLoading && (
             <View style={s.briefHighlight}>
@@ -163,7 +165,7 @@ export default function DashboardScreen() {
             style={({ pressed }) => [s.briefCta, pressed && { opacity: 0.75 }]}
             onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
           >
-            <Text style={s.briefCtaText}>Bespreek met Higgins →</Text>
+            <Text style={s.briefCtaText}>{t.dashboard.discussWithHiggins}</Text>
           </Pressable>
         </View>
 
@@ -171,7 +173,7 @@ export default function DashboardScreen() {
         {approvals.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeaderRow}>
-              <Text style={s.sectionTitle}>Wacht op uw goedkeuring</Text>
+              <Text style={s.sectionTitle}>{t.dashboard.awaitingApproval}</Text>
               <View style={s.countBadge}>
                 <Text style={s.countBadgeText}>{approvals.length}</Text>
               </View>
@@ -194,14 +196,14 @@ export default function DashboardScreen() {
                       onPress={() => handleApproval(item, "approve")}
                       disabled={approvalMutation.isPending}
                     >
-                      <Text style={s.btnApproveText}>✓  Goedkeuren</Text>
+                      <Text style={s.btnApproveText}>✓  {t.dashboard.approve}</Text>
                     </Pressable>
                     <Pressable
                       style={({ pressed }) => [s.btnReject, pressed && { opacity: 0.75 }, approvalMutation.isPending && { opacity: 0.5 }]}
                       onPress={() => handleApproval(item, "reject")}
                       disabled={approvalMutation.isPending}
                     >
-                      <Text style={s.btnRejectText}>✕  Afwijzen</Text>
+                      <Text style={s.btnRejectText}>✕  {t.dashboard.reject}</Text>
                     </Pressable>
                   </View>
                 )}
@@ -212,7 +214,7 @@ export default function DashboardScreen() {
 
         {/* ── Prioriteiten ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Prioriteiten vandaag</Text>
+          <Text style={s.sectionTitle}>{t.dashboard.prioritiesToday}</Text>
           {PRIORITIES.map((item, index) => (
             <Pressable
               key={item.id}
@@ -228,7 +230,7 @@ export default function DashboardScreen() {
               </View>
               {item.urgent && (
                 <View style={s.urgentTag}>
-                  <Text style={s.urgentTagText}>URGENT</Text>
+                  <Text style={s.urgentTagText}>{t.dashboard.urgent}</Text>
                 </View>
               )}
               <Text style={s.arrow}>›</Text>
@@ -255,7 +257,7 @@ export default function DashboardScreen() {
 
         {/* ── Team Pulse ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Team Pulse</Text>
+          <Text style={s.sectionTitle}>{t.tabs.teamPulse}</Text>
           {AGENT_PULSE.map((agent) => (
             <View key={agent.id} style={s.pulseItem}>
               <View style={[s.pulseDot, { backgroundColor: agent.status === "active" ? C.green : C.muted }]} />
@@ -263,7 +265,7 @@ export default function DashboardScreen() {
               <Text style={s.pulseTask} numberOfLines={1}>{agent.task}</Text>
               <View style={[s.pulseTag, { backgroundColor: agent.status === "active" ? C.greenDim : "rgba(90,100,114,0.2)" }]}>
                 <Text style={[s.pulseTagText, { color: agent.status === "active" ? C.green : C.muted }]}>
-                  {agent.status === "active" ? "Actief" : "Inactief"}
+                  {agent.status === "active" ? t.dashboard.active : t.dashboard.standby}
                 </Text>
               </View>
             </View>

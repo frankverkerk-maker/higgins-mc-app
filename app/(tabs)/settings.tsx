@@ -2,6 +2,8 @@ import { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch } from "react-native";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
+import { useLanguage } from "@/lib/language-provider";
+import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -36,6 +38,7 @@ function hapticNotification(type: Haptics.NotificationFeedbackType) {
 }
 
 export default function SettingsScreen() {
+  const { t, language, setLanguage } = useLanguage();
   const [notifications, setNotifications] = useState(true);
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -58,8 +61,8 @@ export default function SettingsScreen() {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.headerLabel}>CONFIGURATIE</Text>
-          <Text style={s.headerTitle}>Instellingen</Text>
+          <Text style={s.headerLabel}>{t.settings.preferences.toUpperCase()}</Text>
+          <Text style={s.headerTitle}>{t.settings.title}</Text>
         </View>
 
         {/* ── Profiel kaart ── */}
@@ -78,6 +81,31 @@ export default function SettingsScreen() {
             <Text style={s.profileBadgeText}>Admin</Text>
           </View>
         </Pressable>
+
+        {/* ── Taal ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.settings.language.toUpperCase()}</Text>
+          <View style={s.card}>
+            {(["nl", "de", "en"] as Language[]).map((lang, i) => (
+              <Pressable
+                key={lang}
+                style={({ pressed }) => [s.row, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
+                onPress={() => { haptic(Haptics.ImpactFeedbackStyle.Medium); setLanguage(lang); }}
+              >
+                <View style={s.rowLeft}>
+                  <Text style={{ fontSize: 22 }}>{LANGUAGE_FLAGS[lang]}</Text>
+                  <Text style={[s.rowLabel, language === lang && { color: C.cyan }]}>{LANGUAGE_NAMES[lang]}</Text>
+                </View>
+                {language === lang && (
+                  <View style={[s.connectedBadge, { backgroundColor: C.cyanDim }]}>
+                    <View style={[s.statusDot, { backgroundColor: C.cyan }]} />
+                    <Text style={[s.statusText, { color: C.cyan }]}>✓</Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
         {/* ── Verbinding ── */}
         <View style={s.section}>
@@ -99,7 +127,7 @@ export default function SettingsScreen() {
               </View>
               <View style={s.connectedBadge}>
                 <View style={[s.statusDot, { backgroundColor: C.green }]} />
-                <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
+                <Text style={[s.statusText, { color: C.green }]}>{t.common.online}</Text>
               </View>
             </Pressable>
 
@@ -119,7 +147,7 @@ export default function SettingsScreen() {
               </View>
               <View style={s.connectedBadge}>
                 <View style={[s.statusDot, { backgroundColor: C.green }]} />
-                <Text style={[s.statusText, { color: C.green }]}>Verbonden</Text>
+                <Text style={[s.statusText, { color: C.green }]}>{t.common.online}</Text>
               </View>
             </Pressable>
 
@@ -147,7 +175,7 @@ export default function SettingsScreen() {
 
         {/* ── Voorkeuren ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Voorkeuren</Text>
+          <Text style={s.sectionTitle}>{t.settings.preferences.toUpperCase()}</Text>
           <View style={s.card}>
             {/* Notificaties */}
             <View style={s.row}>
@@ -156,8 +184,8 @@ export default function SettingsScreen() {
                   <Text style={{ fontSize: 14 }}>🔔</Text>
                 </View>
                 <View>
-                  <Text style={s.rowLabel}>Notificaties</Text>
-                  <Text style={s.rowSub}>Push meldingen</Text>
+                  <Text style={s.rowLabel}>{t.settings.notifications}</Text>
+                  <Text style={s.rowSub}>{t.settings.notificationsDesc}</Text>
                 </View>
               </View>
               <Switch
@@ -175,8 +203,8 @@ export default function SettingsScreen() {
                   <Text style={{ fontSize: 14 }}>🌅</Text>
                 </View>
                 <View>
-                  <Text style={s.rowLabel}>Ochtend Briefing</Text>
-                  <Text style={s.rowSub}>Dagelijks 07:00</Text>
+                  <Text style={s.rowLabel}>{t.settings.morningBriefing}</Text>
+                  <Text style={s.rowSub}>{t.settings.morningBriefingDesc}</Text>
                 </View>
               </View>
               <Switch
@@ -194,8 +222,8 @@ export default function SettingsScreen() {
                   <Text style={{ fontSize: 14 }}>📳</Text>
                 </View>
                 <View>
-                  <Text style={s.rowLabel}>Haptische Feedback</Text>
-                  <Text style={s.rowSub}>Trilpatronen bij acties</Text>
+                  <Text style={s.rowLabel}>{t.settings.hapticFeedback}</Text>
+                  <Text style={s.rowSub}>{t.settings.hapticFeedbackDesc}</Text>
                 </View>
               </View>
               <Switch
@@ -210,10 +238,10 @@ export default function SettingsScreen() {
 
         {/* ── Over ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Over</Text>
+          <Text style={s.sectionTitle}>{t.settings.about.toUpperCase()}</Text>
           <View style={s.card}>
             <View style={s.row}>
-              <Text style={s.rowLabel}>Versie</Text>
+              <Text style={s.rowLabel}>{t.settings.appVersion}</Text>
               <Text style={s.rowValue}>1.0.0 (Beta)</Text>
             </View>
             <View style={[s.row, s.rowBorder]}>
@@ -240,7 +268,7 @@ export default function SettingsScreen() {
             style={({ pressed }) => [s.logoutButton, pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] }]}
             onPress={handleLogout}
           >
-            <Text style={s.logoutText}>Uitloggen</Text>
+            <Text style={s.logoutText}>{t.settings.logout}</Text>
           </Pressable>
         </View>
       </ScrollView>

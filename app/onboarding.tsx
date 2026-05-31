@@ -21,6 +21,7 @@ import Animated, {
 import { useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import { useLanguage } from "@/lib/language-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -40,6 +41,7 @@ const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 export const USER_NAME_KEY = "higgins_user_name";
 
 export default function OnboardingScreen() {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"intro" | "name" | "welcome">("intro");
 
@@ -83,10 +85,10 @@ export default function OnboardingScreen() {
           contentFit="cover"
         />
         <Text style={[s.welcomeTitle, { textAlign: "center" }]}>
-          Welkom, {name.trim()}.
+          {t.onboarding.welcome}, {name.trim()}.
         </Text>
         <Text style={[s.welcomeSub, { textAlign: "center", paddingHorizontal: 40 }]}>
-          Higgins staat klaar om u te assisteren.
+          {t.onboarding.subtitle}
         </Text>
         <View style={s.cyanLine} />
         <Text style={[s.welcomeQuote, { textAlign: "center", paddingHorizontal: 48 }]}>
@@ -127,16 +129,14 @@ export default function OnboardingScreen() {
 
         {/* ── Naam invoer kaart ── */}
         <Animated.View style={[s.card, cardStyle]}>
-          <Text style={s.cardTitle}>Welkom bij Higgins MC</Text>
-          <Text style={s.cardSub}>
-            Higgins is uw persoonlijke Chief of Staff. Hoe mag hij u aanspreken?
-          </Text>
+          <Text style={s.cardTitle}>{t.onboarding.welcome} Higgins MC</Text>
+          <Text style={s.cardSub}>{t.onboarding.nameLabel}</Text>
 
           <TextInput
             style={s.input}
             value={name}
             onChangeText={setName}
-            placeholder="Uw naam..."
+            placeholder={t.onboarding.namePlaceholder}
             placeholderTextColor={C.muted}
             autoCapitalize="words"
             autoCorrect={false}
@@ -154,12 +154,12 @@ export default function OnboardingScreen() {
             disabled={!name.trim()}
           >
             <Text style={[s.buttonText, !name.trim() && { color: C.muted }]}>
-              Aan de slag →
+              {t.onboarding.startButton}
             </Text>
           </Pressable>
 
           <Text style={s.disclaimer}>
-            Uw naam wordt lokaal opgeslagen op dit apparaat.
+            {t.onboarding.nameRequired}
           </Text>
         </Animated.View>
       </ScrollView>

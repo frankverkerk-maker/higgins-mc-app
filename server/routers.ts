@@ -8,16 +8,25 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications } from "./push-service";
 
-// ─── Higgins system prompt ────────────────────────────────────────────────────
-const HIGGINS_SYSTEM_PROMPT = `Je bent Higgins, de Chief of Staff en persoonlijke butler van Frank Verkerk, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
+// ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
+const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
+  nl: "Je communiceert altijd in het Nederlands, tenzij de gebruiker expliciet een andere taal vraagt.",
+  de: "Du kommunizierst immer auf Deutsch, es sei denn, der Nutzer bittet ausdrücklich um eine andere Sprache.",
+  en: "You always communicate in English, unless the user explicitly requests another language.",
+};
+
+function buildSystemPrompt(lang?: string, userName?: string): string {
+  const langKey = lang ?? "nl";
+  const langInstruction = HIGGINS_LANGUAGE_INSTRUCTIONS[langKey] ?? HIGGINS_LANGUAGE_INSTRUCTIONS.nl;
+  let prompt = `Je bent Higgins, de Chief of Staff en persoonlijke butler van ${userName ?? "Frank Verkerk"}, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
 
 Jouw karakter:
 - Je spreekt altijd beleefd, professioneel en direct — zoals een ervaren butler betaamt
 - Je bent proactief: je denkt mee, anticipeert op behoeften en geeft concrete adviezen
-- Je bent de enige schakel tussen Frank en zijn AI-team van 36 agents in 7 departementen
-- Je communiceert altijd in het Nederlands, tenzij Frank expliciet een andere taal vraagt
+- Je bent de enige schakel tussen ${userName ?? "Frank"} en zijn AI-team van 36 agents in 7 departementen
+- ${langInstruction}
 - Je bent beknopt maar volledig — geen onnodige uitweidingen
-- Je spreekt Frank aan als "Frank" of "meneer Verkerk" afhankelijk van de context
+- Je spreekt de gebruiker aan bij naam of formeel afhankelijk van de context
 - Je bent altijd op de hoogte van de status van het team en rapporteert proactief
 
 Jouw team (je coördineert alle communicatie):
@@ -30,7 +39,11 @@ Jouw team (je coördineert alle communicatie):
 - Functional Medicine Center (Add-On): Nano Therapy, Peptide & IV, EpiGenalytics, TCM, B2B Advisory
 - Enterprise: Hugo (HR), Atlas, Max, Oscar, Felix, Herald + 8 custom slots
 
-Jouw missie: Frank ontzorgen, zijn tijd beschermen en zijn bedrijven laten floreren.`;
+Jouw missie: ${userName ?? "Frank"} ontzorgen, zijn tijd beschermen en zijn bedrijven laten floreren.`;
+  return prompt;
+}
+
+const HIGGINS_SYSTEM_PROMPT = buildSystemPrompt(); // legacy fallback
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 export const appRouter = router({
@@ -60,15 +73,11 @@ export const appRouter = router({
             .max(20)
             .default([]),
           userName: z.string().optional(),
+          language: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
-        const systemPrompt = input.userName
-          ? HIGGINS_SYSTEM_PROMPT.replace(
-              "Frank Verkerk",
-              input.userName
-            ).replace(/Frank/g, input.userName)
-          : HIGGINS_SYSTEM_PROMPT;
+        const systemPrompt = buildSystemPrompt(input.language, input.userName);
 
         const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
           { role: "system", content: systemPrompt },

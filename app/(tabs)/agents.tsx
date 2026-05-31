@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { TEAM } from "@/constants/team";
+import { useLanguage } from "@/lib/language-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -76,6 +77,7 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 }
 
 export default function TeamPulseScreen() {
+  const { t } = useLanguage();
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   const handleAgentPress = (name: string) => {
@@ -92,14 +94,14 @@ export default function TeamPulseScreen() {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.headerLabel}>LIVE OVERZICHT</Text>
-          <Text style={s.headerTitle}>Team Pulse</Text>
-          <Text style={s.headerSub}>36 Agents · 7 Departementen</Text>
+          <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
+          <Text style={s.headerTitle}>{t.agents.title}</Text>
+          <Text style={s.headerSub}>36 {t.agents.activeAgents} · 7 {t.agents.department}en</Text>
         </View>
 
         {/* ── Live activiteit (kernteam) ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Actief nu</Text>
+          <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
             {["Higgins", "Elena", "Gary", "Warren"].map((name, i) => {
               const act = ACTIVITY[name] ?? { status: "idle", task: "Wacht op opdracht" };
@@ -132,7 +134,7 @@ export default function TeamPulseScreen() {
                   </View>
                   <View style={[s.statusBadge, { backgroundColor: STATUS_COLORS[act.status] + "22" }]}>
                     <Text style={[s.statusBadgeText, { color: STATUS_COLORS[act.status] }]}>
-                      {act.status === "active" ? "Actief" : act.status === "busy" ? "Bezig" : "Inactief"}
+                      {act.status === "active" ? t.agents.statusActive : act.status === "busy" ? t.agents.statusBusy : t.agents.statusStandby}
                     </Text>
                   </View>
                 </Pressable>

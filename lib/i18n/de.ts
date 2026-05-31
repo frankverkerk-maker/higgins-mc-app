@@ -1,0 +1,146 @@
+import type { Translations } from "./nl";
+
+export const de: Translations = {
+  // ─── Algemeen ───────────────────────────────────────────────────────────────
+  common: {
+    loading: "Laden...",
+    error: "Ein Fehler ist aufgetreten",
+    retry: "Erneut versuchen",
+    cancel: "Abbrechen",
+    confirm: "Bestätigen",
+    save: "Speichern",
+    close: "Schließen",
+    back: "Zurück",
+    next: "Weiter",
+    done: "Fertig",
+    yes: "Ja",
+    no: "Nein",
+    online: "Online",
+    offline: "Offline",
+    version: "Version",
+  },
+
+  // ─── Tabs ────────────────────────────────────────────────────────────────────
+  tabs: {
+    command: "Kommando",
+    chat: "Chat",
+    teamPulse: "Team Pulse",
+    settings: "Einstellungen",
+  },
+
+  // ─── Onboarding ──────────────────────────────────────────────────────────────
+  onboarding: {
+    welcome: "Willkommen bei",
+    subtitle: "Ihr persönlicher Chief of Staff",
+    namePlaceholder: "Ihr Name (z.B. Frank)",
+    nameLabel: "Wie soll Higgins Sie ansprechen?",
+    startButton: "Mit Higgins starten",
+    nameRequired: "Bitte geben Sie Ihren Namen ein, um fortzufahren",
+  },
+
+  // ─── Dashboard / Command Center ──────────────────────────────────────────────
+  dashboard: {
+    title: "Command Center",
+    morningBriefing: "MORGENBRIEFING",
+    morningBriefingNew: "NEU",
+    morningBriefLoading: "Higgins bereitet Ihr Briefing vor...",
+    discussWithHiggins: "Mit Higgins besprechen →",
+    awaitingApproval: "Wartet auf Ihre Genehmigung",
+    approve: "Genehmigen",
+    reject: "Ablehnen",
+    prioritiesToday: "Heutige Prioritäten",
+    urgent: "DRINGEND",
+    teamStatus: "Teamstatus",
+    active: "Aktiv",
+    standby: "Bereitschaft",
+    agents: "Agenten",
+    minutesAgo: "Min. zuvor",
+    hourAgo: "Std. zuvor",
+    hoursAgo: "Std. zuvor",
+    justNow: "gerade eben",
+    morning: "GUTEN MORGEN",
+    afternoon: "GUTEN TAG",
+    evening: "GUTEN ABEND",
+  },
+
+  // ─── Chat ────────────────────────────────────────────────────────────────────
+  chat: {
+    title: "Higgins",
+    statusOnline: "Chief of Staff · Online",
+    statusOffline: "Chief of Staff · Offline",
+    placeholder: "Stellen Sie Higgins eine Frage...",
+    meetingButton: "Besprechung",
+    meetingActive: "Aufnahme aktiv",
+    meetingBannerText: "Besprechung wird aufgezeichnet",
+    meetingBannerStop: "Stopp",
+    sendButton: "Senden",
+    typing: "Higgins tippt...",
+    errorSend: "Nachricht konnte nicht gesendet werden. Bitte erneut versuchen.",
+    meetingModalTitle: "Besprechung verarbeitet",
+    meetingModalSubtitle: "Higgins hat Ihre Besprechung analysiert",
+    meetingModalSummaryLabel: "ZUSAMMENFASSUNG VON HIGGINS",
+    meetingModalTranscriptLabel: "VOLLSTÄNDIGES TRANSKRIPT",
+    meetingModalProcessing: "Higgins analysiert die Besprechung...",
+    meetingModalProcessingSubtext: "Dies kann je nach Dauer etwas dauern",
+    meetingModalSendToChat: "Zusammenfassung an Chat senden →",
+    meetingRecordingError: "Aufnahme fehlgeschlagen. Bitte Mikrofonzugriff prüfen.",
+    meetingProcessingError: "Verarbeitung fehlgeschlagen. Bitte erneut versuchen.",
+  },
+
+  // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
+  agents: {
+    title: "Team Pulse",
+    subtitle: "Live-Status Ihres KI-Teams",
+    searchPlaceholder: "Agent oder Abteilung suchen...",
+    allDepartments: "Alle Abteilungen",
+    activeAgents: "aktive Agenten",
+    statusActive: "Aktiv",
+    statusStandby: "Bereitschaft",
+    statusBusy: "Beschäftigt",
+    statusOffline: "Offline",
+    role: "Rolle",
+    department: "Abteilung",
+    lastActivity: "Letzte Aktivität",
+    noResults: "Keine Agenten gefunden",
+    noResultsSubtext: "Bitte andere Suchanfrage versuchen",
+  },
+
+  // ─── Settings / Einstellungen ────────────────────────────────────────────────
+  settings: {
+    title: "Einstellungen",
+    profile: "Profil",
+    name: "Name",
+    language: "Sprache",
+    languageNL: "Niederländisch",
+    languageDE: "Deutsch",
+    languageEN: "Englisch",
+    preferences: "Einstellungen",
+    morningBriefing: "Morgenbriefing",
+    morningBriefingDesc: "Tägliches Briefing von Higgins",
+    hapticFeedback: "Haptisches Feedback",
+    hapticFeedbackDesc: "Vibrationsmuster bei Interaktionen",
+    darkMode: "Dunkles Design",
+    darkModeDesc: "Automatisch basierend auf System",
+    notifications: "Benachrichtigungen",
+    notificationsDesc: "Push-Benachrichtigungen von Higgins",
+    about: "Über",
+    appVersion: "App-Version",
+    higginsVersion: "Higgins-Version",
+    logout: "Abmelden",
+    logoutConfirm: "Möchten Sie sich wirklich abmelden?",
+    logoutConfirmDesc: "Ihr Name wird gelöscht und Sie kehren zum Willkommensbildschirm zurück.",
+    logoutButton: "Abmelden",
+    saveChanges: "Änderungen speichern",
+    changesSaved: "Gespeichert",
+  },
+
+  // ─── Push notificaties ───────────────────────────────────────────────────────
+  push: {
+    approvalTitle: "Genehmigung erforderlich",
+    morningBriefTitle: "Guten Morgen — Higgins Briefing",
+    chatTitle: "Higgins hat geantwortet",
+  },
+
+  // ─── Higgins system prompt taal ──────────────────────────────────────────────
+  higginsLanguage: "Du kommunizierst immer auf Deutsch, es sei denn, Frank bittet ausdrücklich um eine andere Sprache.",
+};

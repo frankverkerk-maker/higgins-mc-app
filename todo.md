@@ -75,3 +75,15 @@
 - [x] Push notificaties — morning brief push om 07:00 (sendMorningBriefNotification)
 - [x] Push notificaties — deep link navigatie (tik → juist scherm, use-push-notifications.ts)
 - [x] Push notificaties — Android notification channel instellen (higgins-default + higgins-approvals)
+
+## Fase 8: Meertaligheid (NL / DE / EN)
+- [ ] i18n vertaalbestanden aanmaken (NL, DE, EN) — alle UI strings
+- [ ] useTranslation hook + LanguageContext implementeren
+- [ ] Taalinstelling opslaan in AsyncStorage
+- [ ] Dashboard vertalen (NL/DE/EN)
+- [ ] Chat scherm vertalen (NL/DE/EN)
+- [ ] Agents scherm vertalen (NL/DE/EN)
+- [ ] Settings scherm vertalen + taalwisselaar UI
+- [ ] Onboarding scherm vertalen (NL/DE/EN)
+- [ ] Higgins system prompt aanpassen op basis van gekozen taal
+- [ ] Push notificatie teksten vertalen

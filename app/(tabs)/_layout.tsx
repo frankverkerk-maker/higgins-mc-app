@@ -6,6 +6,7 @@ import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { SidebarNav, SIDEBAR_WIDTH } from "@/components/sidebar-nav";
 import { useColors } from "@/hooks/use-colors";
+import { useLanguage } from "@/lib/language-provider";
 
 /** True when the device is wide enough for a sidebar (iPad ≥ 768pt) */
 function useIsPad(): boolean {
@@ -17,6 +18,7 @@ export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isPad = useIsPad();
+  const { t } = useLanguage();
 
   // Ensure enough room: icon (26) + label (10) + padding top (10) + safe area bottom
   const bottomPadding = Platform.OS === "web" ? 14 : Math.max(insets.bottom, 16);
@@ -62,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Command",
+          title: t.tabs.command,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="house.fill" color={color} />
           ),
@@ -71,7 +73,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: "Chat",
+          title: t.tabs.chat,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="bubble.left.fill" color={color} />
           ),
@@ -80,7 +82,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="agents"
         options={{
-          title: "Team Pulse",
+          title: t.tabs.teamPulse,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="person.2.fill" color={color} />
           ),
@@ -89,7 +91,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Instellingen",
+          title: t.tabs.settings,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="gearshape.fill" color={color} />
           ),

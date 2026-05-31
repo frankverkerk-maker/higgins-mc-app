@@ -26,6 +26,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { trpc } from "@/lib/trpc";
+import { useLanguage } from "@/lib/language-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -55,16 +56,23 @@ type Message = {
   timestamp: Date;
 };
 
-const getInitialMessage = (name: string | null): Message => ({
-  id: "0",
-  role: "assistant",
-  content: name
-    ? `Goedemiddag, ${name}. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?`
-    : "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
-  timestamp: new Date(),
-});
+// Initieel bericht wordt dynamisch gegenereerd op basis van taal in de component
+const getInitialMessage = (name: string | null, lang: string): Message => {
+  const greetings: Record<string, string> = {
+    nl: name ? `Goedemiddag, ${name}. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?` : "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
+    de: name ? `Guten Tag, ${name}. Ich bin Higgins, Ihr Chief of Staff & Butler. Wie kann ich Ihnen heute behilflich sein?` : "Guten Tag. Ich bin Higgins, Ihr Chief of Staff & Butler. Wie kann ich Ihnen heute behilflich sein?",
+    en: name ? `Good afternoon, ${name}. I am Higgins, your Chief of Staff & Butler. How may I assist you today?` : "Good afternoon. I am Higgins, your Chief of Staff & Butler. How may I assist you today?",
+  };
+  return {
+    id: "0",
+    role: "assistant",
+    content: greetings[lang] ?? greetings.nl,
+    timestamp: new Date(),
+  };
+};
 
 export default function ChatScreen() {
+  const { t, language } = useLanguage();
   const [userName, setUserName] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -150,7 +158,7 @@ export default function ChatScreen() {
     (async () => {
       const storedName = await AsyncStorage.getItem("higgins_user_name");
       if (storedName) setUserName(storedName);
-      setMessages([getInitialMessage(storedName)]);
+      setMessages([getInitialMessage(storedName, language)]);
 
       if (Platform.OS !== "web") {
         await requestRecordingPermissionsAsync();
@@ -184,6 +192,7 @@ export default function ChatScreen() {
         message: text,
         history: history.map(h => ({ role: h.role, content: String(h.content) })),
         userName: userName ?? undefined,
+        language,
       });
 
       historyRef.current = [
@@ -339,10 +348,10 @@ export default function ChatScreen() {
         <View style={styles.header}>
           <HigginsAvatar size={42} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerName}>Higgins</Text>
+            <Text style={styles.headerName}>{t.chat.title}</Text>
             <View style={styles.headerStatus}>
               <View style={[styles.headerStatusDot, { backgroundColor: "#34D399" }]} />
-              <Text style={styles.headerStatusText}>Chief of Staff & Butler · Live</Text>
+              <Text style={styles.headerStatusText}>{t.chat.statusOnline}</Text>
             </View>
           </View>
           {/* Vergadering opname knop in header */}
@@ -354,7 +363,7 @@ export default function ChatScreen() {
               >
                 <Text style={styles.meetingButtonIcon}>{isMeetingRecording ? "⏹" : "🎤"}</Text>
                 <Text style={[styles.meetingButtonLabel, isMeetingRecording && { color: C.red }]}>
-                  {isMeetingRecording ? formatDuration(meetingDuration) : "Vergadering"}
+                  {isMeetingRecording ? formatDuration(meetingDuration) : t.chat.meetingButton}
                 </Text>
               </Pressable>
             </Animated.View>
@@ -390,10 +399,10 @@ export default function ChatScreen() {
           <View style={styles.meetingBanner}>
             <View style={styles.meetingBannerDot} />
             <Text style={styles.meetingBannerText}>
-              Vergadering wordt opgenomen · {formatDuration(meetingDuration)}
+              {t.chat.meetingBannerText} · {formatDuration(meetingDuration)}
             </Text>
             <Pressable onPress={handleMeetingPress} style={styles.meetingBannerStop}>
-              <Text style={styles.meetingBannerStopText}>Stop</Text>
+              <Text style={styles.meetingBannerStopText}>{t.chat.meetingBannerStop}</Text>
             </Pressable>
           </View>
         )}
@@ -415,7 +424,7 @@ export default function ChatScreen() {
             style={styles.input}
             value={input}
             onChangeText={setInput}
-            placeholder="Stel een vraag aan Higgins..."
+            placeholder={t.chat.placeholder}
             placeholderTextColor={C.muted}
             multiline
             returnKeyType="send"
@@ -447,8 +456,8 @@ export default function ChatScreen() {
           <View style={styles.modalHeader}>
             <HigginsAvatar size={36} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.modalTitle}>Vergadering Verwerkt</Text>
-              <Text style={styles.modalSubtitle}>Higgins heeft uw vergadering geanalyseerd</Text>
+              <Text style={styles.modalTitle}>{t.chat.meetingModalTitle}</Text>
+              <Text style={styles.modalSubtitle}>{t.chat.meetingModalSubtitle}</Text>
             </View>
             <Pressable onPress={() => setShowMeetingModal(false)} style={styles.modalClose}>
               <Text style={styles.modalCloseText}>✕</Text>
@@ -458,20 +467,20 @@ export default function ChatScreen() {
           {isProcessingMeeting ? (
             <View style={styles.modalLoading}>
               <ActivityIndicator size="large" color={C.cyan} />
-              <Text style={styles.modalLoadingText}>Higgins analyseert de vergadering...</Text>
-              <Text style={styles.modalLoadingSubtext}>Dit kan even duren afhankelijk van de duur</Text>
+              <Text style={styles.modalLoadingText}>{t.chat.meetingModalProcessing}</Text>
+              <Text style={styles.modalLoadingSubtext}>{t.chat.meetingModalProcessingSubtext}</Text>
             </View>
           ) : meetingResult ? (
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               {/* Samenvatting */}
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionLabel}>📋 SAMENVATTING VAN HIGGINS</Text>
+                <Text style={styles.modalSectionLabel}>📋 {t.chat.meetingModalSummaryLabel}</Text>
                 <Text style={styles.modalSectionText}>{meetingResult.summary}</Text>
               </View>
 
               {/* Transcriptie */}
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionLabel}>📝 VOLLEDIGE TRANSCRIPTIE</Text>
+                <Text style={styles.modalSectionLabel}>📝 {t.chat.meetingModalTranscriptLabel}</Text>
                 <Text style={[styles.modalSectionText, { color: C.muted, fontSize: 13 }]}>
                   {meetingResult.transcript}
                 </Text>
@@ -487,7 +496,7 @@ export default function ChatScreen() {
                 style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.8 }]}
                 onPress={sendSummaryToChat}
               >
-                <Text style={styles.modalBtnText}>Stuur samenvatting naar chat →</Text>
+                <Text style={styles.modalBtnText}>{t.chat.meetingModalSendToChat}</Text>
               </Pressable>
             </View>
           )}
