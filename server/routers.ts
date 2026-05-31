@@ -6,6 +6,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut } from "./storage";
+import { pushTokenStore, sendExpoPushNotifications } from "./push-service";
 
 // ─── Higgins system prompt ────────────────────────────────────────────────────
 const HIGGINS_SYSTEM_PROMPT = `Je bent Higgins, de Chief of Staff en persoonlijke butler van Frank Verkerk, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
@@ -107,7 +108,8 @@ export const appRouter = router({
         const result = await transcribeAudio({
           audioUrl,
           language: "nl",
-          prompt: "Opdracht of vraag voor Higgins Mission Control",
+          // Vocabulary hints: Whisper gebruikt de prompt als context om eigennamen correct te herkennen
+          prompt: "Higgins, Mission Control, Carpe Diem, Frank, Elena, Warren, Gary, Elon, Justitia, Swiss Vitality, goedkeuren, afwijzen, briefing, vergadering",
         });
 
         // Check for transcription errors
@@ -185,7 +187,8 @@ export const appRouter = router({
         const result = await transcribeAudio({
           audioUrl,
           language: "nl",
-          prompt: "Zakelijke vergadering, besluiten, actiepunten",
+          // Vocabulary hints voor vergadering transcriptie
+          prompt: "Higgins, Mission Control, Carpe Diem, Frank Verkerk, Elena, Warren, Gary, Elon, Justitia, Swiss Vitality Clinics, zakelijke vergadering, besluiten, actiepunten, follow-up",
         });
 
         if ("error" in result) {
@@ -219,6 +222,49 @@ export const appRouter = router({
           language: result.language ?? "nl",
           timestamp: new Date().toISOString(),
         };
+      }),
+
+    // ── Push Token: registreer een Expo push token voor notificaties ──────────────
+    registerPushToken: publicProcedure
+      .input(
+        z.object({
+          token: z.string().min(1),
+          platform: z.string().default("ios"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Sla token op in geheugen (in productie: database)
+        pushTokenStore.set(input.token, {
+          token: input.token,
+          platform: input.platform,
+          registeredAt: new Date().toISOString(),
+        });
+        console.log(`[push] Token geregistreerd voor ${input.platform}: ${input.token.substring(0, 30)}...`);
+        return { success: true };
+      }),
+
+    // ── Push Send: stuur een notificatie naar alle geregistreerde apparaten ─────────
+    sendPushNotification: publicProcedure
+      .input(
+        z.object({
+          title: z.string(),
+          body: z.string(),
+          data: z.record(z.string(), z.any()).optional(),
+          badge: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const tokens = Array.from(pushTokenStore.values()).map(t => t.token);
+        if (tokens.length === 0) {
+          return { sent: 0, tokens: [] };
+        }
+        const results = await sendExpoPushNotifications(tokens, {
+          title: input.title,
+          body: input.body,
+          data: input.data,
+          badge: input.badge,
+        });
+        return { sent: results.length, tokens };
       }),
 
     // ── Morning Brief: genereer een dagelijkse briefing ──────────────────────

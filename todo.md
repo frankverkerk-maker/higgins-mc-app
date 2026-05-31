@@ -65,3 +65,13 @@
 - [x] Adviesrapport PDF bijwerken met iPad architectuur en MDM notitie
 - [x] Teamnamen verwerkt via aangeleverd team overzicht (36 agents, 7 departementen)
 - [ ] Apple Developer Account aanmaken voor App Store publicatie (€99/jaar)
+
+## Fase 7: Push Notificaties & Spraakherkenning Fix
+- [x] Whisper vocabulary fix — 'Higgins' correct herkennen in spraak (vocabulary prompt uitgebreid)
+- [x] Push notificaties — token registratie (iOS + Android)
+- [x] Push notificaties — server-side Expo Push Service delivery (push-service.ts)
+- [x] Push notificaties — notificatie bij nieuwe goedkeuring (sendApprovalNotification)
+- [x] Push notificaties — notificatie bij Higgins chat bericht (sendChatNotification)
+- [x] Push notificaties — morning brief push om 07:00 (sendMorningBriefNotification)
+- [x] Push notificaties — deep link navigatie (tik → juist scherm, use-push-notifications.ts)
+- [x] Push notificaties — Android notification channel instellen (higgins-default + higgins-approvals)
