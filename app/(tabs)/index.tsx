@@ -1,11 +1,12 @@
 import { ScrollView, Text, View, Pressable, StyleSheet, Platform } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
+import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -66,12 +67,53 @@ const AGENT_PULSE = [
 export default function DashboardScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState<string | null>(null);
+  const [approvals, setApprovals] = useState(APPROVALS);
+  const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
+
+  // Live Morning Briefing via server
+  const briefQuery = trpc.higgins.morningBrief.useQuery(
+    { userName: userName ?? undefined },
+    { enabled: true, staleTime: 5 * 60 * 1000 }
+  );
+
+  // Approval mutation
+  const approvalMutation = trpc.higgins.processApproval.useMutation();
 
   useEffect(() => {
     AsyncStorage.getItem(USER_NAME_KEY).then((name) => {
       if (name) setUserName(name);
     });
   }, []);
+
+  const handleApproval = useCallback(async (item: typeof APPROVALS[0], action: "approve" | "reject") => {
+    if (Platform.OS !== "web") {
+      action === "approve"
+        ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+    try {
+      const result = await approvalMutation.mutateAsync({
+        approvalId: item.id,
+        action,
+        agentName: item.agent,
+        actionDescription: item.action,
+        userName: userName ?? undefined,
+      });
+      const higginsReply = typeof result.higginsResponse === "string"
+        ? result.higginsResponse
+        : "Begrepen.";
+      setApprovalFeedback((prev) => ({ ...prev, [item.id]: higginsReply }));
+      // Verwijder na 3 seconden
+      setTimeout(() => {
+        setApprovals((prev) => prev.filter((a) => a.id !== item.id));
+      }, 3000);
+    } catch (_) {
+      setApprovalFeedback((prev) => ({ ...prev, [item.id]: "Actie verwerkt." }));
+      setTimeout(() => {
+        setApprovals((prev) => prev.filter((a) => a.id !== item.id));
+      }, 2000);
+    }
+  }, [userName, approvalMutation]);
 
   const now = new Date();
   const hour = now.getHours();
@@ -103,16 +145,20 @@ export default function DashboardScreen() {
             <HigginsAvatar size={38} />
             <View style={{ flex: 1 }}>
               <Text style={s.briefLabel}>OCHTEND BRIEFING</Text>
-              <Text style={s.briefDate}>{MORNING_BRIEF.date}</Text>
+              <Text style={s.briefDate}>{briefQuery.data?.date ?? MORNING_BRIEF.date}</Text>
             </View>
             <View style={s.newBadge}>
               <Text style={s.newBadgeText}>NIEUW</Text>
             </View>
           </View>
-          <Text style={s.briefSummary}>{MORNING_BRIEF.summary}</Text>
-          <View style={s.briefHighlight}>
-            <Text style={s.briefHighlightText}>⚡ {MORNING_BRIEF.highlight}</Text>
-          </View>
+          <Text style={s.briefSummary}>
+            {briefQuery.isLoading ? "Higgins bereidt uw briefing voor..." : briefQuery.data?.brief ?? MORNING_BRIEF.summary}
+          </Text>
+          {!briefQuery.isLoading && (
+            <View style={s.briefHighlight}>
+              <Text style={s.briefHighlightText}>⚡ {MORNING_BRIEF.highlight}</Text>
+            </View>
+          )}
           <Pressable
             style={({ pressed }) => [s.briefCta, pressed && { opacity: 0.75 }]}
             onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
@@ -122,29 +168,43 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Goedkeuringen ── */}
-        {APPROVALS.length > 0 && (
+        {approvals.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeaderRow}>
               <Text style={s.sectionTitle}>Wacht op uw goedkeuring</Text>
               <View style={s.countBadge}>
-                <Text style={s.countBadgeText}>{APPROVALS.length}</Text>
+                <Text style={s.countBadgeText}>{approvals.length}</Text>
               </View>
             </View>
-            {APPROVALS.map((item) => (
+            {approvals.map((item) => (
               <View key={item.id} style={s.approvalCard}>
                 <View style={s.approvalTop}>
                   <Text style={s.approvalAgent}>{item.agent}</Text>
                   <Text style={s.approvalTime}>{item.time}</Text>
                 </View>
                 <Text style={s.approvalAction}>{item.action}</Text>
-                <View style={s.approvalButtons}>
-                  <Pressable style={({ pressed }) => [s.btnApprove, pressed && { opacity: 0.75 }]} onPress={() => { try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (_) {} }}>
-                    <Text style={s.btnApproveText}>✓  Goedkeuren</Text>
-                  </Pressable>
-                  <Pressable style={({ pressed }) => [s.btnReject, pressed && { opacity: 0.75 }]} onPress={() => { try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch (_) {} }}>
-                    <Text style={s.btnRejectText}>✕  Afwijzen</Text>
-                  </Pressable>
-                </View>
+                {approvalFeedback[item.id] ? (
+                  <View style={[s.briefHighlight, { marginTop: 8 }]}>
+                    <Text style={[s.briefHighlightText, { fontSize: 13 }]}>💬 {approvalFeedback[item.id]}</Text>
+                  </View>
+                ) : (
+                  <View style={s.approvalButtons}>
+                    <Pressable
+                      style={({ pressed }) => [s.btnApprove, pressed && { opacity: 0.75 }, approvalMutation.isPending && { opacity: 0.5 }]}
+                      onPress={() => handleApproval(item, "approve")}
+                      disabled={approvalMutation.isPending}
+                    >
+                      <Text style={s.btnApproveText}>✓  Goedkeuren</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [s.btnReject, pressed && { opacity: 0.75 }, approvalMutation.isPending && { opacity: 0.5 }]}
+                      onPress={() => handleApproval(item, "reject")}
+                      disabled={approvalMutation.isPending}
+                    >
+                      <Text style={s.btnRejectText}>✕  Afwijzen</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             ))}
           </View>

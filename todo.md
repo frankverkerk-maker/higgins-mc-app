@@ -40,7 +40,19 @@
 - [x] Naam integratie in Dashboard en Chat (Higgins spreekt gebruiker persoonlijk aan)
 - [x] Volledig team overzicht verwerkt (36 agents, 7 departementen, officiële namen en rollen)
 - [ ] Push notificaties (agent heeft bericht)
-- [ ] Haptic feedback op acties
+- [x] Haptic feedback op acties (goedkeuringen, navigatie, berichten)
+- [x] Voice-to-Higgins microfoon knop in chat
+
+## Fase 6: Live Backend Integratie
+- [x] Server-side Higgins chat endpoint (ingebouwde LLM, geen externe API key nodig)
+- [x] Whisper spraak transcriptie endpoint op server
+- [x] Goedkeuringen verwerken via server (approve/reject met Higgins bevestiging)
+- [x] Morning Briefing genereren via server LLM
+- [ ] Chat scherm koppelen aan live server backend
+- [ ] Goedkeuringen koppelen aan live server backend
+- [ ] Morning Briefing koppelen aan live server backend
+- [ ] Vergadering opname knop (Whisper transcriptie + Higgins samenvatting)
+- [ ] Adviesrapport PDF bijwerken met kostenstructuur en architectuur
 
 ## Openstaande actiepunten (buiten app)
 - [ ] Apple MDM installeren (Mosyle Business of Jamf Now aanbevolen)
