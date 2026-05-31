@@ -1,5 +1,6 @@
 import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
 
 const AGENTS = [
@@ -85,11 +86,15 @@ export default function AgentsScreen() {
             style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
           >
             <View style={styles.cardTop}>
-              <View style={[styles.avatar, { backgroundColor: item.color + "22", borderColor: item.color + "55" }]}>
-                <Text style={[styles.avatarText, { color: item.color }]}>
-                  {item.name[0]}
-                </Text>
-              </View>
+              {item.id === "higgins" ? (
+                <HigginsAvatar size={48} />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: item.color + "22", borderColor: item.color + "55" }]}>
+                  <Text style={[styles.avatarText, { color: item.color }]}>
+                    {item.name[0]}
+                  </Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <View style={styles.nameRow}>
                   <Text style={styles.agentName}>{item.name}</Text>

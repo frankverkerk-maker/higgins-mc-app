@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,16 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
+  Modal,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { useColors } from "@/hooks/use-colors";
+import { sendMessageToHiggins } from "@/lib/manus-api";
+
+const API_KEY_STORAGE = "higgins_manus_api_key";
+const TASK_ID_STORAGE = "higgins_task_id";
 
 type Message = {
   id: string;
@@ -36,7 +42,44 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [isLive, setIsLive] = useState(false);
   const listRef = useRef<FlatList>(null);
+
+  // Laad opgeslagen API key en task ID bij opstarten
+  useEffect(() => {
+    (async () => {
+      const storedKey = await AsyncStorage.getItem(API_KEY_STORAGE);
+      const storedTaskId = await AsyncStorage.getItem(TASK_ID_STORAGE);
+      if (storedKey) {
+        setApiKey(storedKey);
+        setIsLive(true);
+      }
+      if (storedTaskId) setTaskId(storedTaskId);
+    })();
+  }, []);
+
+  const saveApiKey = useCallback(async () => {
+    const key = apiKeyInput.trim();
+    if (!key) return;
+    await AsyncStorage.setItem(API_KEY_STORAGE, key);
+    setApiKey(key);
+    setIsLive(true);
+    setShowApiKeyModal(false);
+    setApiKeyInput("");
+  }, [apiKeyInput]);
+
+  const disconnectApi = useCallback(async () => {
+    await AsyncStorage.removeItem(API_KEY_STORAGE);
+    await AsyncStorage.removeItem(TASK_ID_STORAGE);
+    setApiKey(null);
+    setTaskId(null);
+    setIsLive(false);
+    setMessages(INITIAL_MESSAGES);
+  }, []);
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -53,27 +96,45 @@ export default function ChatScreen() {
     setInput("");
     setIsLoading(true);
 
-    setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
 
-    // Simuleer Higgins antwoord (wordt later vervangen door Manus API)
-    await new Promise((r) => setTimeout(r, 1200));
+    if (apiKey) {
+      // Live modus: stuur naar Manus API
+      const result = await sendMessageToHiggins({
+        content: text,
+        apiKey,
+        taskId: taskId ?? undefined,
+      });
 
-    const assistantMsg: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `Ik heb uw verzoek ontvangen: "${text}". De Manus API integratie wordt binnenkort geactiveerd voor live antwoorden van Higgins.`,
-      timestamp: new Date(),
-    };
+      if (result.taskId && result.taskId !== taskId) {
+        setTaskId(result.taskId);
+        await AsyncStorage.setItem(TASK_ID_STORAGE, result.taskId);
+      }
 
-    setMessages((prev) => [...prev, assistantMsg]);
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: result.ok
+          ? result.response
+          : `Er is een fout opgetreden: ${result.error ?? "Onbekende fout"}. Controleer uw API verbinding in de Instellingen.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } else {
+      // Demo modus: gesimuleerd antwoord
+      await new Promise((r) => setTimeout(r, 1200));
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `U bent in demo modus. Verbind de Manus API via de sleutel-knop rechtsboven om live antwoorden van Higgins te ontvangen.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    }
+
     setIsLoading(false);
-
-    setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [input, isLoading]);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [input, isLoading, apiKey, taskId]);
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
@@ -82,9 +143,7 @@ export default function ChatScreen() {
     const isUser = item.role === "user";
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
-        {!isUser && (
-          <HigginsAvatar size={32} />
-        )}
+        {!isUser && <HigginsAvatar size={32} />}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
           <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>
             {item.content}
@@ -107,13 +166,24 @@ export default function ChatScreen() {
         {/* Header */}
         <View style={styles.header}>
           <HigginsAvatar size={42} />
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.headerName}>Higgins</Text>
             <View style={styles.headerStatus}>
-              <View style={styles.headerStatusDot} />
-              <Text style={styles.headerStatusText}>Chief AI Officer · Online</Text>
+              <View style={[styles.headerStatusDot, { backgroundColor: isLive ? "#34D399" : "#F59E0B" }]} />
+              <Text style={styles.headerStatusText}>
+                {isLive ? "Chief AI Officer · Live" : "Chief AI Officer · Demo modus"}
+              </Text>
             </View>
           </View>
+          {/* API verbinding knop */}
+          <Pressable
+            style={({ pressed }) => [styles.apiButton, pressed && { opacity: 0.7 }]}
+            onPress={() => isLive ? disconnectApi() : setShowApiKeyModal(true)}
+          >
+            <Text style={[styles.apiButtonText, { color: isLive ? "#34D399" : colors.muted }]}>
+              {isLive ? "⚡ Live" : "🔑 Verbind"}
+            </Text>
+          </Pressable>
         </View>
 
         {/* Messages */}
@@ -163,6 +233,48 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* API Key Modal */}
+      <Modal
+        visible={showApiKeyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowApiKeyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Verbind Manus API</Text>
+            <Text style={styles.modalSubtitle}>
+              Voer uw Manus API sleutel in om live gesprekken met Higgins te voeren.
+              U vindt uw API sleutel in de Manus instellingen.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={apiKeyInput}
+              onChangeText={setApiKeyInput}
+              placeholder="manus-api-key-..."
+              placeholderTextColor={colors.muted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={({ pressed }) => [styles.modalButtonCancel, pressed && { opacity: 0.7 }]}
+                onPress={() => setShowApiKeyModal(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Annuleren</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.modalButtonSave, pressed && { opacity: 0.7 }]}
+                onPress={saveApiKey}
+              >
+                <Text style={styles.modalButtonSaveText}>Verbinden</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -177,21 +289,6 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       paddingVertical: 14,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-    },
-    headerAvatar: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      backgroundColor: colors.primary + "22",
-      borderWidth: 1.5,
-      borderColor: colors.primary + "66",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerAvatarText: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: colors.primary,
     },
     headerName: {
       fontSize: 16,
@@ -208,11 +305,22 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: "#34D399",
     },
     headerStatusText: {
       fontSize: 11,
       color: colors.muted,
+    },
+    apiButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    apiButtonText: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     messageList: {
       padding: 16,
@@ -226,21 +334,6 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     },
     messageRowUser: {
       flexDirection: "row-reverse",
-    },
-    avatar: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: colors.primary + "22",
-      borderWidth: 1,
-      borderColor: colors.primary + "44",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    avatarText: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: colors.primary,
     },
     bubble: {
       maxWidth: "78%",
@@ -324,6 +417,72 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       color: "#fff",
       fontWeight: "300",
       marginLeft: 2,
+    },
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 28,
+      gap: 16,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.foreground,
+    },
+    modalSubtitle: {
+      fontSize: 13,
+      color: colors.muted,
+      lineHeight: 19,
+    },
+    modalInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: colors.foreground,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: 12,
+      marginTop: 4,
+    },
+    modalButtonCancel: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalButtonCancelText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.muted,
+    },
+    modalButtonSave: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+    },
+    modalButtonSaveText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: "#fff",
     },
   });
 }
