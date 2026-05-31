@@ -167,6 +167,60 @@ export const appRouter = router({
         };
       }),
 
+    // ── Vergadering Transcriptie: transcribeer een volledige vergadering en geef samenvatting ──
+    transcribeMeeting: publicProcedure
+      .input(
+        z.object({
+          audioBase64: z.string(),
+          mimeType: z.string().default("audio/m4a"),
+          userName: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const buffer = Buffer.from(input.audioBase64, "base64");
+        const fileName = `meeting-${Date.now()}.m4a`;
+
+        const { url: audioUrl } = await storagePut(fileName, buffer, input.mimeType);
+
+        const result = await transcribeAudio({
+          audioUrl,
+          language: "nl",
+          prompt: "Zakelijke vergadering, besluiten, actiepunten",
+        });
+
+        if ("error" in result) {
+          throw new Error(result.error);
+        }
+
+        const transcriptText = result.text;
+        const userName = input.userName ?? "Frank";
+
+        // Laat Higgins een samenvatting maken van de vergadering
+        const summaryResponse = await invokeLLM({
+          messages: [
+            { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `${userName} heeft zojuist een vergadering gehad. Hier is de transcriptie:\n\n${transcriptText}\n\nMaak een beknopte samenvatting met: (1) de belangrijkste besluiten, (2) actiepunten met verantwoordelijke personen, en (3) eventuele follow-up die ik voor ${userName} moet inplannen. Gebruik een professionele, gestructureerde opmaak.`,
+            },
+          ],
+        });
+
+        const rawSummary = summaryResponse.choices?.[0]?.message?.content;
+        const summary = typeof rawSummary === "string"
+          ? rawSummary
+          : Array.isArray(rawSummary)
+            ? rawSummary.map((c) => (typeof c === "string" ? c : (c as any).text ?? "")).join("")
+            : "Vergadering verwerkt. Ik heb de transcriptie ontvangen.";
+
+        return {
+          transcript: transcriptText,
+          summary,
+          language: result.language ?? "nl",
+          timestamp: new Date().toISOString(),
+        };
+      }),
+
     // ── Morning Brief: genereer een dagelijkse briefing ──────────────────────
     morningBrief: publicProcedure
       .input(

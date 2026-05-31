@@ -48,16 +48,16 @@
 - [x] Whisper spraak transcriptie endpoint op server
 - [x] Goedkeuringen verwerken via server (approve/reject met Higgins bevestiging)
 - [x] Morning Briefing genereren via server LLM
-- [ ] Chat scherm koppelen aan live server backend
-- [ ] Goedkeuringen koppelen aan live server backend
-- [ ] Morning Briefing koppelen aan live server backend
-- [ ] Vergadering opname knop (Whisper transcriptie + Higgins samenvatting)
-- [ ] Adviesrapport PDF bijwerken met kostenstructuur en architectuur
+- [x] Chat scherm koppelen aan live server backend
+- [x] Goedkeuringen koppelen aan live server backend (live Higgins reactie + verdwijnt na 3s)
+- [x] Morning Briefing koppelen aan live server backend
+- [x] Vergadering opname knop (Whisper transcriptie + Higgins samenvatting) — in Chat header
+- [x] Adviesrapport PDF bijwerken met kostenstructuur, iPad architectuur en MDM
 
 ## Openstaande actiepunten (buiten app)
 - [ ] Apple MDM installeren (Mosyle Business of Jamf Now aanbevolen)
 - [ ] Apple Business Manager account aanmaken voor Carpe Diem
 - [ ] iPad Command Bundle propositie uitwerken (MDM + app + Mission Control web)
-- [ ] Adviesrapport PDF bijwerken met iPad architectuur en MDM notitie
+- [x] Adviesrapport PDF bijwerken met iPad architectuur en MDM notitie
 - [x] Teamnamen verwerkt via aangeleverd team overzicht (36 agents, 7 departementen)
 - [ ] Apple Developer Account aanmaken voor App Store publicatie (€99/jaar)

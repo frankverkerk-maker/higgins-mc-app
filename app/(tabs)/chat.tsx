@@ -10,6 +10,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  Modal,
+  ScrollView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -40,6 +42,8 @@ const C = {
   userBorder: "rgba(0,212,212,0.3)",
   green:      "#00D4A0",
   red:        "#FF4D6A",
+  redDim:     "rgba(255,77,106,0.15)",
+  amber:      "#F5A623",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
@@ -68,18 +72,32 @@ export default function ChatScreen() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const listRef = useRef<FlatList>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const meetingPulseAnim = useRef(new Animated.Value(1)).current;
   const historyRef = useRef<Array<{ role: "user" | "assistant"; content: string }>>([]);
+
+  // Vergadering opname state
+  const [isMeetingRecording, setIsMeetingRecording] = useState(false);
+  const [meetingResult, setMeetingResult] = useState<{ transcript: string; summary: string } | null>(null);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [isProcessingMeeting, setIsProcessingMeeting] = useState(false);
+  const [meetingDuration, setMeetingDuration] = useState(0);
+  const meetingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // tRPC mutations
   const chatMutation = trpc.higgins.chat.useMutation();
   const transcribeMutation = trpc.higgins.transcribe.useMutation();
+  const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
 
-  // Voice recorder
+  // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const isRecording = recorderState.isRecording;
 
-  // Pulserende animatie voor opname knop
+  // Meeting recorder (apart exemplaar)
+  const meetingRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const meetingRecorderState = useAudioRecorderState(meetingRecorder);
+
+  // Pulserende animatie voor chat mic knop
   useEffect(() => {
     if (isRecording) {
       Animated.loop(
@@ -93,6 +111,39 @@ export default function ChatScreen() {
       pulseAnim.setValue(1);
     }
   }, [isRecording]);
+
+  // Pulserende animatie voor vergadering opname knop
+  useEffect(() => {
+    if (isMeetingRecording) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(meetingPulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
+          Animated.timing(meetingPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      meetingPulseAnim.stopAnimation();
+      meetingPulseAnim.setValue(1);
+    }
+  }, [isMeetingRecording]);
+
+  // Vergadering timer
+  useEffect(() => {
+    if (isMeetingRecording) {
+      setMeetingDuration(0);
+      meetingTimerRef.current = setInterval(() => {
+        setMeetingDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (meetingTimerRef.current) {
+        clearInterval(meetingTimerRef.current);
+        meetingTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (meetingTimerRef.current) clearInterval(meetingTimerRef.current);
+    };
+  }, [isMeetingRecording]);
 
   // Laad gebruikersnaam bij opstarten
   useEffect(() => {
@@ -126,7 +177,6 @@ export default function ChatScreen() {
     setIsLoading(true);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
 
-    // Bouw conversatie geschiedenis op (max 10 berichten)
     const history: Array<{ role: "user" | "assistant"; content: string }> = historyRef.current.slice(-10);
 
     try {
@@ -136,7 +186,6 @@ export default function ChatScreen() {
         userName: userName ?? undefined,
       });
 
-      // Update geschiedenis
       historyRef.current = [
         ...historyRef.current,
         { role: "user" as const, content: text },
@@ -166,7 +215,7 @@ export default function ChatScreen() {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, isLoading, userName, chatMutation]);
 
-  // ─── Voice opname starten / stoppen ───────────────────────────────────────
+  // ─── Chat mic: Voice-to-Higgins ───────────────────────────────────────────
   const handleVoicePress = useCallback(async () => {
     if (Platform.OS === "web") return;
 
@@ -177,16 +226,13 @@ export default function ChatScreen() {
       if (uri) {
         setIsTranscribing(true);
         try {
-          // Lees audio bestand als base64
           const base64 = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
-
           const result = await transcribeMutation.mutateAsync({
             audioBase64: base64,
             mimeType: "audio/m4a",
           });
-
           setInput(result.text);
         } catch (err) {
           setInput("(Transcriptie mislukt — probeer opnieuw)");
@@ -201,8 +247,69 @@ export default function ChatScreen() {
     }
   }, [isRecording, audioRecorder, transcribeMutation]);
 
+  // ─── Vergadering opname starten / stoppen ─────────────────────────────────
+  const handleMeetingPress = useCallback(async () => {
+    if (Platform.OS === "web") return;
+
+    if (isMeetingRecording) {
+      // Stop opname en verwerk
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch (_) {}
+      setIsMeetingRecording(false);
+      await meetingRecorder.stop();
+      const uri = meetingRecorder.uri;
+      if (uri) {
+        setIsProcessingMeeting(true);
+        setShowMeetingModal(true);
+        try {
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const result = await transcribeMeetingMutation.mutateAsync({
+            audioBase64: base64,
+            mimeType: "audio/m4a",
+            userName: userName ?? undefined,
+          });
+          setMeetingResult({ transcript: result.transcript, summary: result.summary });
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (_) {}
+        } catch (err) {
+          setMeetingResult({ transcript: "(Transcriptie mislukt)", summary: "Er is een fout opgetreden bij het verwerken van de vergadering." });
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch (_) {}
+        } finally {
+          setIsProcessingMeeting(false);
+        }
+      }
+    } else {
+      // Start opname
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+      setMeetingResult(null);
+      await meetingRecorder.prepareToRecordAsync();
+      meetingRecorder.record();
+      setIsMeetingRecording(true);
+    }
+  }, [isMeetingRecording, meetingRecorder, transcribeMeetingMutation, userName]);
+
+  const sendSummaryToChat = useCallback(() => {
+    if (!meetingResult) return;
+    setShowMeetingModal(false);
+    const summaryMessage = `📋 **Vergadering samenvatting door Higgins:**\n\n${meetingResult.summary}`;
+    const assistantMsg: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: summaryMessage,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, assistantMsg]);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [meetingResult]);
+
   const formatTime = (date: Date) =>
     date.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === "user";
@@ -238,9 +345,20 @@ export default function ChatScreen() {
               <Text style={styles.headerStatusText}>Chief of Staff & Butler · Live</Text>
             </View>
           </View>
-          <View style={styles.liveBadge}>
-            <Text style={styles.liveBadgeText}>⚡ Live</Text>
-          </View>
+          {/* Vergadering opname knop in header */}
+          {Platform.OS !== "web" && (
+            <Animated.View style={{ transform: [{ scale: meetingPulseAnim }] }}>
+              <Pressable
+                style={[styles.meetingButton, isMeetingRecording && styles.meetingButtonActive]}
+                onPress={handleMeetingPress}
+              >
+                <Text style={styles.meetingButtonIcon}>{isMeetingRecording ? "⏹" : "🎤"}</Text>
+                <Text style={[styles.meetingButtonLabel, isMeetingRecording && { color: C.red }]}>
+                  {isMeetingRecording ? formatDuration(meetingDuration) : "Vergadering"}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </View>
 
         {/* Messages */}
@@ -264,6 +382,19 @@ export default function ChatScreen() {
                 : <ActivityIndicator size="small" color={C.cyan} />
               }
             </View>
+          </View>
+        )}
+
+        {/* Vergadering opname banner */}
+        {isMeetingRecording && (
+          <View style={styles.meetingBanner}>
+            <View style={styles.meetingBannerDot} />
+            <Text style={styles.meetingBannerText}>
+              Vergadering wordt opgenomen · {formatDuration(meetingDuration)}
+            </Text>
+            <Pressable onPress={handleMeetingPress} style={styles.meetingBannerStop}>
+              <Text style={styles.meetingBannerStopText}>Stop</Text>
+            </Pressable>
           </View>
         )}
 
@@ -304,18 +435,83 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Vergadering resultaat modal */}
+      <Modal
+        visible={showMeetingModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMeetingModal(false)}
+      >
+        <View style={styles.modal}>
+          <View style={styles.modalHeader}>
+            <HigginsAvatar size={36} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTitle}>Vergadering Verwerkt</Text>
+              <Text style={styles.modalSubtitle}>Higgins heeft uw vergadering geanalyseerd</Text>
+            </View>
+            <Pressable onPress={() => setShowMeetingModal(false)} style={styles.modalClose}>
+              <Text style={styles.modalCloseText}>✕</Text>
+            </Pressable>
+          </View>
+
+          {isProcessingMeeting ? (
+            <View style={styles.modalLoading}>
+              <ActivityIndicator size="large" color={C.cyan} />
+              <Text style={styles.modalLoadingText}>Higgins analyseert de vergadering...</Text>
+              <Text style={styles.modalLoadingSubtext}>Dit kan even duren afhankelijk van de duur</Text>
+            </View>
+          ) : meetingResult ? (
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Samenvatting */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionLabel}>📋 SAMENVATTING VAN HIGGINS</Text>
+                <Text style={styles.modalSectionText}>{meetingResult.summary}</Text>
+              </View>
+
+              {/* Transcriptie */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionLabel}>📝 VOLLEDIGE TRANSCRIPTIE</Text>
+                <Text style={[styles.modalSectionText, { color: C.muted, fontSize: 13 }]}>
+                  {meetingResult.transcript}
+                </Text>
+              </View>
+
+              <View style={{ height: 24 }} />
+            </ScrollView>
+          ) : null}
+
+          {!isProcessingMeeting && meetingResult && (
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.8 }]}
+                onPress={sendSummaryToChat}
+              >
+                <Text style={styles.modalBtnText}>Stuur samenvatting naar chat →</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
   headerName: { fontSize: 16, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD },
   headerStatus: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
   headerStatusDot: { width: 6, height: 6, borderRadius: 3 },
   headerStatusText: { fontSize: 11, color: C.cyan, fontFamily: FONT, letterSpacing: 0.3 },
-  liveBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.cyanBorder },
-  liveBadgeText: { fontSize: 12, fontWeight: "700", color: C.green, fontFamily: FONT_BOLD },
+  meetingButton: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.cyanBorder },
+  meetingButtonActive: { backgroundColor: C.redDim, borderColor: C.red },
+  meetingButtonIcon: { fontSize: 16 },
+  meetingButtonLabel: { fontSize: 12, fontWeight: "700", color: C.cyan, fontFamily: FONT_BOLD },
+  meetingBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.redDim, borderTopWidth: 1, borderTopColor: C.red },
+  meetingBannerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red },
+  meetingBannerText: { flex: 1, fontSize: 13, color: C.red, fontFamily: FONT, fontWeight: "600" },
+  meetingBannerStop: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: C.red },
+  meetingBannerStopText: { fontSize: 12, fontWeight: "800", color: "#fff", fontFamily: FONT_BOLD },
   messageList: { padding: 16, gap: 12 },
   messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginBottom: 8 },
   messageRowUser: { flexDirection: "row-reverse" },
@@ -336,4 +532,21 @@ const styles = StyleSheet.create({
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   sendButtonText: { fontSize: 24, color: C.bg, fontWeight: "900", marginTop: -2 },
+  // Modal
+  modal: { flex: 1, backgroundColor: C.bg },
+  modalHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
+  modalTitle: { fontSize: 16, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD },
+  modalSubtitle: { fontSize: 12, color: C.cyan, fontFamily: FONT, marginTop: 2 },
+  modalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.surface2, alignItems: "center", justifyContent: "center" },
+  modalCloseText: { fontSize: 14, color: C.muted, fontWeight: "700" },
+  modalLoading: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 40 },
+  modalLoadingText: { fontSize: 16, color: C.text, fontFamily: FONT, textAlign: "center" },
+  modalLoadingSubtext: { fontSize: 13, color: C.muted, fontFamily: FONT, textAlign: "center" },
+  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  modalSection: { marginBottom: 24, backgroundColor: C.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
+  modalSectionLabel: { fontSize: 11, fontWeight: "800", color: C.cyan, fontFamily: FONT_BOLD, letterSpacing: 1, marginBottom: 10 },
+  modalSectionText: { fontSize: 15, color: C.text, fontFamily: FONT, lineHeight: 23 },
+  modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  modalBtn: { backgroundColor: C.cyan, borderRadius: 14, paddingVertical: 14, alignItems: "center" },
+  modalBtnText: { fontSize: 15, fontWeight: "800", color: C.bg, fontFamily: FONT_BOLD },
 });
