@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,17 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from "expo-audio";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { sendMessageToHiggins } from "@/lib/manus-api";
@@ -31,6 +40,7 @@ const C = {
   userBorder: "rgba(0,212,212,0.3)",
   green:      "#00D4A0",
   greenDim:   "rgba(0,212,160,0.15)",
+  red:        "#FF4D6A",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
@@ -64,7 +74,29 @@ export default function ChatScreen() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [isLive, setIsLive] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Voice recorder
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
+  const isRecording = recorderState.isRecording;
+
+  // Pulserende animatie voor opname knop
+  useEffect(() => {
+    if (isRecording) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.25, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording]);
 
   // Laad opgeslagen API key, task ID en gebruikersnaam bij opstarten
   useEffect(() => {
@@ -72,19 +104,23 @@ export default function ChatScreen() {
       const storedKey = await AsyncStorage.getItem(API_KEY_STORAGE);
       const storedTaskId = await AsyncStorage.getItem(TASK_ID_STORAGE);
       const storedName = await AsyncStorage.getItem("higgins_user_name");
-      if (storedKey) {
-        setApiKey(storedKey);
-        setIsLive(true);
-      }
+      if (storedKey) { setApiKey(storedKey); setIsLive(true); }
       if (storedTaskId) setTaskId(storedTaskId);
       if (storedName) setUserName(storedName);
       setMessages([getInitialMessage(storedName)]);
+
+      // Microfoon permissie en audio modus instellen
+      if (Platform.OS !== "web") {
+        await requestRecordingPermissionsAsync();
+        await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+      }
     })();
-  }, [])
+  }, []);
 
   const saveApiKey = useCallback(async () => {
     const key = apiKeyInput.trim();
     if (!key) return;
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await AsyncStorage.setItem(API_KEY_STORAGE, key);
     setApiKey(key);
     setIsLive(true);
@@ -93,17 +129,20 @@ export default function ChatScreen() {
   }, [apiKeyInput]);
 
   const disconnectApi = useCallback(async () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await AsyncStorage.removeItem(API_KEY_STORAGE);
     await AsyncStorage.removeItem(TASK_ID_STORAGE);
     setApiKey(null);
     setTaskId(null);
     setIsLive(false);
     setMessages([getInitialMessage(userName)]);
-  }, []);
+  }, [userName]);
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
+  const sendMessage = useCallback(async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
     if (!text || isLoading) return;
+
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -115,22 +154,14 @@ export default function ChatScreen() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
-
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
 
     if (apiKey) {
-      // Live modus: stuur naar Manus API
-      const result = await sendMessageToHiggins({
-        content: text,
-        apiKey,
-        taskId: taskId ?? undefined,
-      });
-
+      const result = await sendMessageToHiggins({ content: text, apiKey, taskId: taskId ?? undefined });
       if (result.taskId && result.taskId !== taskId) {
         setTaskId(result.taskId);
         await AsyncStorage.setItem(TASK_ID_STORAGE, result.taskId);
       }
-
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -139,9 +170,9 @@ export default function ChatScreen() {
           : `Er is een fout opgetreden: ${result.error ?? "Onbekende fout"}. Controleer uw API verbinding in de Instellingen.`,
         timestamp: new Date(),
       };
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setMessages((prev) => [...prev, assistantMsg]);
     } else {
-      // Demo modus: gesimuleerd antwoord
       await new Promise((r) => setTimeout(r, 1200));
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -155,6 +186,31 @@ export default function ChatScreen() {
     setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, isLoading, apiKey, taskId]);
+
+  // ─── Voice opname starten / stoppen ───────────────────────────────────────
+  const handleVoicePress = useCallback(async () => {
+    if (Platform.OS === "web") return; // Web ondersteunt geen native opname
+
+    if (isRecording) {
+      // Stop opname
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (uri) {
+        setIsTranscribing(true);
+        // Simuleer transcriptie (in productie: stuur audio naar Manus transcriptie API)
+        await new Promise((r) => setTimeout(r, 1500));
+        setIsTranscribing(false);
+        // In demo modus: toon placeholder tekst
+        setInput("(Spraakopdracht ontvangen — verbind Manus API voor live transcriptie)");
+      }
+    } else {
+      // Start opname
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+    }
+  }, [isRecording, audioRecorder]);
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
@@ -191,11 +247,10 @@ export default function ChatScreen() {
             <View style={styles.headerStatus}>
               <View style={[styles.headerStatusDot, { backgroundColor: isLive ? "#34D399" : "#F59E0B" }]} />
               <Text style={styles.headerStatusText}>
-              {isLive ? "Chief of Staff & Butler · Live" : "Chief of Staff & Butler · Demo modus"}
-            </Text>
+                {isLive ? "Chief of Staff & Butler · Live" : "Chief of Staff & Butler · Demo"}
+              </Text>
             </View>
           </View>
-          {/* API verbinding knop */}
           <Pressable
             style={({ pressed }) => [styles.apiButton, pressed && { opacity: 0.7 }]}
             onPress={() => isLive ? disconnectApi() : setShowApiKeyModal(true)}
@@ -217,18 +272,38 @@ export default function ChatScreen() {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         />
 
-        {/* Typing indicator */}
-        {isLoading && (
+        {/* Typing / transcribing indicator */}
+        {(isLoading || isTranscribing) && (
           <View style={styles.typingRow}>
             <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
-              <ActivityIndicator size="small" color={C.cyan} />
+              {isTranscribing
+                ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>🎙 Transcriberen...</Text>
+                : <ActivityIndicator size="small" color={C.cyan} />
+              }
             </View>
           </View>
         )}
 
-        {/* Input */}
+        {/* Input bar */}
         <View style={styles.inputRow}>
+          {/* Microfoon knop */}
+          {Platform.OS !== "web" && (
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <Pressable
+                style={[
+                  styles.voiceButton,
+                  isRecording && styles.voiceButtonActive,
+                ]}
+                onPress={handleVoicePress}
+              >
+                <Text style={styles.voiceButtonIcon}>
+                  {isRecording ? "⏹" : "🎙"}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          )}
+
           <TextInput
             style={styles.input}
             value={input}
@@ -237,7 +312,7 @@ export default function ChatScreen() {
             placeholderTextColor={C.muted}
             multiline
             returnKeyType="send"
-            onSubmitEditing={sendMessage}
+            onSubmitEditing={() => sendMessage()}
             blurOnSubmit={false}
           />
           <Pressable
@@ -246,7 +321,7 @@ export default function ChatScreen() {
               (!input.trim() || isLoading) && styles.sendButtonDisabled,
               pressed && { opacity: 0.8 },
             ]}
-            onPress={sendMessage}
+            onPress={() => sendMessage()}
             disabled={!input.trim() || isLoading}
           >
             <Text style={styles.sendButtonText}>›</Text>
@@ -319,7 +394,10 @@ const styles = StyleSheet.create({
   bubbleTimeUser: { color: "rgba(0,212,212,0.5)" },
   typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
   typingBubble: { paddingVertical: 12, paddingHorizontal: 16 },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  voiceButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center" },
+  voiceButtonActive: { backgroundColor: "rgba(255,77,106,0.2)", borderColor: C.red, shadowColor: C.red, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 10 },
+  voiceButtonIcon: { fontSize: 18 },
   input: { flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.text, maxHeight: 100, lineHeight: 20, fontFamily: FONT },
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center", shadowColor: C.cyan, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8 },
   sendButtonDisabled: { backgroundColor: C.surface2, shadowOpacity: 0 },

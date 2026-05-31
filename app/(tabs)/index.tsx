@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -114,7 +115,7 @@ export default function DashboardScreen() {
           </View>
           <Pressable
             style={({ pressed }) => [s.briefCta, pressed && { opacity: 0.75 }]}
-            onPress={() => router.push("/chat")}
+            onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
           >
             <Text style={s.briefCtaText}>Bespreek met Higgins →</Text>
           </Pressable>
@@ -137,10 +138,10 @@ export default function DashboardScreen() {
                 </View>
                 <Text style={s.approvalAction}>{item.action}</Text>
                 <View style={s.approvalButtons}>
-                  <Pressable style={({ pressed }) => [s.btnApprove, pressed && { opacity: 0.75 }]}>
+                  <Pressable style={({ pressed }) => [s.btnApprove, pressed && { opacity: 0.75 }]} onPress={() => { try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (_) {} }}>
                     <Text style={s.btnApproveText}>✓  Goedkeuren</Text>
                   </Pressable>
-                  <Pressable style={({ pressed }) => [s.btnReject, pressed && { opacity: 0.75 }]}>
+                  <Pressable style={({ pressed }) => [s.btnReject, pressed && { opacity: 0.75 }]} onPress={() => { try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch (_) {} }}>
                     <Text style={s.btnRejectText}>✕  Afwijzen</Text>
                   </Pressable>
                 </View>
@@ -156,7 +157,7 @@ export default function DashboardScreen() {
             <Pressable
               key={item.id}
               style={({ pressed }) => [s.priorityItem, pressed && { opacity: 0.75 }]}
-              onPress={() => router.push("/chat")}
+              onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
             >
               <View style={[s.priorityNum, item.urgent && s.priorityNumUrgent]}>
                 <Text style={[s.priorityNumText, item.urgent && { color: C.cyan }]}>{index + 1}</Text>
@@ -183,7 +184,7 @@ export default function DashboardScreen() {
               <Pressable
                 key={cmd.id}
                 style={({ pressed }) => [s.commandCard, pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] }]}
-                onPress={() => router.push("/chat")}
+                onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
               >
                 <Text style={s.commandIcon}>{cmd.icon}</Text>
                 <Text style={s.commandLabel}>{cmd.label}</Text>
