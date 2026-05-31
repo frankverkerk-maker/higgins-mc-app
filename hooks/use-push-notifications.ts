@@ -18,6 +18,7 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useLanguage } from "@/lib/language-provider";
 const PUSH_TOKEN_KEY = "higgins_push_token";
 
 // Stel de foreground handler in (globaal, buiten component)
@@ -39,6 +40,7 @@ export function usePushNotifications() {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const router = useRouter();
+  const { language } = useLanguage();
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -73,7 +75,7 @@ export function usePushNotifications() {
         await fetch("/api/trpc/higgins.registerPushToken", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ json: { token, platform: Platform.OS } }),
+          body: JSON.stringify({ json: { token, platform: Platform.OS, language } }),
         });
       } catch (_) {
         // Stil falen — token is lokaal opgeslagen, volgende keer opnieuw proberen

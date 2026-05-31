@@ -77,13 +77,18 @@
 - [x] Push notificaties — Android notification channel instellen (higgins-default + higgins-approvals)
 
 ## Fase 8: Meertaligheid (NL / DE / EN)
-- [ ] i18n vertaalbestanden aanmaken (NL, DE, EN) — alle UI strings
-- [ ] useTranslation hook + LanguageContext implementeren
-- [ ] Taalinstelling opslaan in AsyncStorage
-- [ ] Dashboard vertalen (NL/DE/EN)
-- [ ] Chat scherm vertalen (NL/DE/EN)
-- [ ] Agents scherm vertalen (NL/DE/EN)
-- [ ] Settings scherm vertalen + taalwisselaar UI
-- [ ] Onboarding scherm vertalen (NL/DE/EN)
-- [ ] Higgins system prompt aanpassen op basis van gekozen taal
-- [ ] Push notificatie teksten vertalen
+- [x] i18n vertaalbestanden aanmaken (NL, DE, EN) — alle UI strings
+- [x] useTranslation hook + LanguageContext implementeren
+- [x] Taalinstelling opslaan in AsyncStorage
+- [x] Dashboard vertalen (NL/DE/EN)
+- [x] Chat scherm vertalen (NL/DE/EN)
+- [x] Agents scherm vertalen (NL/DE/EN)
+- [x] Settings scherm vertalen + taalwisselaar UI
+- [x] Onboarding scherm vertalen (NL/DE/EN)
+- [x] Higgins system prompt aanpassen op basis van gekozen taal
+- [x] Push notificatie teksten vertalen — NL/DE/EN in push-service.ts
+
+## Fase 9: i18n Verfijning
+- [x] Ochtend briefing genereren in gekozen taal (NL/DE/EN) — language param in morningBrief query
+- [x] Taalwisselaar op onboarding scherm (vóór naam invoer) — 🇬🇧 🇩🇪 🇬🇧 knoppen rechtsboven
+- [x] Push notificaties in de juiste taal — per taalgroep, token slaat taal op

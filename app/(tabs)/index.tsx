@@ -74,7 +74,7 @@ export default function DashboardScreen() {
 
   // Live Morning Briefing via server
   const briefQuery = trpc.higgins.morningBrief.useQuery(
-    { userName: userName ?? undefined },
+    { userName: userName ?? undefined, language },
     { enabled: true, staleTime: 5 * 60 * 1000 }
   );
 

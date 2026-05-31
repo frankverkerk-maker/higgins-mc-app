@@ -22,6 +22,7 @@ import { useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useLanguage } from "@/lib/language-provider";
+import { type Language, LANGUAGE_FLAGS, LANGUAGE_NAMES } from "@/lib/i18n";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -40,8 +41,10 @@ const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 export const USER_NAME_KEY = "higgins_user_name";
 
+const LANGUAGES: Language[] = ["nl", "de", "en"];
+
 export default function OnboardingScreen() {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"intro" | "name" | "welcome">("intro");
 
@@ -109,6 +112,22 @@ export default function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Taalwisselaar ── */}
+        <View style={s.langRow}>
+          {LANGUAGES.map((lang) => (
+            <Pressable
+              key={lang}
+              style={[s.langBtn, language === lang && s.langBtnActive]}
+              onPress={() => setLanguage(lang)}
+            >
+              <Text style={s.langFlag}>{LANGUAGE_FLAGS[lang]}</Text>
+              <Text style={[s.langLabel, language === lang && { color: C.cyan }]}>
+                {LANGUAGE_NAMES[lang]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         {/* ── Logo ── */}
         <Animated.View style={[s.logoContainer, logoStyle]}>
           <Image
@@ -213,4 +232,21 @@ const s = StyleSheet.create({
   welcomeTitle: { fontSize: 32, fontWeight: "900", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5 },
   welcomeSub: { fontSize: 15, color: C.muted, fontFamily: FONT, lineHeight: 22 },
   welcomeQuote: { fontSize: 14, color: C.cyan, fontFamily: FONT, fontStyle: "italic" },
+
+  // Taalwisselaar
+  langRow: {
+    flexDirection: "row", gap: 8, marginTop: 20, marginBottom: 4,
+    paddingHorizontal: 20, alignSelf: "flex-end",
+  },
+  langBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1, borderColor: C.border,
+    backgroundColor: C.surface,
+  },
+  langBtnActive: {
+    borderColor: C.cyanBorder, backgroundColor: C.cyanDim,
+  },
+  langFlag: { fontSize: 16 },
+  langLabel: { fontSize: 11, color: C.muted, fontFamily: FONT, fontWeight: "600" },
 });

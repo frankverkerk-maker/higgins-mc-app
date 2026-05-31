@@ -13,6 +13,34 @@ interface PushTokenRecord {
   token: string;
   platform: string;
   registeredAt: string;
+  language?: string;
+}
+
+// ─── Push teksten per taal ────────────────────────────────────────────────────
+const PUSH_STRINGS: Record<string, {
+  approvalTitle: (agent: string) => string;
+  morningBriefTitle: string;
+  chatTitle: string;
+}> = {
+  nl: {
+    approvalTitle: (agent) => `✅ Goedkeuring vereist — ${agent}`,
+    morningBriefTitle: "🌅 Goedemorgen — Higgins Briefing",
+    chatTitle: "💬 Higgins heeft gereageerd",
+  },
+  de: {
+    approvalTitle: (agent) => `✅ Genehmigung erforderlich — ${agent}`,
+    morningBriefTitle: "🌅 Guten Morgen — Higgins Briefing",
+    chatTitle: "💬 Higgins hat geantwortet",
+  },
+  en: {
+    approvalTitle: (agent) => `✅ Approval required — ${agent}`,
+    morningBriefTitle: "🌅 Good morning — Higgins Briefing",
+    chatTitle: "💬 Higgins has responded",
+  },
+};
+
+function getStrings(lang?: string) {
+  return PUSH_STRINGS[lang ?? "nl"] ?? PUSH_STRINGS.nl;
 }
 
 export const pushTokenStore = new Map<string, PushTokenRecord>();
@@ -100,40 +128,72 @@ export async function sendApprovalNotification(opts: {
   agentName: string;
   action: string;
   count?: number;
+  language?: string;
 }) {
-  const tokens = Array.from(pushTokenStore.values()).map(t => t.token);
-  if (tokens.length === 0) return;
+  const records = Array.from(pushTokenStore.values());
+  if (records.length === 0) return;
 
-  await sendExpoPushNotifications(tokens, {
-    title: `✅ Goedkeuring vereist — ${opts.agentName}`,
-    body: opts.action,
-    data: { type: "approval", agentName: opts.agentName },
-    badge: opts.count ?? 1,
-    channelId: "higgins-approvals",
-  });
+  // Stuur per taalgroep (elke gebruiker krijgt notificatie in zijn eigen taal)
+  const byLang = new Map<string, string[]>();
+  for (const r of records) {
+    const lang = r.language ?? opts.language ?? "nl";
+    if (!byLang.has(lang)) byLang.set(lang, []);
+    byLang.get(lang)!.push(r.token);
+  }
+
+  for (const [lang, tokens] of byLang) {
+    const str = getStrings(lang);
+    await sendExpoPushNotifications(tokens, {
+      title: str.approvalTitle(opts.agentName),
+      body: opts.action,
+      data: { type: "approval", agentName: opts.agentName },
+      badge: opts.count ?? 1,
+      channelId: "higgins-approvals",
+    });
+  }
 }
 
 /** Stuur een morning brief notificatie */
-export async function sendMorningBriefNotification(briefPreview: string) {
-  const tokens = Array.from(pushTokenStore.values()).map(t => t.token);
-  if (tokens.length === 0) return;
+export async function sendMorningBriefNotification(briefPreview: string, language?: string) {
+  const records = Array.from(pushTokenStore.values());
+  if (records.length === 0) return;
 
-  await sendExpoPushNotifications(tokens, {
-    title: "🌅 Goedemorgen — Higgins Briefing",
-    body: briefPreview.substring(0, 120) + (briefPreview.length > 120 ? "..." : ""),
-    data: { type: "morning_brief" },
-    badge: 1,
-  });
+  const byLang = new Map<string, string[]>();
+  for (const r of records) {
+    const lang = r.language ?? language ?? "nl";
+    if (!byLang.has(lang)) byLang.set(lang, []);
+    byLang.get(lang)!.push(r.token);
+  }
+
+  for (const [lang, tokens] of byLang) {
+    const str = getStrings(lang);
+    await sendExpoPushNotifications(tokens, {
+      title: str.morningBriefTitle,
+      body: briefPreview.substring(0, 120) + (briefPreview.length > 120 ? "..." : ""),
+      data: { type: "morning_brief" },
+      badge: 1,
+    });
+  }
 }
 
 /** Stuur een Higgins chat notificatie (app op achtergrond) */
-export async function sendChatNotification(message: string) {
-  const tokens = Array.from(pushTokenStore.values()).map(t => t.token);
-  if (tokens.length === 0) return;
+export async function sendChatNotification(message: string, language?: string) {
+  const records = Array.from(pushTokenStore.values());
+  if (records.length === 0) return;
 
-  await sendExpoPushNotifications(tokens, {
-    title: "💬 Higgins heeft gereageerd",
-    body: message.substring(0, 100) + (message.length > 100 ? "..." : ""),
-    data: { type: "chat" },
-  });
+  const byLang = new Map<string, string[]>();
+  for (const r of records) {
+    const lang = r.language ?? language ?? "nl";
+    if (!byLang.has(lang)) byLang.set(lang, []);
+    byLang.get(lang)!.push(r.token);
+  }
+
+  for (const [lang, tokens] of byLang) {
+    const str = getStrings(lang);
+    await sendExpoPushNotifications(tokens, {
+      title: str.chatTitle,
+      body: message.substring(0, 100) + (message.length > 100 ? "..." : ""),
+      data: { type: "chat" },
+    });
+  }
 }

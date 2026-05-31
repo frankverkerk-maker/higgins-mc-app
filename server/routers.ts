@@ -239,6 +239,7 @@ export const appRouter = router({
         z.object({
           token: z.string().min(1),
           platform: z.string().default("ios"),
+          language: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -247,8 +248,9 @@ export const appRouter = router({
           token: input.token,
           platform: input.platform,
           registeredAt: new Date().toISOString(),
+          language: input.language ?? "nl",
         });
-        console.log(`[push] Token geregistreerd voor ${input.platform}: ${input.token.substring(0, 30)}...`);
+        console.log(`[push] Token geregistreerd voor ${input.platform} (${input.language ?? "nl"}): ${input.token.substring(0, 30)}...`);
         return { success: true };
       }),
 
@@ -282,13 +284,17 @@ export const appRouter = router({
         z.object({
           userName: z.string().optional(),
           date: z.string().optional(),
+          language: z.string().optional(),
         })
       )
       .query(async ({ input }) => {
         const userName = input.userName ?? "Frank";
+        const lang = input.language ?? "nl";
+        const localeMap: Record<string, string> = { nl: "nl-NL", de: "de-DE", en: "en-GB" };
+        const locale = localeMap[lang] ?? "nl-NL";
         const date =
           input.date ??
-          new Date().toLocaleDateString("nl-NL", {
+          new Date().toLocaleDateString(locale, {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -310,23 +316,34 @@ export const appRouter = router({
           }
         }
 
-        // Fallback: genereer on-demand als er geen cache is
+        // Fallback: genereer on-demand in de gekozen taal
+        const briefSystemPrompt = buildSystemPrompt(lang, userName);
+        const briefPrompts: Record<string, string> = {
+          nl: `Genereer een beknopte ochtend briefing voor ${userName} voor ${date}. Noem 2-3 prioriteiten, een teamstatus update en een motiverende afsluiting. Maximaal 3 zinnen. Spreek in het Nederlands.`,
+          de: `Erstelle eine kurze Morgen-Briefing für ${userName} für ${date}. Nenne 2-3 Prioritäten, ein Team-Status-Update und einen motivierenden Abschluss. Maximal 3 Sätze. Antworte auf Deutsch.`,
+          en: `Generate a concise morning briefing for ${userName} for ${date}. Mention 2-3 priorities, a team status update and a motivating closing. Maximum 3 sentences. Respond in English.`,
+        };
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+            { role: "system", content: briefSystemPrompt },
             {
               role: "user",
-              content: `Genereer een beknopte ochtend briefing voor ${userName} voor ${date}. Noem 2-3 prioriteiten, een teamstatus update en een motiverende afsluiting. Maximaal 3 zinnen.`,
+              content: briefPrompts[lang] ?? briefPrompts.nl,
             },
           ],
         });
 
+        const fallbacks: Record<string, string> = {
+          nl: `Goedemorgen ${userName}. Uw team staat klaar. Higgins is beschikbaar voor uw opdrachten.`,
+          de: `Guten Morgen ${userName}. Ihr Team ist bereit. Higgins steht für Ihre Aufträge zur Verfügung.`,
+          en: `Good morning ${userName}. Your team is ready. Higgins is available for your instructions.`,
+        };
         const rawBrief = response.choices?.[0]?.message?.content;
         const brief = typeof rawBrief === "string"
           ? rawBrief
           : Array.isArray(rawBrief)
             ? rawBrief.map((c) => (typeof c === "string" ? c : (c as any).text ?? "")).join("")
-            : `Goedemorgen ${userName}. Uw team staat klaar. Higgins is beschikbaar voor uw opdrachten.`;
+            : fallbacks[lang] ?? fallbacks.nl;
 
         return {
           brief,
