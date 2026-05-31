@@ -29,14 +29,16 @@
 - [x] Avenir lettertype instellen (iOS native, web fallback)
 - [x] Tab bar hoogte gefixd (iconen volledig zichtbaar)
 - [x] Dashboard herbouwd in luxury dark stijl
-- [ ] Chat scherm in luxury dark stijl
-- [ ] Team Pulse scherm in luxury dark stijl
-- [ ] Instellingen scherm in luxury dark stijl
+- [x] Chat scherm in luxury dark stijl
+- [x] Team Pulse scherm in luxury dark stijl
+- [x] Instellingen scherm in luxury dark stijl
 
 ## Fase 5: Uitbreidingen
 - [ ] iPad layout optimalisatie (grotere schermen, split-view)
 - [ ] Voice-to-Higgins microfoon knop in chat
-- [ ] Naam personalisatie onboarding scherm
+- [x] Naam personalisatie onboarding scherm (welkomst animatie + persoonlijke begroeting)
+- [x] Naam integratie in Dashboard en Chat (Higgins spreekt gebruiker persoonlijk aan)
+- [x] Volledig team overzicht verwerkt (36 agents, 7 departementen, officiële namen en rollen)
 - [ ] Push notificaties (agent heeft bericht)
 - [ ] Haptic feedback op acties
 
@@ -45,5 +47,5 @@
 - [ ] Apple Business Manager account aanmaken voor Carpe Diem
 - [ ] iPad Command Bundle propositie uitwerken (MDM + app + Mission Control web)
 - [ ] Adviesrapport PDF bijwerken met iPad architectuur en MDM notitie
-- [ ] Teamnamen ophalen uit Higgins MC ontwikkel Sandbox (login vereist)
+- [x] Teamnamen verwerkt via aangeleverd team overzicht (36 agents, 7 departementen)
 - [ ] Apple Developer Account aanmaken voor App Store publicatie (€99/jaar)

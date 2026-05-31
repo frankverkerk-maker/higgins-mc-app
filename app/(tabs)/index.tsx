@@ -1,7 +1,10 @@
 import { ScrollView, Text, View, Pressable, StyleSheet, Platform } from "react-native";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { USER_NAME_KEY } from "@/app/onboarding";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -61,10 +64,18 @@ const AGENT_PULSE = [
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(USER_NAME_KEY).then((name) => {
+      if (name) setUserName(name);
+    });
+  }, []);
 
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+  const greetingWord = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+  const greeting = userName ? `${greetingWord}, ${userName}` : greetingWord;
 
   return (
     <ScreenContainer containerClassName="bg-background">

@@ -45,17 +45,18 @@ type Message = {
   timestamp: Date;
 };
 
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: "0",
-    role: "assistant",
-    content: "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
-    timestamp: new Date(),
-  },
-];
+const getInitialMessage = (name: string | null): Message => ({
+  id: "0",
+  role: "assistant",
+  content: name
+    ? `Goedemiddag, ${name}. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?`
+    : "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
+  timestamp: new Date(),
+});
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -65,18 +66,21 @@ export default function ChatScreen() {
   const [isLive, setIsLive] = useState(false);
   const listRef = useRef<FlatList>(null);
 
-  // Laad opgeslagen API key en task ID bij opstarten
+  // Laad opgeslagen API key, task ID en gebruikersnaam bij opstarten
   useEffect(() => {
     (async () => {
       const storedKey = await AsyncStorage.getItem(API_KEY_STORAGE);
       const storedTaskId = await AsyncStorage.getItem(TASK_ID_STORAGE);
+      const storedName = await AsyncStorage.getItem("higgins_user_name");
       if (storedKey) {
         setApiKey(storedKey);
         setIsLive(true);
       }
       if (storedTaskId) setTaskId(storedTaskId);
+      if (storedName) setUserName(storedName);
+      setMessages([getInitialMessage(storedName)]);
     })();
-  }, []);
+  }, [])
 
   const saveApiKey = useCallback(async () => {
     const key = apiKeyInput.trim();
@@ -94,7 +98,7 @@ export default function ChatScreen() {
     setApiKey(null);
     setTaskId(null);
     setIsLive(false);
-    setMessages(INITIAL_MESSAGES);
+    setMessages([getInitialMessage(userName)]);
   }, []);
 
   const sendMessage = useCallback(async () => {
