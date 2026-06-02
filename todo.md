@@ -92,3 +92,12 @@
 - [x] Ochtend briefing genereren in gekozen taal (NL/DE/EN) — language param in morningBrief query
 - [x] Taalwisselaar op onboarding scherm (vóór naam invoer) — 🇬🇧 🇩🇪 🇬🇧 knoppen rechtsboven
 - [x] Push notificaties in de juiste taal — per taalgroep, token slaat taal op
+
+## Fase 10: Messenger Architectuur Upgrade
+- [ ] Higgins system prompt corrigeren — eerlijk over capabilities, geen valse agent-delegatie
+- [ ] Agent-statussen realtime meesturen in Higgins context (wie is online/offline)
+- [ ] PDF generatie endpoint op server (pdfkit)
+- [ ] PDF berichttype in chat UI — kaart met download knop
+- [ ] Rijke berichttypen: tekst, PDF, afbeelding, bestand
+- [ ] Chat berichten persistent opslaan in AsyncStorage
+- [ ] Bestand uploaden knop in chat input bar (📎)

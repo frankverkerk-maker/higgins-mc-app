@@ -5,8 +5,9 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
-import { storagePut } from "./storage";
+import { storagePut, storagePut as storageUpload } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications } from "./push-service";
+import { generateResponsePdf } from "./pdf-generator";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -15,10 +16,20 @@ const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   en: "You always communicate in English, unless the user explicitly requests another language.",
 };
 
-function buildSystemPrompt(lang?: string, userName?: string): string {
+function buildSystemPrompt(lang?: string, userName?: string, agentStatuses?: Record<string, string>): string {
   const langKey = lang ?? "nl";
   const langInstruction = HIGGINS_LANGUAGE_INSTRUCTIONS[langKey] ?? HIGGINS_LANGUAGE_INSTRUCTIONS.nl;
-  let prompt = `Je bent Higgins, de Chief of Staff en persoonlijke butler van ${userName ?? "Frank Verkerk"}, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
+
+  // Bouw agent-status context op als die beschikbaar is
+  let agentStatusContext = "";
+  if (agentStatuses && Object.keys(agentStatuses).length > 0) {
+    const statusLines = Object.entries(agentStatuses)
+      .map(([name, status]) => `  - ${name}: ${status}`)
+      .join("\n");
+    agentStatusContext = `\n\nHuidige agent-statussen (realtime):\n${statusLines}`;
+  }
+
+  const prompt = `Je bent Higgins, de Chief of Staff en persoonlijke butler van ${userName ?? "Frank Verkerk"}, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
 
 Jouw karakter:
 - Je spreekt altijd beleefd, professioneel en direct — zoals een ervaren butler betaamt
@@ -27,7 +38,15 @@ Jouw karakter:
 - ${langInstruction}
 - Je bent beknopt maar volledig — geen onnodige uitweidingen
 - Je spreekt de gebruiker aan bij naam of formeel afhankelijk van de context
-- Je bent altijd op de hoogte van de status van het team en rapporteert proactief
+
+KRITISCHE EERLIJKHEIDSREGELS — NOOIT OVERTREDEN:
+- Je kunt GEEN opdrachten daadwerkelijk doorzetten naar agents. Je hebt geen directe verbinding met Justitia, Elena, Warren of andere agents.
+- Zeg NOOIT dat je een opdracht hebt doorgestuurd, tenzij je dat daadwerkelijk hebt gedaan via een tool.
+- Als een gebruiker vraagt om iets door te sturen naar een agent, zeg dan eerlijk: "Ik kan dit voor u noteren en als prioriteit markeren, maar de daadwerkelijke uitvoering vereist dat de agent actief is in het systeem."
+- Kijk altijd naar de agent-statussen hieronder. Als een agent 'Wacht op opdracht' of offline is, zeg dat dan eerlijk.
+- Verzin NOOIT dat een agent bezig is met een taak als dat niet zo is.
+- Je kunt WEL: informatie opzoeken, documenten genereren (PDF), vragen beantwoorden, plannen maken, en de gebruiker adviseren.
+- Je kunt NIET: e-mails versturen, vergaderingen boeken, externe systemen aansturen, of agents activeren.
 
 Jouw team (je coördineert alle communicatie):
 - Orchestrators: Elena (Office Manager)
@@ -36,8 +55,7 @@ Jouw team (je coördineert alle communicatie):
 - Revenue: Warren (CFO), Abacus, Closer, Carson, Strategos, Fortuna
 - Specialists: Catharina, Victoria, Barbara, Vera, Rosi
 - Justitia Legal Council (Add-On): Justitia (CLO), Adrian, Isabelle, Matteo, Elena V., Dr. Nadia
-- Functional Medicine Center (Add-On): Nano Therapy, Peptide & IV, EpiGenalytics, TCM, B2B Advisory
-- Enterprise: Hugo (HR), Atlas, Max, Oscar, Felix, Herald + 8 custom slots
+- Enterprise: Hugo (HR), Atlas, Max, Oscar, Felix, Herald${agentStatusContext}
 
 Jouw missie: ${userName ?? "Frank"} ontzorgen, zijn tijd beschermen en zijn bedrijven laten floreren.`;
   return prompt;
@@ -74,10 +92,11 @@ export const appRouter = router({
             .default([]),
           userName: z.string().optional(),
           language: z.string().optional(),
+          agentStatuses: z.record(z.string(), z.string()).optional(),
         })
       )
       .mutation(async ({ input }) => {
-        const systemPrompt = buildSystemPrompt(input.language, input.userName);
+        const systemPrompt = buildSystemPrompt(input.language, input.userName, input.agentStatuses);
 
         const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
           { role: "system", content: systemPrompt },
@@ -276,6 +295,36 @@ export const appRouter = router({
           badge: input.badge,
         });
         return { sent: results.length, tokens };
+      }),
+
+    // ── PDF Generatie: genereer een professionele PDF in Higgins huisstijl ────
+    generatePdf: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1).max(200),
+          content: z.string().min(1),
+          userName: z.string().optional(),
+          language: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const pdfBuffer = await generateResponsePdf(
+          input.title,
+          input.content,
+          input.userName ?? "Frank",
+          input.language ?? "nl"
+        );
+
+        // Upload PDF naar S3 storage
+        const fileName = `higgins-report-${Date.now()}.pdf`;
+        const { url } = await storageUpload(fileName, pdfBuffer, "application/pdf");
+
+        return {
+          url,
+          fileName,
+          sizeBytes: pdfBuffer.length,
+          generatedAt: new Date().toISOString(),
+        };
       }),
 
     // ── Morning Brief: genereer een dagelijkse briefing ──────────────────────

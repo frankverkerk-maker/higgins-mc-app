@@ -12,6 +12,8 @@ import {
   Animated,
   Modal,
   ScrollView,
+  Linking,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -45,18 +47,43 @@ const C = {
   red:        "#FF4D6A",
   redDim:     "rgba(255,77,106,0.15)",
   amber:      "#F5A623",
+  pdfBg:      "#0D1A2A",
+  pdfBorder:  "rgba(0,212,212,0.35)",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
+
+// ─── Agent statussen (eerlijk — gesimuleerd tot live backend) ─────────────────
+const AGENT_STATUSES: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {
+  "Higgins":  { status: "active", task: "Beschikbaar" },
+  "Elena":    { status: "active", task: "E-mails verwerken" },
+  "Gary":     { status: "busy",   task: "Campagne analyse" },
+  "Elon":     { status: "idle",   task: "Wacht op opdracht" },
+  "Warren":   { status: "busy",   task: "Q2 rapport opstellen" },
+  "Justitia": { status: "idle",   task: "Wacht op opdracht" },
+  "Adrian":   { status: "idle",   task: "Wacht op opdracht" },
+  "Isabelle": { status: "idle",   task: "Wacht op opdracht" },
+  "Matteo":   { status: "idle",   task: "Wacht op opdracht" },
+  "Hugo":     { status: "idle",   task: "Wacht op opdracht" },
+};
+
+// ─── Berichttypen ─────────────────────────────────────────────────────────────
+type MessageType = "text" | "pdf";
 
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  type?: MessageType;
+  // PDF bijlage velden
+  pdfUrl?: string;
+  pdfFileName?: string;
+  pdfSizeBytes?: number;
 };
 
-// Initieel bericht wordt dynamisch gegenereerd op basis van taal in de component
+const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
+
 const getInitialMessage = (name: string | null, lang: string): Message => {
   const greetings: Record<string, string> = {
     nl: name ? `Goedemiddag, ${name}. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?` : "Goedemiddag. Ik ben Higgins, uw Chief of Staff & Butler. Hoe kan ik u vandaag van dienst zijn?",
@@ -68,6 +95,7 @@ const getInitialMessage = (name: string | null, lang: string): Message => {
     role: "assistant",
     content: greetings[lang] ?? greetings.nl,
     timestamp: new Date(),
+    type: "text",
   };
 };
 
@@ -78,6 +106,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const listRef = useRef<FlatList>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const meetingPulseAnim = useRef(new Animated.Value(1)).current;
@@ -95,6 +124,7 @@ export default function ChatScreen() {
   const chatMutation = trpc.higgins.chat.useMutation();
   const transcribeMutation = trpc.higgins.transcribe.useMutation();
   const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
+  const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
 
   // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -103,7 +133,6 @@ export default function ChatScreen() {
 
   // Meeting recorder (apart exemplaar)
   const meetingRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const meetingRecorderState = useAudioRecorderState(meetingRecorder);
 
   // Pulserende animatie voor chat mic knop
   useEffect(() => {
@@ -153,12 +182,48 @@ export default function ChatScreen() {
     };
   }, [isMeetingRecording]);
 
-  // Laad gebruikersnaam bij opstarten
+  // ─── Persistente chat opslag ──────────────────────────────────────────────
+  const saveMessages = useCallback(async (msgs: Message[]) => {
+    try {
+      // Sla de laatste 50 berichten op (zonder het initiële welkomstbericht)
+      const toSave = msgs.slice(-50).map(m => ({
+        ...m,
+        timestamp: m.timestamp.toISOString(),
+      }));
+      await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (_) {}
+  }, []);
+
+  // Laad gebruikersnaam en chatgeschiedenis bij opstarten
   useEffect(() => {
     (async () => {
       const storedName = await AsyncStorage.getItem("higgins_user_name");
       if (storedName) setUserName(storedName);
-      setMessages([getInitialMessage(storedName, language)]);
+
+      // Herstel chatgeschiedenis
+      try {
+        const stored = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as Array<Message & { timestamp: string }>;
+          const restored: Message[] = parsed.map(m => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          }));
+          if (restored.length > 0) {
+            setMessages(restored);
+            historyRef.current = restored
+              .filter(m => m.type !== "pdf")
+              .map(m => ({ role: m.role, content: m.content }))
+              .slice(-20);
+          } else {
+            setMessages([getInitialMessage(storedName, language)]);
+          }
+        } else {
+          setMessages([getInitialMessage(storedName, language)]);
+        }
+      } catch (_) {
+        setMessages([getInitialMessage(storedName, language)]);
+      }
 
       if (Platform.OS !== "web") {
         await requestRecordingPermissionsAsync();
@@ -167,6 +232,16 @@ export default function ChatScreen() {
     })();
   }, []);
 
+  // ─── Bouw agent status context voor Higgins ───────────────────────────────
+  const buildAgentContext = (): string => {
+    const lines = Object.entries(AGENT_STATUSES).map(([name, info]) => {
+      const statusLabel = info.status === "active" ? "actief" : info.status === "busy" ? "bezig" : "inactief/slapend";
+      return `- ${name}: ${statusLabel} — ${info.task}`;
+    });
+    return `\n\nACTUELE TEAMSTATUS (gebruik dit voor eerlijke antwoorden over het team):\n${lines.join("\n")}`;
+  };
+
+  // ─── Stuur bericht naar Higgins ───────────────────────────────────────────
   const sendMessage = useCallback(async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text || isLoading) return;
@@ -178,18 +253,24 @@ export default function ChatScreen() {
       role: "user",
       content: text,
       timestamp: new Date(),
+      type: "text",
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setIsLoading(true);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
 
     const history: Array<{ role: "user" | "assistant"; content: string }> = historyRef.current.slice(-10);
 
+    // Voeg agent context toe aan het bericht voor eerlijke antwoorden
+    const agentContext = buildAgentContext();
+    const messageWithContext = text + agentContext;
+
     try {
       const result = await chatMutation.mutateAsync({
-        message: text,
+        message: messageWithContext,
         history: history.map(h => ({ role: h.role, content: String(h.content) })),
         userName: userName ?? undefined,
         language,
@@ -206,23 +287,70 @@ export default function ChatScreen() {
         role: "assistant",
         content: result.reply,
         timestamp: new Date(),
+        type: "text",
       };
 
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setMessages((prev) => [...prev, assistantMsg]);
+      const updatedMessages = [...newMessages, assistantMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
     } catch (error) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
         timestamp: new Date(),
+        type: "text",
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      const updatedMessages = [...newMessages, errorMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
     }
 
     setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [input, isLoading, userName, chatMutation]);
+  }, [input, isLoading, userName, chatMutation, messages, language, saveMessages]);
+
+  // ─── PDF genereren van het laatste Higgins antwoord ───────────────────────
+  const handleGeneratePdf = useCallback(async () => {
+    // Zoek het laatste assistant bericht
+    const lastAssistant = [...messages].reverse().find(m => m.role === "assistant" && m.type === "text");
+    if (!lastAssistant) return;
+
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsGeneratingPdf(true);
+
+    try {
+      const result = await generatePdfMutation.mutateAsync({
+        title: "Higgins Rapport",
+        content: lastAssistant.content,
+        userName: userName ?? undefined,
+        language,
+      });
+
+      const pdfMsg: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Ik heb het rapport voor u gegenereerd in de Carpe Diem huisstijl.",
+        timestamp: new Date(),
+        type: "pdf",
+        pdfUrl: result.url,
+        pdfFileName: result.fileName,
+        pdfSizeBytes: result.sizeBytes,
+      };
+
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const updatedMessages = [...messages, pdfMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (err) {
+      Alert.alert("PDF fout", "Het genereren van de PDF is mislukt. Probeer het opnieuw.");
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [messages, generatePdfMutation, userName, language, saveMessages]);
 
   // ─── Chat mic: Voice-to-Higgins ───────────────────────────────────────────
   const handleVoicePress = useCallback(async () => {
@@ -261,7 +389,6 @@ export default function ChatScreen() {
     if (Platform.OS === "web") return;
 
     if (isMeetingRecording) {
-      // Stop opname en verwerk
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch (_) {}
       setIsMeetingRecording(false);
       await meetingRecorder.stop();
@@ -288,7 +415,6 @@ export default function ChatScreen() {
         }
       }
     } else {
-      // Start opname
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
       setMeetingResult(null);
       await meetingRecorder.prepareToRecordAsync();
@@ -297,19 +423,22 @@ export default function ChatScreen() {
     }
   }, [isMeetingRecording, meetingRecorder, transcribeMeetingMutation, userName]);
 
-  const sendSummaryToChat = useCallback(() => {
+  const sendSummaryToChat = useCallback(async () => {
     if (!meetingResult) return;
     setShowMeetingModal(false);
-    const summaryMessage = `📋 **Vergadering samenvatting door Higgins:**\n\n${meetingResult.summary}`;
+    const summaryMessage = `📋 Vergadering samenvatting:\n\n${meetingResult.summary}`;
     const assistantMsg: Message = {
       id: Date.now().toString(),
       role: "assistant",
       content: summaryMessage,
       timestamp: new Date(),
+      type: "text",
     };
-    setMessages((prev) => [...prev, assistantMsg]);
+    const updatedMessages = [...messages, assistantMsg];
+    setMessages(updatedMessages);
+    await saveMessages(updatedMessages);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [meetingResult]);
+  }, [meetingResult, messages, saveMessages]);
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
@@ -320,8 +449,73 @@ export default function ChatScreen() {
     return `${m}:${s}`;
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // ─── PDF kaart component ──────────────────────────────────────────────────
+  const PdfCard = ({ msg }: { msg: Message }) => {
+    const [isOpening, setIsOpening] = useState(false);
+
+    const handleOpen = async () => {
+      if (!msg.pdfUrl) return;
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setIsOpening(true);
+      try {
+        // Bouw de volledige URL op (server-relative pad naar absolute URL)
+        const baseUrl = "https://3000-ijaocie6mkqhn7bw1b1p3-03a7ef55.us2.manus.computer";
+        const fullUrl = msg.pdfUrl.startsWith("http") ? msg.pdfUrl : `${baseUrl}${msg.pdfUrl}`;
+        await Linking.openURL(fullUrl);
+      } catch (_) {
+        Alert.alert("Fout", "Kan de PDF niet openen.");
+      } finally {
+        setIsOpening(false);
+      }
+    };
+
+    return (
+      <View style={styles.pdfCard}>
+        <View style={styles.pdfIconWrap}>
+          <Text style={styles.pdfIcon}>📄</Text>
+        </View>
+        <View style={styles.pdfInfo}>
+          <Text style={styles.pdfName} numberOfLines={1}>
+            {msg.pdfFileName ?? "Higgins Rapport.pdf"}
+          </Text>
+          <Text style={styles.pdfMeta}>
+            PDF · {msg.pdfSizeBytes ? formatFileSize(msg.pdfSizeBytes) : "—"} · {formatTime(msg.timestamp)}
+          </Text>
+          <Text style={styles.pdfCaption} numberOfLines={2}>{msg.content}</Text>
+        </View>
+        <Pressable
+          style={({ pressed }) => [styles.pdfOpenBtn, pressed && { opacity: 0.7 }]}
+          onPress={handleOpen}
+          disabled={isOpening}
+        >
+          {isOpening
+            ? <ActivityIndicator size="small" color={C.bg} />
+            : <Text style={styles.pdfOpenBtnText}>Openen</Text>
+          }
+        </Pressable>
+      </View>
+    );
+  };
+
+  // ─── Render bericht ───────────────────────────────────────────────────────
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === "user";
+
+    if (item.type === "pdf") {
+      return (
+        <View style={[styles.messageRow]}>
+          <HigginsAvatar size={32} />
+          <PdfCard msg={item} />
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
         {!isUser && <HigginsAvatar size={32} />}
@@ -336,6 +530,9 @@ export default function ChatScreen() {
       </View>
     );
   };
+
+  // Controleer of er een recent assistant bericht is om PDF van te maken
+  const hasRecentAssistantMessage = messages.some(m => m.role === "assistant" && m.type === "text");
 
   return (
     <ScreenContainer containerClassName="bg-background">
@@ -381,14 +578,16 @@ export default function ChatScreen() {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         />
 
-        {/* Typing / transcribing indicator */}
-        {(isLoading || isTranscribing) && (
+        {/* Typing / transcribing / PDF indicator */}
+        {(isLoading || isTranscribing || isGeneratingPdf) && (
           <View style={styles.typingRow}>
             <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
               {isTranscribing
                 ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>🎙 Transcriberen...</Text>
-                : <ActivityIndicator size="small" color={C.cyan} />
+                : isGeneratingPdf
+                  ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📄 PDF genereren...</Text>
+                  : <ActivityIndicator size="small" color={C.cyan} />
               }
             </View>
           </View>
@@ -431,6 +630,18 @@ export default function ChatScreen() {
             onSubmitEditing={() => sendMessage()}
             blurOnSubmit={false}
           />
+
+          {/* PDF genereer knop — zichtbaar als er een recent assistant bericht is */}
+          {hasRecentAssistantMessage && !isLoading && (
+            <Pressable
+              style={({ pressed }) => [styles.pdfButton, pressed && { opacity: 0.7 }]}
+              onPress={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+            >
+              <Text style={styles.pdfButtonIcon}>📄</Text>
+            </Pressable>
+          )}
+
           <Pressable
             style={({ pressed }) => [
               styles.sendButton,
@@ -472,20 +683,16 @@ export default function ChatScreen() {
             </View>
           ) : meetingResult ? (
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-              {/* Samenvatting */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionLabel}>📋 {t.chat.meetingModalSummaryLabel}</Text>
                 <Text style={styles.modalSectionText}>{meetingResult.summary}</Text>
               </View>
-
-              {/* Transcriptie */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionLabel}>📝 {t.chat.meetingModalTranscriptLabel}</Text>
                 <Text style={[styles.modalSectionText, { color: C.muted, fontSize: 13 }]}>
                   {meetingResult.transcript}
                 </Text>
               </View>
-
               <View style={{ height: 24 }} />
             </ScrollView>
           ) : null}
@@ -538,9 +745,21 @@ const styles = StyleSheet.create({
   voiceButtonActive: { backgroundColor: "rgba(255,77,106,0.2)", borderColor: C.red },
   voiceButtonIcon: { fontSize: 18 },
   input: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: C.surface2, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, color: C.text, fontSize: 15, fontFamily: FONT, borderWidth: 1, borderColor: C.border },
+  pdfButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.pdfBorder, alignItems: "center", justifyContent: "center" },
+  pdfButtonIcon: { fontSize: 18 },
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   sendButtonText: { fontSize: 24, color: C.bg, fontWeight: "900", marginTop: -2 },
+  // PDF kaart
+  pdfCard: { flex: 1, maxWidth: "85%", flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.pdfBg, borderRadius: 16, borderWidth: 1, borderColor: C.pdfBorder, padding: 12 },
+  pdfIconWrap: { width: 40, height: 48, backgroundColor: "rgba(0,212,212,0.1)", borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  pdfIcon: { fontSize: 22 },
+  pdfInfo: { flex: 1, gap: 3 },
+  pdfName: { fontSize: 13, fontWeight: "700", color: C.text, fontFamily: FONT_BOLD },
+  pdfMeta: { fontSize: 11, color: C.muted, fontFamily: FONT },
+  pdfCaption: { fontSize: 12, color: C.muted, fontFamily: FONT, lineHeight: 17, marginTop: 2 },
+  pdfOpenBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: C.cyan, borderRadius: 10, alignItems: "center", justifyContent: "center", minWidth: 64 },
+  pdfOpenBtnText: { fontSize: 12, fontWeight: "800", color: C.bg, fontFamily: FONT_BOLD },
   // Modal
   modal: { flex: 1, backgroundColor: C.bg },
   modalHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },
