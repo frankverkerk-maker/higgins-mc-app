@@ -54,18 +54,9 @@ const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 // ─── Agent statussen (eerlijk — gesimuleerd tot live backend) ─────────────────
-const AGENT_STATUSES: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {
-  "Higgins":  { status: "active", task: "Beschikbaar" },
-  "Elena":    { status: "active", task: "E-mails verwerken" },
-  "Gary":     { status: "busy",   task: "Campagne analyse" },
-  "Elon":     { status: "idle",   task: "Wacht op opdracht" },
-  "Warren":   { status: "busy",   task: "Q2 rapport opstellen" },
-  "Justitia": { status: "idle",   task: "Wacht op opdracht" },
-  "Adrian":   { status: "idle",   task: "Wacht op opdracht" },
-  "Isabelle": { status: "idle",   task: "Wacht op opdracht" },
-  "Matteo":   { status: "idle",   task: "Wacht op opdracht" },
-  "Hugo":     { status: "idle",   task: "Wacht op opdracht" },
-};
+// Agent statussen worden dynamisch bijgehouden — gestart als lege map,
+// bijgewerkt wanneer Higgins een agent activeert via de Manus API.
+type AgentStatus = { status: "active" | "idle" | "busy"; task: string; taskId?: string };
 
 // ─── Berichttypen ─────────────────────────────────────────────────────────────
 type MessageType = "text" | "pdf";
@@ -107,6 +98,8 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  // Dynamische agent statussen — bijgewerkt na echte Manus API activering
+  const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({});
   const listRef = useRef<FlatList>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const meetingPulseAnim = useRef(new Animated.Value(1)).current;
@@ -234,12 +227,16 @@ export default function ChatScreen() {
   }, []);
 
   // ─── Bouw agent status context voor Higgins ───────────────────────────────
+  // Alleen geactiveerde agents worden meegestuurd — geen misleidende hardcoded statussen
   const buildAgentContext = (): string => {
-    const lines = Object.entries(AGENT_STATUSES).map(([name, info]) => {
-      const statusLabel = info.status === "active" ? "actief" : info.status === "busy" ? "bezig" : "inactief/slapend";
-      return `- ${name}: ${statusLabel} — ${info.task}`;
+    const activeAgents = Object.entries(agentStatuses);
+    if (activeAgents.length === 0) return "";
+    const lines = activeAgents.map(([name, info]) => {
+      const statusLabel = info.status === "busy" ? "bezig" : "actief";
+      const taskIdNote = info.taskId ? ` (Manus taak: ${info.taskId})` : "";
+      return `- ${name}: ${statusLabel} — ${info.task}${taskIdNote}`;
     });
-    return `\n\nACTUELE TEAMSTATUS (gebruik dit voor eerlijke antwoorden over het team):\n${lines.join("\n")}`;
+    return `\n\nGEACTIVEERDE AGENTS VIA MANUS API (dit zijn echte actieve taken):\n${lines.join("\n")}`;
   };
 
   // ─── Detecteer agent-activering intentie ─────────────────────────────────
@@ -340,6 +337,18 @@ export default function ChatScreen() {
           timestamp: new Date(),
           type: "text",
         };
+
+        // Bijwerken van de dynamische agent status na succesvolle activering
+        if (activationResult.success) {
+          setAgentStatuses(prev => ({
+            ...prev,
+            [agentActivation.agentName]: {
+              status: "busy",
+              task: agentActivation.taskDescription.substring(0, 60) + (agentActivation.taskDescription.length > 60 ? "..." : ""),
+              taskId: activationResult.taskId,
+            },
+          }));
+        }
 
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const updatedMessages = [...newMessages, assistantMsg];
