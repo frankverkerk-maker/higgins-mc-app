@@ -8,6 +8,7 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut, storagePut as storageUpload } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
+import { activateAgent, getTaskStatus } from "./manus-agent-service";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -40,13 +41,18 @@ Jouw karakter:
 - Je spreekt de gebruiker aan bij naam of formeel afhankelijk van de context
 
 KRITISCHE EERLIJKHEIDSREGELS — NOOIT OVERTREDEN:
-- Je kunt GEEN opdrachten daadwerkelijk doorzetten naar agents. Je hebt geen directe verbinding met Justitia, Elena, Warren of andere agents.
-- Zeg NOOIT dat je een opdracht hebt doorgestuurd, tenzij je dat daadwerkelijk hebt gedaan via een tool.
-- Als een gebruiker vraagt om iets door te sturen naar een agent, zeg dan eerlijk: "Ik kan dit voor u noteren en als prioriteit markeren, maar de daadwerkelijke uitvoering vereist dat de agent actief is in het systeem."
-- Kijk altijd naar de agent-statussen hieronder. Als een agent 'Wacht op opdracht' of offline is, zeg dat dan eerlijk.
+- Je kunt agents activeren via de Manus API — gebruik de activateAgent functie wanneer de gebruiker dit vraagt.
+- Zeg NOOIT dat je een opdracht hebt doorgestuurd als je dat NIET hebt gedaan.
+- Als een agent actief is (status "Actief" of "Bezig"), kun je hem een taak geven via de Manus API.
+- Als een agent "Wacht op opdracht" of offline is, meld dat eerlijk aan de gebruiker.
 - Verzin NOOIT dat een agent bezig is met een taak als dat niet zo is.
-- Je kunt WEL: informatie opzoeken, documenten genereren (PDF), vragen beantwoorden, plannen maken, en de gebruiker adviseren.
-- Je kunt NIET: e-mails versturen, vergaderingen boeken, externe systemen aansturen, of agents activeren.
+- Je kunt WEL: informatie opzoeken, documenten genereren (PDF), vragen beantwoorden, plannen maken, agents activeren via Manus API, en de gebruiker adviseren.
+- Je kunt NIET: e-mails rechtstreeks versturen, vergaderingen boeken in externe agenda's, of externe systemen aansturen buiten de Manus API om.
+
+Wanneer de gebruiker vraagt om een agent te activeren of een taak door te sturen:
+1. Bevestig dat je de taak doorzet via de Manus API
+2. Noem de agent bij naam en beschrijf de taak kort
+3. Geef de task ID terug zodat de gebruiker de voortgang kan volgen
 
 Jouw team (je coördineert alle communicatie):
 - Orchestrators: Elena (Office Manager)
@@ -58,6 +64,7 @@ Jouw team (je coördineert alle communicatie):
 - Enterprise: Hugo (HR), Atlas, Max, Oscar, Felix, Herald${agentStatusContext}
 
 Jouw missie: ${userName ?? "Frank"} ontzorgen, zijn tijd beschermen en zijn bedrijven laten floreren.`;
+
   return prompt;
 }
 
@@ -324,6 +331,97 @@ export const appRouter = router({
           fileName,
           sizeBytes: pdfBuffer.length,
           generatedAt: new Date().toISOString(),
+        };
+      }),
+
+    // ── Agent Activering: activeer een Manus agent via de Manus API ───────────
+    activateAgent: publicProcedure
+      .input(
+        z.object({
+          agentName: z.string().min(1).max(100),
+          taskDescription: z.string().min(1).max(2000),
+          language: z.string().optional(),
+          userName: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const lang = input.language ?? "nl";
+        const userName = input.userName ?? "Frank";
+
+        // Activeer de agent via de Manus API
+        const result = await activateAgent(
+          input.agentName,
+          input.taskDescription,
+          lang
+        );
+
+        // Genereer een Higgins bevestigingsbericht in de juiste taal
+        const confirmMessages: Record<string, string> = {
+          nl: `Uitstekend, ${userName}. Ik heb ${input.agentName} geactiveerd via de Manus API. De taak is aangemaakt met ID: \`${result.taskId}\`. ${input.agentName} is nu aan het werk. U kunt de voortgang opvragen via de taakstatus.`,
+          de: `Ausgezeichnet, ${userName}. Ich habe ${input.agentName} über die Manus API aktiviert. Die Aufgabe wurde mit ID: \`${result.taskId}\` erstellt. ${input.agentName} arbeitet jetzt daran. Sie können den Fortschritt über den Aufgabenstatus abrufen.`,
+          en: `Excellent, ${userName}. I have activated ${input.agentName} via the Manus API. The task has been created with ID: \`${result.taskId}\`. ${input.agentName} is now working on it. You can check the progress via the task status.`,
+        };
+
+        return {
+          success: true,
+          taskId: result.taskId,
+          agentName: input.agentName,
+          higginsResponse: confirmMessages[lang] ?? confirmMessages.nl,
+          timestamp: new Date().toISOString(),
+        };
+      }),
+
+    // ── Taakstatus: haal de status op van een actieve Manus taak ─────────────
+    getTaskStatus: publicProcedure
+      .input(
+        z.object({
+          taskId: z.string().min(1),
+          language: z.string().optional(),
+          userName: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        const lang = input.language ?? "nl";
+        const userName = input.userName ?? "Frank";
+
+        const status = await getTaskStatus(input.taskId);
+
+        // Genereer een Higgins statusbericht
+        const statusLabels: Record<string, Record<string, string>> = {
+          nl: {
+            running: "is actief bezig",
+            stopped: "heeft de taak voltooid",
+            waiting: "wacht op bevestiging",
+            error: "heeft een fout gemeld",
+          },
+          de: {
+            running: "arbeitet aktiv",
+            stopped: "hat die Aufgabe abgeschlossen",
+            waiting: "wartet auf Bestätigung",
+            error: "hat einen Fehler gemeldet",
+          },
+          en: {
+            running: "is actively working",
+            stopped: "has completed the task",
+            waiting: "is waiting for confirmation",
+            error: "has reported an error",
+          },
+        };
+
+        const labels = statusLabels[lang] ?? statusLabels.nl;
+        const statusLabel = labels[status.agentStatus] ?? "is bezig";
+
+        const higginsResponse = status.lastMessage
+          ? `De agent ${statusLabel}. Laatste update: ${status.lastMessage}`
+          : `De agent ${statusLabel}. Taak ID: \`${input.taskId}\``;
+
+        return {
+          taskId: input.taskId,
+          agentStatus: status.agentStatus,
+          lastMessage: status.lastMessage,
+          higginsResponse,
+          completedAt: status.completedAt,
+          timestamp: new Date().toISOString(),
         };
       }),
 

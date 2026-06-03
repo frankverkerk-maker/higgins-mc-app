@@ -1,11 +1,21 @@
 /**
  * Higgins MC — PDF Generator
  * Huisstijl gebaseerd op Carpe Diem GmbH documenten
- * Serif typografie, ruime marges, professioneel zakelijk karakter
+ * Nunito typografie (Avenir-equivalent), ruime marges, professioneel zakelijk karakter
  */
 
 import PDFDocument from "pdfkit";
-import { Readable } from "stream";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+// Font paden — Nunito als Avenir-equivalent (clean, modern, sans-serif)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FONTS_DIR = path.join(__dirname, "fonts");
+
+const FONT_REGULAR = path.join(FONTS_DIR, "Nunito-Regular.ttf");
+const FONT_BOLD = path.join(FONTS_DIR, "Nunito-Bold.ttf");
+const FONT_SEMIBOLD = path.join(FONTS_DIR, "Nunito-SemiBold.ttf");
+const FONT_ITALIC = path.join(FONTS_DIR, "Nunito-Italic.ttf");
 
 // ─── Kleurpalet ───────────────────────────────────────────────────────────────
 const COLORS = {
@@ -52,13 +62,20 @@ export async function generateHigginsPdf(options: HigginsPdfOptions): Promise<Bu
     const doc = new PDFDocument({
       size: "A4",
       margins: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN },
+      bufferPages: true,
       info: {
         Title: options.title,
         Author: "Higgins MC · Carpe Diem GmbH",
         Creator: "Higgins Mission Control",
-        Producer: "Higgins MC v2.10",
+        Producer: "Higgins MC v3.1",
       },
     });
+
+    // Registreer Nunito fonts (Avenir-equivalent)
+    doc.registerFont("Avenir", FONT_REGULAR);
+    doc.registerFont("Avenir-Bold", FONT_BOLD);
+    doc.registerFont("Avenir-SemiBold", FONT_SEMIBOLD);
+    doc.registerFont("Avenir-Italic", FONT_ITALIC);
 
     const chunks: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -92,7 +109,7 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
   doc
     .fontSize(9)
     .fillColor(COLORS.primary)
-    .font("Helvetica-Bold")
+    .font("Avenir-Bold")
     .text("HIGGINS MC · CARPE DIEM GMBH", MARGIN, y0, { characterSpacing: 1.5 });
 
   // Horizontale lijn
@@ -107,7 +124,7 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
   doc
     .fontSize(28)
     .fillColor(COLORS.black)
-    .font("Helvetica-Bold")
+    .font("Avenir-Bold")
     .text(options.title, MARGIN, y0 + 36, {
       width: CONTENT_WIDTH,
       lineGap: 6,
@@ -128,7 +145,7 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
     doc
       .fontSize(16)
       .fillColor(COLORS.darkGray)
-      .font("Helvetica-Bold")
+      .font("Avenir-SemiBold")
       .text(options.subtitle, MARGIN, titleBottom + 16, {
         width: CONTENT_WIDTH,
         lineGap: 4,
@@ -150,12 +167,11 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
     doc
       .fontSize(10)
       .fillColor(COLORS.black)
-      .font("Helvetica-Bold")
+      .font("Avenir-Bold")
       .text(options.classification, MARGIN, metaY + 14);
   }
 
   // Metadata
-  const metaStartY = doc.y + 10;
   const metaItems: [string, string][] = [];
   if (options.preparedFor) metaItems.push(["Prepared for:", options.preparedFor]);
   if (options.date) metaItems.push(["Date:", options.date]);
@@ -166,9 +182,9 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
     doc
       .fontSize(10)
       .fillColor(COLORS.black)
-      .font("Helvetica-Bold")
+      .font("Avenir-Bold")
       .text(label + " ", MARGIN, lineY, { continued: true })
-      .font("Helvetica")
+      .font("Avenir")
       .fillColor(COLORS.darkGray)
       .text(value);
   }
@@ -178,14 +194,14 @@ function renderTitlePage(doc: PDFKit.PDFDocument, options: HigginsPdfOptions) {
     doc
       .fontSize(10)
       .fillColor(COLORS.black)
-      .font("Helvetica-Bold")
+      .font("Avenir-Bold")
       .text("Authors:", MARGIN, doc.y + 10);
 
     for (const author of options.authors) {
       doc
         .fontSize(10)
         .fillColor(COLORS.darkGray)
-        .font("Helvetica")
+        .font("Avenir")
         .text(`• ${author}`, MARGIN + 12, doc.y + 2);
     }
   }
@@ -208,7 +224,7 @@ function renderSection(doc: PDFKit.PDFDocument, section: PdfSection) {
     doc
       .fontSize(18)
       .fillColor(COLORS.black)
-      .font("Helvetica-Bold")
+      .font("Avenir-Bold")
       .text(section.heading, MARGIN, headY, { width: CONTENT_WIDTH });
 
     // Lijn onder H2
@@ -224,7 +240,7 @@ function renderSection(doc: PDFKit.PDFDocument, section: PdfSection) {
       doc
         .fontSize(10)
         .fillColor(COLORS.midGray)
-        .font("Helvetica-Oblique")
+        .font("Avenir-Italic")
         .text(`Authored by ${section.author}`, MARGIN, doc.y + 10);
     }
 
@@ -237,7 +253,7 @@ function renderSection(doc: PDFKit.PDFDocument, section: PdfSection) {
     doc
       .fontSize(13)
       .fillColor(COLORS.black)
-      .font("Helvetica-Bold")
+      .font("Avenir-SemiBold")
       .text(section.subheading, MARGIN, doc.y + 12, { width: CONTENT_WIDTH });
     doc.moveDown(0.3);
   }
@@ -257,7 +273,7 @@ function renderSection(doc: PDFKit.PDFDocument, section: PdfSection) {
       doc
         .fontSize(11)
         .fillColor(COLORS.midGray)
-        .font("Helvetica-Oblique")
+        .font("Avenir-Italic")
         .text(section.body, MARGIN + 16, quoteY + 4, {
           width: CONTENT_WIDTH - 20,
           align: "left",
@@ -267,7 +283,7 @@ function renderSection(doc: PDFKit.PDFDocument, section: PdfSection) {
       doc
         .fontSize(11)
         .fillColor(COLORS.darkGray)
-        .font("Helvetica")
+        .font("Avenir")
         .text(section.body, MARGIN, doc.y + 6, {
           width: CONTENT_WIDTH,
           align: "justify",
@@ -292,7 +308,7 @@ function renderFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: numb
   doc
     .fontSize(8)
     .fillColor(COLORS.lightGray)
-    .font("Helvetica")
+    .font("Avenir")
     .text(
       `Gegenereerd door Higgins MC · Carpe Diem GmbH · ${classification ?? "Vertrouwelijk"}`,
       MARGIN,

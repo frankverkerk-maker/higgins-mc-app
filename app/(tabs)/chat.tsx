@@ -125,6 +125,7 @@ export default function ChatScreen() {
   const transcribeMutation = trpc.higgins.transcribe.useMutation();
   const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
   const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
+  const activateAgentMutation = trpc.higgins.activateAgent.useMutation();
 
   // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -241,6 +242,55 @@ export default function ChatScreen() {
     return `\n\nACTUELE TEAMSTATUS (gebruik dit voor eerlijke antwoorden over het team):\n${lines.join("\n")}`;
   };
 
+  // ─── Detecteer agent-activering intentie ─────────────────────────────────
+  const detectAgentActivation = (text: string): { agentName: string; taskDescription: string } | null => {
+    // Bekende agentnamen in het team
+    const knownAgents = [
+      "Elena", "Gary", "Bard", "Picasso", "Echo", "Anna", "Larry", "Flash",
+      "Elon", "Oracle", "Nano", "Pixel", "Shield", "Sentinel",
+      "Warren", "Abacus", "Closer", "Carson", "Strategos", "Fortuna",
+      "Catharina", "Victoria", "Barbara", "Vera", "Rosi",
+      "Justitia", "Adrian", "Isabelle", "Matteo", "Elena V.", "Dr. Nadia",
+      "Hugo", "Atlas", "Max", "Oscar", "Felix", "Herald",
+    ];
+
+    // Activeringspatronen in NL/DE/EN
+    const activationPatterns = [
+      // Nederlands
+      /(?:activeer|stuur|geef opdracht aan|zet|schakel in|laat)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:om|voor|met de taak|de taak|aan om)/i,
+      /([A-Z][a-zA-Z\s\.]+?)\s+(?:moet|kan|zou moeten)\s+(.+)/i,
+      // Duits
+      /(?:aktiviere|beauftrage|schicke|lass)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:mit|für|um)/i,
+      // Engels
+      /(?:activate|assign|send|task|tell|ask)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:to|with|for)/i,
+    ];
+
+    const lowerText = text.toLowerCase();
+    const hasActivationKeyword = [
+      "activeer", "stuur door", "geef opdracht", "laat uitvoeren", "schakel in",
+      "aktiviere", "beauftrage",
+      "activate", "assign to", "task ", "delegate",
+    ].some(kw => lowerText.includes(kw));
+
+    if (!hasActivationKeyword) return null;
+
+    // Zoek welke agent genoemd wordt
+    for (const agentName of knownAgents) {
+      if (text.includes(agentName)) {
+        // Extraheer de taakomschrijving (alles na de agentnaam)
+        const agentIdx = text.indexOf(agentName);
+        const afterAgent = text.substring(agentIdx + agentName.length).trim();
+        // Verwijder voorzetsels aan het begin
+        const taskDescription = afterAgent
+          .replace(/^(om|voor|met|to|with|for|mit|für|:)\s*/i, "")
+          .trim() || text;
+        return { agentName, taskDescription };
+      }
+    }
+
+    return null;
+  };
+
   // ─── Stuur bericht naar Higgins ───────────────────────────────────────────
   const sendMessage = useCallback(async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
@@ -264,36 +314,69 @@ export default function ChatScreen() {
 
     const history: Array<{ role: "user" | "assistant"; content: string }> = historyRef.current.slice(-10);
 
-    // Voeg agent context toe aan het bericht voor eerlijke antwoorden
-    const agentContext = buildAgentContext();
-    const messageWithContext = text + agentContext;
-
     try {
-      const result = await chatMutation.mutateAsync({
-        message: messageWithContext,
-        history: history.map(h => ({ role: h.role, content: String(h.content) })),
-        userName: userName ?? undefined,
-        language,
-      });
+      // ── Detecteer agent-activering intentie ──────────────────────────────
+      const agentActivation = detectAgentActivation(text);
 
-      historyRef.current = [
-        ...historyRef.current,
-        { role: "user" as const, content: text },
-        { role: "assistant" as const, content: result.reply },
-      ].slice(-20);
+      if (agentActivation) {
+        // Activeer de agent via de Manus API
+        const activationResult = await activateAgentMutation.mutateAsync({
+          agentName: agentActivation.agentName,
+          taskDescription: agentActivation.taskDescription,
+          language,
+          userName: userName ?? undefined,
+        });
 
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: result.reply,
-        timestamp: new Date(),
-        type: "text",
-      };
+        historyRef.current = [
+          ...historyRef.current,
+          { role: "user" as const, content: text },
+          { role: "assistant" as const, content: activationResult.higginsResponse },
+        ].slice(-20);
 
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const updatedMessages = [...newMessages, assistantMsg];
-      setMessages(updatedMessages);
-      await saveMessages(updatedMessages);
+        const assistantMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: activationResult.higginsResponse,
+          timestamp: new Date(),
+          type: "text",
+        };
+
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const updatedMessages = [...newMessages, assistantMsg];
+        setMessages(updatedMessages);
+        await saveMessages(updatedMessages);
+      } else {
+        // ── Normaal chat bericht naar Higgins ────────────────────────────────
+        // Voeg agent context toe aan het bericht voor eerlijke antwoorden
+        const agentContext = buildAgentContext();
+        const messageWithContext = text + agentContext;
+
+        const result = await chatMutation.mutateAsync({
+          message: messageWithContext,
+          history: history.map(h => ({ role: h.role, content: String(h.content) })),
+          userName: userName ?? undefined,
+          language,
+        });
+
+        historyRef.current = [
+          ...historyRef.current,
+          { role: "user" as const, content: text },
+          { role: "assistant" as const, content: result.reply },
+        ].slice(-20);
+
+        const assistantMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: result.reply,
+          timestamp: new Date(),
+          type: "text",
+        };
+
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const updatedMessages = [...newMessages, assistantMsg];
+        setMessages(updatedMessages);
+        await saveMessages(updatedMessages);
+      }
     } catch (error) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -309,7 +392,7 @@ export default function ChatScreen() {
 
     setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [input, isLoading, userName, chatMutation, messages, language, saveMessages]);
+  }, [input, isLoading, userName, chatMutation, activateAgentMutation, messages, language, saveMessages]);
 
   // ─── PDF genereren van het laatste Higgins antwoord ───────────────────────
   const handleGeneratePdf = useCallback(async () => {

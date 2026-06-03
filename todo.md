@@ -101,3 +101,14 @@
 - [ ] Rijke berichttypen: tekst, PDF, afbeelding, bestand
 - [ ] Chat berichten persistent opslaan in AsyncStorage
 - [ ] Bestand uploaden knop in chat input bar (📎)
+
+## Fase 11: Agent-Activering via Manus API (v3.1)
+- [x] Manus agent service aanmaken (server/manus-agent-service.ts) — activateAgent + getTaskStatus
+- [x] activateAgent tRPC endpoint — POST /api/trpc/higgins.activateAgent (Manus API task.create)
+- [x] getTaskStatus tRPC endpoint — GET /api/trpc/higgins.getTaskStatus (Manus API task.listMessages)
+- [x] Higgins system prompt bijgewerkt — eerlijk: KAN agents activeren via Manus API
+- [x] Chat.tsx: intent detectie voor agent-activering (NL/DE/EN patronen)
+- [x] Chat.tsx: activateAgent mutation geïntegreerd — echte Manus taak aanmaken
+- [x] PDF font gewijzigd van Helvetica naar Nunito (Avenir-equivalent) — TTF fonts in server/fonts/
+- [x] pdfkit toegevoegd aan package.json dependencies (fix deployment failure)
+- [x] Metro blockList toegevoegd — voorkomt ENOENT crash bij tijdelijke pnpm mappen
