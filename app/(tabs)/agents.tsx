@@ -89,7 +89,7 @@ export default function TeamPulseScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <CircuitBackground opacity={0.18} color="#00D4D4" />
+      <CircuitBackground opacity={0.32} color="#00D4D4" />
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -222,8 +222,18 @@ const s = StyleSheet.create({
   addOnBadge: { backgroundColor: C.amberDim, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: C.amber + "44" },
   addOnText: { fontSize: 9, color: C.amber, fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
 
-  card: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
-  rowBorder: { borderTopWidth: 1, borderTopColor: C.border },
+  card: {
+    backgroundColor: "rgba(0,212,212,0.05)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.22)",
+    overflow: "hidden",
+    shadowColor: "#00D4D4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  rowBorder: { borderTopWidth: 1, borderTopColor: "rgba(0,212,212,0.12)" },
 
   // Pulse rijen (actief nu)
   pulseRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },

@@ -55,7 +55,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <CircuitBackground opacity={0.18} color="#00D4D4" />
+      <CircuitBackground opacity={0.32} color="#00D4D4" />
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -289,8 +289,9 @@ const s = StyleSheet.create({
   profileCard: {
     flexDirection: "row", alignItems: "center", gap: 14,
     marginHorizontal: 16, marginBottom: 24, padding: 16,
-    backgroundColor: C.surface, borderRadius: 20,
-    borderWidth: 1, borderColor: C.cyanBorder,
+    backgroundColor: "rgba(0,212,212,0.06)", borderRadius: 20,
+    borderWidth: 1, borderColor: "rgba(0,212,212,0.35)",
+    shadowColor: "#00D4D4", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 16,
   },
   profileAvatar: {
     width: 52, height: 52, borderRadius: 26,
@@ -311,7 +312,17 @@ const s = StyleSheet.create({
     fontSize: 10, fontWeight: "700", color: C.muted, fontFamily: FONT_BOLD,
     textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginLeft: 4,
   },
-  card: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
+  card: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.18)",
+    overflow: "hidden",
+    shadowColor: "#00D4D4",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
   row: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 14,

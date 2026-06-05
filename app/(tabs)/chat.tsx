@@ -630,13 +630,13 @@ export default function ChatScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
+      {/* Circuit achtergrond — VAST buiten KeyboardAvoidingView */}
+      <CircuitBackground opacity={0.32} color="#00D4D4" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
-        {/* Circuit achtergrond */}
-        <CircuitBackground opacity={0.18} color="#00D4D4" />
 
         {/* Header */}
         <View style={styles.header}>

@@ -139,8 +139,8 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-        {/* ── Circuit achtergrond ── */}
-        <CircuitBackground opacity={0.18} color="#00D4D4" />
+      {/* ── Circuit achtergrond — VAST, buiten ScrollView zodat content erover scrolt ── */}
+      <CircuitBackground opacity={0.32} color="#00D4D4" />
 
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
