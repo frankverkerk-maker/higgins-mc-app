@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from "react-n
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
+import { CircuitBackground } from "@/components/circuit-background";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { TEAM } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
 
@@ -87,16 +89,20 @@ export default function TeamPulseScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
+      <CircuitBackground opacity={0.04} color="#00D4D4" />
       <ScrollView
-        style={{ flex: 1, backgroundColor: C.bg }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
-          <Text style={s.headerTitle}>{t.agents.title}</Text>
-          <Text style={s.headerSub}>36 {t.agents.activeAgents} · 7 {t.agents.department}en</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
+            <Text style={s.headerTitle}>{t.agents.title}</Text>
+            <Text style={s.headerSub}>36 {t.agents.activeAgents} · 7 {t.agents.department}en</Text>
+          </View>
+          <LanguageSwitcher />
         </View>
 
         {/* ── Live activiteit (kernteam) ── */}
@@ -205,7 +211,7 @@ export default function TeamPulseScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   headerLabel: { fontSize: 10, color: C.muted, fontFamily: FONT, letterSpacing: 2, textTransform: "uppercase" },
   headerTitle: { fontSize: 28, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5, marginTop: 4 },
   headerSub: { fontSize: 13, color: C.cyan, fontFamily: FONT, marginTop: 4, letterSpacing: 0.5 },

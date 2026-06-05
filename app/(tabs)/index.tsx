@@ -1,8 +1,19 @@
-import { ScrollView, Text, View, Pressable, StyleSheet, Platform } from "react-native";
-import { useState, useEffect, useCallback } from "react";
+"use client";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  Pressable,
+  Animated,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
+import { CircuitBackground } from "@/components/circuit-background";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
@@ -11,32 +22,26 @@ import { useLanguage } from "@/lib/language-provider";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:       "#0A0C0E",
-  surface:  "#111418",
-  surface2: "#161B21",
-  border:   "#1E2530",
-  cyan:     "#00D4D4",
-  cyanDim:  "rgba(0,212,212,0.15)",
+  bg:        "#0A0C0E",
+  surface:   "#111418",
+  surface2:  "#161B21",
+  border:    "#1E2530",
+  cyan:      "#00D4D4",
+  cyanDim:   "rgba(0,212,212,0.15)",
   cyanBorder:"rgba(0,212,212,0.25)",
-  text:     "#E8EDF2",
-  muted:    "#5A6472",
-  red:      "#FF4D6A",
-  redDim:   "rgba(255,77,106,0.15)",
-  green:    "#00D4A0",
-  greenDim: "rgba(0,212,160,0.15)",
-  amber:    "#F5A623",
+  text:      "#E8EDF2",
+  muted:     "#5A6472",
+  red:       "#FF4D6A",
+  redDim:    "rgba(255,77,106,0.15)",
+  green:     "#00D4A0",
+  greenDim:  "rgba(0,212,160,0.15)",
+  amber:     "#F5A623",
 };
 
-const FONT = Platform.OS === "ios" ? "Avenir" : undefined;
+const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
-const MORNING_BRIEF = {
-  date: "Zaterdag, 31 mei 2026",
-  summary: "Goedemorgen. Vandaag heeft u 2 vergaderingen en 3 openstaande acties. Warren heeft gisteren de portfolio-analyse afgerond. Elena heeft 4 e-mails klaargezet voor uw goedkeuring. Ik adviseer u te beginnen met de Q2-review.",
-  highlight: "Q2-review vereist uw aandacht vandaag.",
-};
-
 const PRIORITIES = [
   { id: "p1", label: "Q2 financieel rapport goedkeuren", agent: "Warren", urgent: true },
   { id: "p2", label: "Voorstel nieuwe partner clinic bekijken", agent: "Justitia", urgent: false },
@@ -72,6 +77,17 @@ export default function DashboardScreen() {
   const [approvals, setApprovals] = useState(APPROVALS);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
 
+  // Subtiele puls animatie op de status dot
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.6, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
   // Live Morning Briefing via server
   const briefQuery = trpc.higgins.morningBrief.useQuery(
     { userName: userName ?? undefined, language },
@@ -105,7 +121,6 @@ export default function DashboardScreen() {
         ? result.higginsResponse
         : "Begrepen.";
       setApprovalFeedback((prev) => ({ ...prev, [item.id]: higginsReply }));
-      // Verwijder na 3 seconden
       setTimeout(() => {
         setApprovals((prev) => prev.filter((a) => a.id !== item.id));
       }, 3000);
@@ -124,20 +139,29 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
+      {/* ── Circuit achtergrond ── */}
+      <CircuitBackground opacity={0.04} color="#00D4D4" />
+
       <ScrollView
-        style={{ flex: 1, backgroundColor: C.bg }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
+        {/* ── Header met logo + taalwisselaar ── */}
         <View style={s.header}>
-          <View>
-            <Text style={s.greeting}>{greeting}</Text>
-            <Text style={s.title}>{t.dashboard.title}</Text>
+          <View style={s.headerLeft}>
+            <HigginsAvatar size={40} />
+            <View style={{ marginLeft: 12 }}>
+              <Text style={s.greeting}>{greeting}</Text>
+              <Text style={s.title}>{t.dashboard.title}</Text>
+            </View>
           </View>
-          <View style={s.statusBadge}>
-            <View style={s.statusDot} />
-            <Text style={s.statusText}>{t.common.online}</Text>
+          <View style={s.headerRight}>
+            <LanguageSwitcher />
+            <View style={s.statusBadge}>
+              <Animated.View style={[s.statusDot, { transform: [{ scale: pulseAnim }] }]} />
+              <Text style={s.statusText}>{t.common.online}</Text>
+            </View>
           </View>
         </View>
 
@@ -147,23 +171,21 @@ export default function DashboardScreen() {
             <HigginsAvatar size={38} />
             <View style={{ flex: 1 }}>
               <Text style={s.briefLabel}>{t.dashboard.morningBriefing}</Text>
-              <Text style={s.briefDate}>{briefQuery.data?.date ?? MORNING_BRIEF.date}</Text>
+              <Text style={s.briefDate}>{briefQuery.data?.date ?? ""}</Text>
             </View>
             <View style={s.newBadge}>
               <Text style={s.newBadgeText}>{t.dashboard.morningBriefingNew}</Text>
             </View>
           </View>
           <Text style={s.briefSummary}>
-            {briefQuery.isLoading ? t.dashboard.morningBriefLoading : briefQuery.data?.brief ?? MORNING_BRIEF.summary}
+            {briefQuery.isLoading ? t.dashboard.morningBriefLoading : briefQuery.data?.brief ?? ""}
           </Text>
-          {!briefQuery.isLoading && (
-            <View style={s.briefHighlight}>
-              <Text style={s.briefHighlightText}>⚡ {MORNING_BRIEF.highlight}</Text>
-            </View>
-          )}
           <Pressable
-            style={({ pressed }) => [s.briefCta, pressed && { opacity: 0.75 }]}
-            onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
+            style={({ pressed }) => [s.briefCta, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
+            onPress={() => {
+              try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+              router.push("/chat");
+            }}
           >
             <Text style={s.briefCtaText}>{t.dashboard.discussWithHiggins}</Text>
           </Pressable>
@@ -218,8 +240,11 @@ export default function DashboardScreen() {
           {PRIORITIES.map((item, index) => (
             <Pressable
               key={item.id}
-              style={({ pressed }) => [s.priorityItem, pressed && { opacity: 0.75 }]}
-              onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
+              style={({ pressed }) => [s.priorityItem, pressed && { opacity: 0.75, transform: [{ scale: 0.99 }] }]}
+              onPress={() => {
+                try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+                router.push("/chat");
+              }}
             >
               <View style={[s.priorityNum, item.urgent && s.priorityNumUrgent]}>
                 <Text style={[s.priorityNumText, item.urgent && { color: C.cyan }]}>{index + 1}</Text>
@@ -245,8 +270,14 @@ export default function DashboardScreen() {
             {QUICK_COMMANDS.map((cmd) => (
               <Pressable
                 key={cmd.id}
-                style={({ pressed }) => [s.commandCard, pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] }]}
-                onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {} router.push("/chat"); }}
+                style={({ pressed }) => [
+                  s.commandCard,
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+                ]}
+                onPress={() => {
+                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+                  router.push("/chat");
+                }}
               >
                 <Text style={s.commandIcon}>{cmd.icon}</Text>
                 <Text style={s.commandLabel}>{cmd.label}</Text>
@@ -274,7 +305,7 @@ export default function DashboardScreen() {
 
         {/* ── CTA ── */}
         <Pressable
-          style={({ pressed }) => [s.chatCta, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [s.chatCta, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
           onPress={() => router.push("/chat")}
         >
           <HigginsAvatar size={42} />
@@ -292,73 +323,359 @@ export default function DashboardScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   // Header
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 },
-  greeting: { fontSize: 12, color: C.muted, fontFamily: FONT, letterSpacing: 1.5, textTransform: "uppercase" },
-  title: { fontSize: 28, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5, marginTop: 4 },
-  statusBadge: { flexDirection: "row", alignItems: "center", backgroundColor: C.greenDim, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "rgba(0,212,160,0.3)", gap: 6 },
-  statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.green },
-  statusText: { fontSize: 11, color: C.green, fontWeight: "700", fontFamily: FONT, letterSpacing: 0.5 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  greeting: {
+    fontSize: 11,
+    color: C.muted,
+    fontFamily: FONT,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.text,
+    fontFamily: FONT_BOLD,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.greenDim,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,160,0.3)",
+    gap: 5,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.green,
+  },
+  statusText: {
+    fontSize: 10,
+    color: C.green,
+    fontWeight: "700",
+    fontFamily: FONT,
+    letterSpacing: 0.5,
+  },
 
   // Brief card
-  briefCard: { marginHorizontal: 20, marginBottom: 24, backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.cyanBorder, gap: 12, shadowColor: C.cyan, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 12 },
+  briefCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: C.cyanBorder,
+    gap: 12,
+    shadowColor: C.cyan,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+  },
   briefHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  briefLabel: { fontSize: 10, fontWeight: "800", color: C.cyan, fontFamily: FONT_BOLD, letterSpacing: 2 },
+  briefLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: C.cyan,
+    fontFamily: FONT_BOLD,
+    letterSpacing: 2,
+  },
   briefDate: { fontSize: 11, color: C.muted, marginTop: 2, fontFamily: FONT },
-  newBadge: { backgroundColor: C.cyanDim, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: C.cyanBorder },
-  newBadgeText: { fontSize: 9, color: C.cyan, fontWeight: "800", fontFamily: FONT_BOLD, letterSpacing: 1.5 },
-  briefSummary: { fontSize: 13, color: C.text, lineHeight: 21, fontFamily: FONT, opacity: 0.85 },
-  briefHighlight: { backgroundColor: C.cyanDim, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, borderLeftWidth: 3, borderLeftColor: C.cyan },
-  briefHighlightText: { fontSize: 12, color: C.cyan, fontWeight: "700", fontFamily: FONT_BOLD },
-  briefCta: { alignSelf: "flex-start", paddingHorizontal: 16, paddingVertical: 9, backgroundColor: C.cyan, borderRadius: 12 },
-  briefCtaText: { fontSize: 13, color: "#0A0C0E", fontWeight: "800", fontFamily: FONT_BOLD },
+  newBadge: {
+    backgroundColor: C.cyanDim,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: C.cyanBorder,
+  },
+  newBadgeText: {
+    fontSize: 9,
+    color: C.cyan,
+    fontWeight: "800",
+    fontFamily: FONT_BOLD,
+    letterSpacing: 1.5,
+  },
+  briefSummary: {
+    fontSize: 13,
+    color: C.text,
+    lineHeight: 21,
+    fontFamily: FONT,
+    opacity: 0.85,
+  },
+  briefHighlight: {
+    backgroundColor: C.cyanDim,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderLeftWidth: 3,
+    borderLeftColor: C.cyan,
+  },
+  briefHighlightText: {
+    fontSize: 12,
+    color: C.cyan,
+    fontWeight: "700",
+    fontFamily: FONT_BOLD,
+  },
+  briefCta: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    backgroundColor: C.cyan,
+    borderRadius: 12,
+  },
+  briefCtaText: {
+    fontSize: 13,
+    color: "#0A0C0E",
+    fontWeight: "800",
+    fontFamily: FONT_BOLD,
+  },
 
   // Sections
   section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.2, marginBottom: 12 },
-  countBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.red, alignItems: "center", justifyContent: "center" },
-  countBadgeText: { fontSize: 11, color: "#fff", fontWeight: "800", fontFamily: FONT_BOLD },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: C.text,
+    fontFamily: FONT_BOLD,
+    letterSpacing: -0.2,
+    marginBottom: 12,
+  },
+  countBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: C.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countBadgeText: {
+    fontSize: 11,
+    color: "#fff",
+    fontWeight: "800",
+    fontFamily: FONT_BOLD,
+  },
 
   // Approvals
-  approvalCard: { backgroundColor: C.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "rgba(255,77,106,0.2)", gap: 8, marginBottom: 10 },
+  approvalCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,77,106,0.2)",
+    gap: 8,
+    marginBottom: 10,
+  },
   approvalTop: { flexDirection: "row", justifyContent: "space-between" },
-  approvalAgent: { fontSize: 12, fontWeight: "800", color: C.cyan, fontFamily: FONT_BOLD, letterSpacing: 0.5 },
+  approvalAgent: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: C.cyan,
+    fontFamily: FONT_BOLD,
+    letterSpacing: 0.5,
+  },
   approvalTime: { fontSize: 11, color: C.muted, fontFamily: FONT },
-  approvalAction: { fontSize: 13, color: C.text, lineHeight: 19, fontFamily: FONT },
+  approvalAction: {
+    fontSize: 13,
+    color: C.text,
+    lineHeight: 19,
+    fontFamily: FONT,
+  },
   approvalButtons: { flexDirection: "row", gap: 8, marginTop: 4 },
-  btnApprove: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: C.greenDim, borderWidth: 1, borderColor: "rgba(0,212,160,0.3)" },
-  btnApproveText: { fontSize: 13, fontWeight: "700", color: C.green, fontFamily: FONT_BOLD },
-  btnReject: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: C.redDim, borderWidth: 1, borderColor: "rgba(255,77,106,0.3)" },
-  btnRejectText: { fontSize: 13, fontWeight: "700", color: C.red, fontFamily: FONT_BOLD },
+  btnApprove: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: C.greenDim,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,160,0.3)",
+  },
+  btnApproveText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.green,
+    fontFamily: FONT_BOLD,
+  },
+  btnReject: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: C.redDim,
+    borderWidth: 1,
+    borderColor: "rgba(255,77,106,0.3)",
+  },
+  btnRejectText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.red,
+    fontFamily: FONT_BOLD,
+  },
 
   // Priorities
-  priorityItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
-  priorityNum: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.surface2, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: C.border },
-  priorityNumUrgent: { borderColor: C.cyanBorder, backgroundColor: C.cyanDim },
-  priorityNumText: { fontSize: 13, fontWeight: "800", color: C.muted, fontFamily: FONT_BOLD },
-  priorityLabel: { fontSize: 13, fontWeight: "600", color: C.text, lineHeight: 18, fontFamily: FONT },
+  priorityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: C.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 8,
+  },
+  priorityNum: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: C.surface2,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  priorityNumUrgent: {
+    borderColor: C.cyanBorder,
+    backgroundColor: C.cyanDim,
+  },
+  priorityNumText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: C.muted,
+    fontFamily: FONT_BOLD,
+  },
+  priorityLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.text,
+    lineHeight: 18,
+    fontFamily: FONT,
+  },
   priorityAgent: { fontSize: 11, color: C.muted, marginTop: 2, fontFamily: FONT },
-  urgentTag: { backgroundColor: C.redDim, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: "rgba(255,77,106,0.3)" },
-  urgentTagText: { fontSize: 9, color: C.red, fontWeight: "800", fontFamily: FONT_BOLD, letterSpacing: 1 },
+  urgentTag: {
+    backgroundColor: C.redDim,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,77,106,0.3)",
+  },
+  urgentTagText: {
+    fontSize: 9,
+    color: C.red,
+    fontWeight: "800",
+    fontFamily: FONT_BOLD,
+    letterSpacing: 1,
+  },
   arrow: { fontSize: 22, color: C.muted, fontWeight: "300" },
 
   // Quick commands
   commandGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  commandCard: { width: "30%", aspectRatio: 1, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center", gap: 7 },
+  commandCard: {
+    width: "30%",
+    aspectRatio: 1,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
   commandIcon: { fontSize: 22 },
-  commandLabel: { fontSize: 10, fontWeight: "700", color: C.text, textAlign: "center", fontFamily: FONT_BOLD, letterSpacing: 0.2 },
+  commandLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: C.text,
+    textAlign: "center",
+    fontFamily: FONT_BOLD,
+    letterSpacing: 0.2,
+  },
 
   // Team Pulse
-  pulseItem: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
+  pulseItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 8,
+  },
   pulseDot: { width: 8, height: 8, borderRadius: 4 },
-  pulseName: { fontSize: 13, fontWeight: "700", color: C.text, width: 72, fontFamily: FONT_BOLD },
+  pulseName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.text,
+    width: 72,
+    fontFamily: FONT_BOLD,
+  },
   pulseTask: { flex: 1, fontSize: 12, color: C.muted, fontFamily: FONT },
   pulseTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   pulseTagText: { fontSize: 10, fontWeight: "700", fontFamily: FONT_BOLD },
 
   // Chat CTA
-  chatCta: { marginHorizontal: 20, backgroundColor: C.cyan, borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: C.cyan, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16 },
-  chatCtaTitle: { fontSize: 15, fontWeight: "800", color: "#0A0C0E", fontFamily: FONT_BOLD },
-  chatCtaSub: { fontSize: 12, color: "rgba(10,12,14,0.65)", marginTop: 2, fontFamily: FONT },
-  chatCtaArrow: { fontSize: 26, color: "rgba(10,12,14,0.5)", fontWeight: "300" },
+  chatCta: {
+    marginHorizontal: 20,
+    backgroundColor: C.cyan,
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    shadowColor: C.cyan,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+  },
+  chatCtaTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0A0C0E",
+    fontFamily: FONT_BOLD,
+  },
+  chatCtaSub: {
+    fontSize: 12,
+    color: "rgba(10,12,14,0.65)",
+    marginTop: 2,
+    fontFamily: FONT,
+  },
+  chatCtaArrow: {
+    fontSize: 26,
+    color: "rgba(10,12,14,0.5)",
+    fontWeight: "300",
+  },
 });

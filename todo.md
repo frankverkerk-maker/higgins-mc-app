@@ -112,3 +112,16 @@
 - [x] PDF font gewijzigd van Helvetica naar Nunito (Avenir-equivalent) — TTF fonts in server/fonts/
 - [x] pdfkit toegevoegd aan package.json dependencies (fix deployment failure)
 - [x] Metro blockList toegevoegd — voorkomt ENOENT crash bij tijdelijke pnpm mappen
+
+## Fase 12: Luxury UI Polish + Circuit Achtergrond
+- [x] Circuit/stroomschema SVG achtergrond component aangemaakt (components/circuit-background.tsx)
+- [x] Circuit achtergrond op Command Center scherm
+- [x] Circuit achtergrond op Chat scherm
+- [x] Circuit achtergrond op Team Pulse scherm
+- [x] Circuit achtergrond op Instellingen scherm
+- [x] Higgins logo (avatar) in Command Center header naast titel
+- [x] Taalwisselaar (NL/DE/EN) in header van Command Center
+- [x] Taalwisselaar in header van Chat scherm
+- [x] Taalwisselaar in header van Team Pulse scherm
+- [x] iPad sidebar: taalwisselaar + i18n nav labels
+- [x] Pulserende status dot animatie op dashboard

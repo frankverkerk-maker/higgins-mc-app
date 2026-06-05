@@ -27,6 +27,8 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
+import { CircuitBackground } from "@/components/circuit-background";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 
@@ -633,6 +635,9 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
+        {/* Circuit achtergrond */}
+        <CircuitBackground opacity={0.035} color="#00D4D4" />
+
         {/* Header */}
         <View style={styles.header}>
           <HigginsAvatar size={42} />
@@ -643,6 +648,8 @@ export default function ChatScreen() {
               <Text style={styles.headerStatusText}>{t.chat.statusOnline}</Text>
             </View>
           </View>
+          {/* Taalwisselaar */}
+          <LanguageSwitcher />
           {/* Vergadering opname knop in header */}
           {Platform.OS !== "web" && (
             <Animated.View style={{ transform: [{ scale: meetingPulseAnim }] }}>

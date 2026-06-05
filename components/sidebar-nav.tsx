@@ -11,6 +11,8 @@ import { usePathname, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { HigginsAvatar } from "@/components/higgins-avatar";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/lib/language-provider";
 
 const C = {
   bg:         "#0D1014",
@@ -26,11 +28,11 @@ const C = {
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
-const NAV_ITEMS = [
-  { href: "/(tabs)/",        label: "Command",     icon: "house.fill"     as const },
-  { href: "/(tabs)/chat",    label: "Chat",        icon: "bubble.left.fill" as const },
-  { href: "/(tabs)/agents",  label: "Team Pulse",  icon: "person.2.fill"  as const },
-  { href: "/(tabs)/settings",label: "Instellingen",icon: "gearshape.fill" as const },
+const NAV_ITEM_DEFS = [
+  { href: "/(tabs)/",        key: "command",    icon: "house.fill"      as const },
+  { href: "/(tabs)/chat",    key: "chat",       icon: "bubble.left.fill" as const },
+  { href: "/(tabs)/agents",  key: "teamPulse",  icon: "person.2.fill"   as const },
+  { href: "/(tabs)/settings",key: "settings",   icon: "gearshape.fill"  as const },
 ];
 
 export const SIDEBAR_WIDTH = 220;
@@ -45,6 +47,7 @@ export function SidebarNav() {
   const isPad = useIsPad();
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLanguage();
 
   if (!isPad) return null;
 
@@ -66,7 +69,8 @@ export function SidebarNav() {
 
       {/* Nav items */}
       <View style={s.navList}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEM_DEFS.map((item) => {
+          const label = (t.tabs as Record<string, string>)[item.key] ?? item.key;
           const isActive =
             item.href === "/(tabs)/"
               ? pathname === "/" || pathname === "/(tabs)" || pathname === "/(tabs)/"
@@ -87,12 +91,17 @@ export function SidebarNav() {
                 color={isActive ? C.cyan : C.muted}
               />
               <Text style={[s.navLabel, isActive && s.navLabelActive]}>
-                {item.label}
+                {label}
               </Text>
               {isActive && <View style={s.activeIndicator} />}
             </Pressable>
           );
         })}
+      </View>
+
+      {/* Taalwisselaar */}
+      <View style={{ paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, marginTop: 8 }}>
+        <LanguageSwitcher />
       </View>
 
       {/* Status footer */}

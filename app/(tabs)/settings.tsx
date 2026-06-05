@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch } from "react-native";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
+import { CircuitBackground } from "@/components/circuit-background";
 import { useLanguage } from "@/lib/language-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 
@@ -54,15 +55,18 @@ export default function SettingsScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
+      <CircuitBackground opacity={0.04} color="#00D4D4" />
       <ScrollView
-        style={{ flex: 1, backgroundColor: C.bg }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.headerLabel}>{t.settings.preferences.toUpperCase()}</Text>
-          <Text style={s.headerTitle}>{t.settings.title}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerLabel}>{t.settings.preferences.toUpperCase()}</Text>
+            <Text style={s.headerTitle}>{t.settings.title}</Text>
+          </View>
         </View>
 
         {/* ── Profiel kaart ── */}
@@ -278,7 +282,7 @@ export default function SettingsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   headerLabel: { fontSize: 10, color: C.muted, fontFamily: FONT, letterSpacing: 2, textTransform: "uppercase" },
   headerTitle: { fontSize: 28, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5, marginTop: 4 },
 
