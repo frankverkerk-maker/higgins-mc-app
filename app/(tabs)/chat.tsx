@@ -27,8 +27,8 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
-import { CircuitBackground } from "@/components/circuit-background";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { CircuitBackground } from "@/components/circuit-background";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 
@@ -630,8 +630,7 @@ export default function ChatScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      {/* Circuit achtergrond — VAST buiten KeyboardAvoidingView */}
-      <CircuitBackground opacity={0.32} color="#00D4D4" />
+      <CircuitBackground opacity={0.30} color="#00D4D4">
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -808,6 +807,7 @@ export default function ChatScreen() {
           )}
         </View>
       </Modal>
+      </CircuitBackground>
     </ScreenContainer>
   );
 }

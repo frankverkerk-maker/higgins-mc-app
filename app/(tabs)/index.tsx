@@ -12,8 +12,8 @@ import {
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
-import { CircuitBackground } from "@/components/circuit-background";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { CircuitBackground } from "@/components/circuit-background";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
@@ -139,9 +139,7 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      {/* ── Circuit achtergrond — VAST, buiten ScrollView zodat content erover scrolt ── */}
-      <CircuitBackground opacity={0.32} color="#00D4D4" />
-
+      <CircuitBackground opacity={0.30} color="#00D4D4">
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -315,6 +313,7 @@ export default function DashboardScreen() {
           <Text style={s.chatCtaArrow}>›</Text>
         </Pressable>
       </ScrollView>
+      </CircuitBackground>
     </ScreenContainer>
   );
 }

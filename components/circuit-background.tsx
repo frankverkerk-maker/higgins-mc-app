@@ -1,54 +1,60 @@
 /**
  * CircuitBackground — Higgins MC
  *
- * Organische circuit/stroomschema achtergrond geïnspireerd op de Higgins presentatie.
+ * CORRECTE iOS AANPAK:
+ * De SVG staat als eerste child in de buitenste View (flex:1).
+ * De content staat in een StyleSheet.absoluteFillObject View erbovenop.
+ * Dit is de enige betrouwbare manier op iOS — geen zIndex hacks.
  *
- * BELANGRIJK: Dit component gebruikt position:"absolute" met zIndex:-1 zodat het
- * ALTIJD achter alle andere content valt. De parent moet position:"relative" hebben
- * (standaard in React Native).
+ * Gebruik:
+ * <CircuitBackground>
+ *   <ScrollView>...</ScrollView>
+ * </CircuitBackground>
  */
+import React from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import Svg, { Path, Circle, Line, Rect, G } from "react-native-svg";
 
 interface CircuitBackgroundProps {
+  children: React.ReactNode;
   opacity?: number;
   color?: string;
 }
 
 export function CircuitBackground({
-  opacity = 0.32,
+  children,
+  opacity = 0.30,
   color = "#00D4D4",
 }: CircuitBackgroundProps) {
   const { width: W, height: H } = useWindowDimensions();
-  const svgElements = buildCircuit(W, H, color);
 
   return (
-    <View
-      style={styles.container}
-      pointerEvents="none"
-    >
+    <View style={styles.root}>
+      {/* Laag 1: SVG achtergrond — staat als EERSTE child, dus altijd onderaan */}
       <Svg
         width={W}
         height={H}
-        style={{ opacity }}
+        style={[StyleSheet.absoluteFillObject, { opacity }]}
         viewBox={`0 0 ${W} ${H}`}
+        pointerEvents="none"
       >
-        {svgElements}
+        {buildCircuit(W, H, color)}
       </Svg>
+
+      {/* Laag 2: Content — staat als TWEEDE child, dus altijd bovenaan */}
+      <View style={styles.content}>
+        {children}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // zIndex negatief zodat het ALTIJD onder alle andere Views valt
-    zIndex: -1,
-    elevation: 0, // Android
+  root: {
+    flex: 1,
+  },
+  content: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
 
@@ -200,9 +206,8 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(W, H - 175, W - 55, H - 175, sw3, 0.6));
   els.push(CV(`M${W},${H - 40} C${W - 30},${H - 40} ${W - 55},${H - 55} ${W - 100},${H - 65}`, sw2, 0.85));
 
-  // ── ZIJKANTEN ─────────────────────────────────────────────────────────────
+  // ── ZIJKANTEN MIDDEN ─────────────────────────────────────────────────────
   const midY = H / 2;
-
   els.push(L(0, midY - 70, 35, midY - 70, sw2, 0.75));
   els.push(L(35, midY - 70, 35, midY + 70, sw, 0.85));
   els.push(Dot(35, midY, 5, 0.9));
@@ -212,10 +217,6 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(35, midY + 70, 0, midY + 70, sw2, 0.75));
   els.push(Dot(35, midY - 70, 3, 0.7));
   els.push(Dot(35, midY + 70, 3, 0.7));
-  els.push(L(35, midY - 35, 0, midY - 35, sw3, 0.55));
-  els.push(Sq(35, midY - 35, 5, 0.6));
-  els.push(L(35, midY + 35, 0, midY + 35, sw3, 0.55));
-  els.push(Sq(35, midY + 35, 5, 0.6));
 
   els.push(L(W, midY - 70, W - 35, midY - 70, sw2, 0.75));
   els.push(L(W - 35, midY - 70, W - 35, midY + 70, sw, 0.85));
@@ -226,14 +227,9 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(W - 35, midY + 70, W, midY + 70, sw2, 0.75));
   els.push(Dot(W - 35, midY - 70, 3, 0.7));
   els.push(Dot(W - 35, midY + 70, 3, 0.7));
-  els.push(L(W - 35, midY - 35, W, midY - 35, sw3, 0.55));
-  els.push(Sq(W - 35, midY - 35, 5, 0.6));
-  els.push(L(W - 35, midY + 35, W, midY + 35, sw3, 0.55));
-  els.push(Sq(W - 35, midY + 35, 5, 0.6));
 
   // ── BOVEN/ONDER MIDDEN ────────────────────────────────────────────────────
   const midX = W / 2;
-
   els.push(L(midX - 80, 0, midX - 80, 30, sw2, 0.7));
   els.push(L(midX - 80, 30, midX + 80, 30, sw, 0.75));
   els.push(Dot(midX, 30, 4, 0.8));
@@ -241,8 +237,6 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(midX + 80, 30, midX + 80, 0, sw2, 0.7));
   els.push(Dot(midX - 80, 30, 3, 0.65));
   els.push(Dot(midX + 80, 30, 3, 0.65));
-  els.push(L(midX, 30, midX, 65, sw2, 0.65));
-  els.push(Sq(midX, 65, 6, 0.6));
   els.push(Chip(midX - 40, 30, 18, 10, 0.7));
   els.push(Chip(midX + 40, 30, 18, 10, 0.7));
 
@@ -253,16 +247,8 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(midX + 80, H - 30, midX + 80, H, sw2, 0.7));
   els.push(Dot(midX - 80, H - 30, 3, 0.65));
   els.push(Dot(midX + 80, H - 30, 3, 0.65));
-  els.push(L(midX, H - 30, midX, H - 65, sw2, 0.65));
-  els.push(Sq(midX, H - 65, 6, 0.6));
   els.push(Chip(midX - 40, H - 30, 18, 10, 0.7));
   els.push(Chip(midX + 40, H - 30, 18, 10, 0.7));
-
-  // ── GEBOGEN VERBINDINGEN ──────────────────────────────────────────────────
-  els.push(CV(`M215,200 C190,${midY - 100} 70,${midY - 50} 90,${midY}`, sw2, 0.65));
-  els.push(CV(`M${W - 215},200 C${W - 190},${midY - 100} ${W - 70},${midY - 50} ${W - 90},${midY}`, sw2, 0.65));
-  els.push(CV(`M215,${H - 200} C190,${midY + 100} 70,${midY + 50} 90,${midY}`, sw2, 0.65));
-  els.push(CV(`M${W - 215},${H - 200} C${W - 190},${midY + 100} ${W - 70},${midY + 50} ${W - 90},${midY}`, sw2, 0.65));
 
   return els;
 }

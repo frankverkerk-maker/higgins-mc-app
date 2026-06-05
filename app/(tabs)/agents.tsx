@@ -3,8 +3,8 @@ import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from "react-n
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
-import { CircuitBackground } from "@/components/circuit-background";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { CircuitBackground } from "@/components/circuit-background";
 import { TEAM } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
 
@@ -89,7 +89,7 @@ export default function TeamPulseScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <CircuitBackground opacity={0.32} color="#00D4D4" />
+      <CircuitBackground opacity={0.30} color="#00D4D4">
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -205,6 +205,7 @@ export default function TeamPulseScreen() {
           );
         })}
       </ScrollView>
+      </CircuitBackground>
     </ScreenContainer>
   );
 }

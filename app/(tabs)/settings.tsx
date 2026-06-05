@@ -55,7 +55,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <CircuitBackground opacity={0.32} color="#00D4D4" />
+      <CircuitBackground opacity={0.30} color="#00D4D4">
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -276,6 +276,7 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </CircuitBackground>
     </ScreenContainer>
   );
 }
