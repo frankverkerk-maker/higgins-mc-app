@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { PatternBackground } from "@/components/pattern-background";
+import { AppBackground } from "@/components/app-background";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
@@ -139,7 +139,7 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <PatternBackground bgColor="#0A0C0E" patternColor="#00D4D4" opacity={0.12} />
+      <AppBackground>
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -313,6 +313,7 @@ export default function DashboardScreen() {
           <Text style={s.chatCtaArrow}>›</Text>
         </Pressable>
       </ScrollView>
+      </AppBackground>
     </ScreenContainer>
   );
 }

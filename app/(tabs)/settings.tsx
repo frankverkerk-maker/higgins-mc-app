@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch } from "react-native";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
-import { PatternBackground } from "@/components/pattern-background";
+import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <PatternBackground bgColor="#0A0C0E" patternColor="#00D4D4" opacity={0.12} />
+      <AppBackground>
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -276,6 +276,7 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </AppBackground>
     </ScreenContainer>
   );
 }

@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { PatternBackground } from "@/components/pattern-background";
+import { AppBackground } from "@/components/app-background";
 import { TEAM } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
 
@@ -89,7 +89,7 @@ export default function TeamPulseScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <PatternBackground bgColor="#0A0C0E" patternColor="#00D4D4" opacity={0.12} />
+      <AppBackground>
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}
@@ -205,6 +205,7 @@ export default function TeamPulseScreen() {
           );
         })}
       </ScrollView>
+      </AppBackground>
     </ScreenContainer>
   );
 }
