@@ -89,7 +89,7 @@ export default function TeamPulseScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      <CircuitBackground opacity={0.04} color="#00D4D4" />
+      <CircuitBackground opacity={0.18} color="#00D4D4" />
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
         showsVerticalScrollIndicator={false}

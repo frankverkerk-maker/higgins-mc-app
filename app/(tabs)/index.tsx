@@ -139,8 +139,8 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer containerClassName="bg-background">
-      {/* ── Circuit achtergrond ── */}
-      <CircuitBackground opacity={0.04} color="#00D4D4" />
+        {/* ── Circuit achtergrond ── */}
+        <CircuitBackground opacity={0.18} color="#00D4D4" />
 
       <ScrollView
         style={{ flex: 1, backgroundColor: "transparent" }}
@@ -150,9 +150,8 @@ export default function DashboardScreen() {
         {/* ── Header met logo + taalwisselaar ── */}
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <HigginsAvatar size={40} />
-            <View style={{ marginLeft: 12 }}>
-              <Text style={s.greeting}>{greeting}</Text>
+            <HigginsAvatar size={36} />
+            <View style={{ marginLeft: 10 }}>
               <Text style={s.title}>{t.dashboard.title}</Text>
             </View>
           </View>
@@ -341,20 +340,12 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  greeting: {
-    fontSize: 11,
-    color: C.muted,
-    fontFamily: FONT,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-  },
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
     color: C.text,
     fontFamily: FONT_BOLD,
-    letterSpacing: -0.3,
-    marginTop: 2,
+    letterSpacing: -0.2,
   },
   statusBadge: {
     flexDirection: "row",

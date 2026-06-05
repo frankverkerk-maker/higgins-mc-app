@@ -636,7 +636,7 @@ export default function ChatScreen() {
         keyboardVerticalOffset={0}
       >
         {/* Circuit achtergrond */}
-        <CircuitBackground opacity={0.035} color="#00D4D4" />
+        <CircuitBackground opacity={0.18} color="#00D4D4" />
 
         {/* Header */}
         <View style={styles.header}>
