@@ -57,7 +57,7 @@ export default function SettingsScreen() {
     <ScreenContainer containerClassName="bg-background">
       <CircuitBackground opacity={0.32} color="#00D4D4" />
       <ScrollView
-        style={{ flex: 1, backgroundColor: "transparent" }}
+        style={{ flex: 1, backgroundColor: "transparent", zIndex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >

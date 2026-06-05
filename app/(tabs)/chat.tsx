@@ -633,7 +633,7 @@ export default function ChatScreen() {
       {/* Circuit achtergrond — VAST buiten KeyboardAvoidingView */}
       <CircuitBackground opacity={0.32} color="#00D4D4" />
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, zIndex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >

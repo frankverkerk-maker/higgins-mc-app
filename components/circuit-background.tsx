@@ -20,7 +20,7 @@ export function CircuitBackground({
   const svgElements = buildCircuit(W, H, color);
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]} pointerEvents="none">
       <Svg
         width={W}
         height={H}
