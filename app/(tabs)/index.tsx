@@ -372,20 +372,20 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Brief card
+  // Brief card — glassmorphism
   briefCard: {
     marginHorizontal: 20,
     marginBottom: 24,
-    backgroundColor: C.surface,
+    backgroundColor: "rgba(0,212,212,0.06)",
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: C.cyanBorder,
+    borderColor: "rgba(0,212,212,0.35)",
     gap: 12,
     shadowColor: C.cyan,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
   },
   briefHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   briefLabel: {
@@ -477,15 +477,19 @@ const s = StyleSheet.create({
     fontFamily: FONT_BOLD,
   },
 
-  // Approvals
+  // Approvals — glassmorphism
   approvalCard: {
-    backgroundColor: C.surface,
+    backgroundColor: "rgba(255,77,106,0.06)",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,77,106,0.2)",
+    borderColor: "rgba(255,77,106,0.35)",
     gap: 8,
     marginBottom: 10,
+    shadowColor: "#FF4D6A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
   },
   approvalTop: { flexDirection: "row", justifyContent: "space-between" },
   approvalAgent: {
@@ -534,17 +538,21 @@ const s = StyleSheet.create({
     fontFamily: FONT_BOLD,
   },
 
-  // Priorities
+  // Priorities — glassmorphism
   priorityItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: C.surface,
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "rgba(0,212,212,0.18)",
     marginBottom: 8,
+    shadowColor: C.cyan,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   priorityNum: {
     width: 30,
@@ -596,13 +604,17 @@ const s = StyleSheet.create({
   commandCard: {
     width: "30%",
     aspectRatio: 1,
-    backgroundColor: C.surface,
+    backgroundColor: "rgba(0,212,212,0.05)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "rgba(0,212,212,0.22)",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
+    shadowColor: C.cyan,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
   },
   commandIcon: { fontSize: 22 },
   commandLabel: {
@@ -619,11 +631,11 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: C.surface,
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: "rgba(0,212,212,0.15)",
     marginBottom: 8,
   },
   pulseDot: { width: 8, height: 8, borderRadius: 4 },
