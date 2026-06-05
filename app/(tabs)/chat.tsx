@@ -633,7 +633,7 @@ export default function ChatScreen() {
       {/* Circuit achtergrond — VAST buiten KeyboardAvoidingView */}
       <CircuitBackground opacity={0.32} color="#00D4D4" />
       <KeyboardAvoidingView
-        style={{ flex: 1, zIndex: 1 }}
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
@@ -831,19 +831,59 @@ const styles = StyleSheet.create({
   messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginBottom: 8 },
   messageRowUser: { flexDirection: "row-reverse" },
   bubble: { maxWidth: "78%", borderRadius: 18, padding: 12 },
-  bubbleAssistant: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderBottomLeftRadius: 4 },
-  bubbleUser: { backgroundColor: C.userBubble, borderWidth: 1, borderColor: C.userBorder, borderBottomRightRadius: 4 },
+  bubbleAssistant: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.2)",
+    borderBottomLeftRadius: 4,
+    shadowColor: "#00D4D4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+  },
+  bubbleUser: {
+    backgroundColor: "rgba(0,212,212,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.4)",
+    borderBottomRightRadius: 4,
+    shadowColor: "#00D4D4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+  },
   bubbleText: { fontSize: 15, color: C.text, fontFamily: FONT, lineHeight: 22 },
   bubbleTextUser: { color: C.cyan },
   bubbleTime: { fontSize: 10, color: C.muted, marginTop: 4, fontFamily: FONT },
   bubbleTimeUser: { textAlign: "right" },
   typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
   typingBubble: { paddingVertical: 10, paddingHorizontal: 16 },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,212,212,0.2)",
+    backgroundColor: "rgba(10,12,14,0.85)",
+  },
   voiceButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.cyanBorder, alignItems: "center", justifyContent: "center" },
   voiceButtonActive: { backgroundColor: "rgba(255,77,106,0.2)", borderColor: C.red },
   voiceButtonIcon: { fontSize: 18 },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: C.surface2, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, color: C.text, fontSize: 15, fontFamily: FONT, borderWidth: 1, borderColor: C.border },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: C.text,
+    fontSize: 15,
+    fontFamily: FONT,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.25)",
+  },
   pdfButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.pdfBorder, alignItems: "center", justifyContent: "center" },
   pdfButtonIcon: { fontSize: 18 },
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },

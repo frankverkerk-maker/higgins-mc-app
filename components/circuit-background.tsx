@@ -1,11 +1,14 @@
 /**
  * CircuitBackground — Higgins MC
  *
- * Intense, heldere circuit/stroomschema achtergrond geïnspireerd op de Higgins presentatie.
- * Organische gebogen lijnen, IC-chips, gloeiende knooppunten, diagonale verbindingen.
+ * Organische circuit/stroomschema achtergrond geïnspireerd op de Higgins presentatie.
+ *
+ * BELANGRIJK: Dit component gebruikt position:"absolute" met zIndex:-1 zodat het
+ * ALTIJD achter alle andere content valt. De parent moet position:"relative" hebben
+ * (standaard in React Native).
  */
 import { View, StyleSheet, useWindowDimensions } from "react-native";
-import Svg, { Path, Circle, Line, Rect, G, Defs, RadialGradient, Stop } from "react-native-svg";
+import Svg, { Path, Circle, Line, Rect, G } from "react-native-svg";
 
 interface CircuitBackgroundProps {
   opacity?: number;
@@ -13,14 +16,17 @@ interface CircuitBackgroundProps {
 }
 
 export function CircuitBackground({
-  opacity = 0.55,
+  opacity = 0.32,
   color = "#00D4D4",
 }: CircuitBackgroundProps) {
   const { width: W, height: H } = useWindowDimensions();
   const svgElements = buildCircuit(W, H, color);
 
   return (
-    <View style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]} pointerEvents="none">
+    <View
+      style={styles.container}
+      pointerEvents="none"
+    >
       <Svg
         width={W}
         height={H}
@@ -33,13 +39,28 @@ export function CircuitBackground({
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // zIndex negatief zodat het ALTIJD onder alle andere Views valt
+    zIndex: -1,
+    elevation: 0, // Android
+  },
+});
+
+// ─── Circuit builder ──────────────────────────────────────────────────────────
+
 function buildCircuit(W: number, H: number, color: string): React.ReactElement[] {
   const els: React.ReactElement[] = [];
   let k = 0;
 
-  const sw  = 1.4;   // standaard lijndikte
-  const sw2 = 1.0;   // dunne lijn
-  const sw3 = 0.7;   // extra dun
+  const sw  = 1.4;
+  const sw2 = 1.0;
+  const sw3 = 0.7;
 
   const L = (x1: number, y1: number, x2: number, y2: number, w = sw, op = 1.0) => (
     <Line key={k++} x1={x1} y1={y1} x2={x2} y2={y2}
@@ -101,7 +122,6 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(Sq(55, 125, 6, 0.7));
   els.push(L(55, 125, 55, 175, sw3, 0.65));
   els.push(Dot(55, 175, 2.5, 0.6));
-  // Extra aftakking
   els.push(L(0, 175, 55, 175, sw3, 0.6));
   els.push(CV(`M0,40 C30,40 55,55 100,65`, sw2, 0.85));
 
@@ -180,10 +200,9 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(W, H - 175, W - 55, H - 175, sw3, 0.6));
   els.push(CV(`M${W},${H - 40} C${W - 30},${H - 40} ${W - 55},${H - 55} ${W - 100},${H - 65}`, sw2, 0.85));
 
-  // ── ZIJKANTEN — verticale stammen ─────────────────────────────────────────
+  // ── ZIJKANTEN ─────────────────────────────────────────────────────────────
   const midY = H / 2;
 
-  // Links
   els.push(L(0, midY - 70, 35, midY - 70, sw2, 0.75));
   els.push(L(35, midY - 70, 35, midY + 70, sw, 0.85));
   els.push(Dot(35, midY, 5, 0.9));
@@ -193,13 +212,11 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(L(35, midY + 70, 0, midY + 70, sw2, 0.75));
   els.push(Dot(35, midY - 70, 3, 0.7));
   els.push(Dot(35, midY + 70, 3, 0.7));
-  // Extra aftakkingen links
   els.push(L(35, midY - 35, 0, midY - 35, sw3, 0.55));
   els.push(Sq(35, midY - 35, 5, 0.6));
   els.push(L(35, midY + 35, 0, midY + 35, sw3, 0.55));
   els.push(Sq(35, midY + 35, 5, 0.6));
 
-  // Rechts
   els.push(L(W, midY - 70, W - 35, midY - 70, sw2, 0.75));
   els.push(L(W - 35, midY - 70, W - 35, midY + 70, sw, 0.85));
   els.push(Dot(W - 35, midY, 5, 0.9));
@@ -217,7 +234,6 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   // ── BOVEN/ONDER MIDDEN ────────────────────────────────────────────────────
   const midX = W / 2;
 
-  // Boven
   els.push(L(midX - 80, 0, midX - 80, 30, sw2, 0.7));
   els.push(L(midX - 80, 30, midX + 80, 30, sw, 0.75));
   els.push(Dot(midX, 30, 4, 0.8));
@@ -227,11 +243,9 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(Dot(midX + 80, 30, 3, 0.65));
   els.push(L(midX, 30, midX, 65, sw2, 0.65));
   els.push(Sq(midX, 65, 6, 0.6));
-  // Extra boven chips
   els.push(Chip(midX - 40, 30, 18, 10, 0.7));
   els.push(Chip(midX + 40, 30, 18, 10, 0.7));
 
-  // Onder
   els.push(L(midX - 80, H, midX - 80, H - 30, sw2, 0.7));
   els.push(L(midX - 80, H - 30, midX + 80, H - 30, sw, 0.75));
   els.push(Dot(midX, H - 30, 4, 0.8));
@@ -244,31 +258,11 @@ function buildCircuit(W: number, H: number, color: string): React.ReactElement[]
   els.push(Chip(midX - 40, H - 30, 18, 10, 0.7));
   els.push(Chip(midX + 40, H - 30, 18, 10, 0.7));
 
-  // ── GEBOGEN VERBINDINGEN — hoeken naar zijkanten ──────────────────────────
+  // ── GEBOGEN VERBINDINGEN ──────────────────────────────────────────────────
   els.push(CV(`M215,200 C190,${midY - 100} 70,${midY - 50} 90,${midY}`, sw2, 0.65));
   els.push(CV(`M${W - 215},200 C${W - 190},${midY - 100} ${W - 70},${midY - 50} ${W - 90},${midY}`, sw2, 0.65));
   els.push(CV(`M215,${H - 200} C190,${midY + 100} 70,${midY + 50} 90,${midY}`, sw2, 0.65));
   els.push(CV(`M${W - 215},${H - 200} C${W - 190},${midY + 100} ${W - 70},${midY + 50} ${W - 90},${midY}`, sw2, 0.65));
-
-  // ── EXTRA DIAGONALE ACCENTEN (midden scherm) ──────────────────────────────
-  const q1x = W * 0.25, q3x = W * 0.75;
-  const q1y = H * 0.3,  q3y = H * 0.7;
-
-  els.push(L(q1x, q1y, q1x + 40, q1y, sw3, 0.5));
-  els.push(Dot(q1x, q1y, 2.5, 0.5));
-  els.push(L(q1x, q1y, q1x, q1y + 40, sw3, 0.5));
-
-  els.push(L(q3x, q1y, q3x - 40, q1y, sw3, 0.5));
-  els.push(Dot(q3x, q1y, 2.5, 0.5));
-  els.push(L(q3x, q1y, q3x, q1y + 40, sw3, 0.5));
-
-  els.push(L(q1x, q3y, q1x + 40, q3y, sw3, 0.5));
-  els.push(Dot(q1x, q3y, 2.5, 0.5));
-  els.push(L(q1x, q3y, q1x, q3y - 40, sw3, 0.5));
-
-  els.push(L(q3x, q3y, q3x - 40, q3y, sw3, 0.5));
-  els.push(Dot(q3x, q3y, 2.5, 0.5));
-  els.push(L(q3x, q3y, q3x, q3y - 40, sw3, 0.5));
 
   return els;
 }
