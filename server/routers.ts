@@ -500,44 +500,41 @@ export const appRouter = router({
           topics: null,
         };
       }),
-  }),
-
-  dailyBriefing: publicProcedure
-    .input(z.object({
-      lang: z.string().optional(),
-      location: z.object({
-        lat: z.number(),
-        lon: z.number(),
-        name: z.string(),
-      }).optional(),
-    }))
-    .query(async ({ input }) => {
-      return await getDailyBriefing(input.lang ?? "nl", input.location);
-    }),
-
-  checkBreakingNews: publicProcedure
-    .input(z.object({ lang: z.string().optional() }))
-    .mutation(async ({ input }) => {
-      const lang = input.lang ?? "nl";
-      const langNames: Record<string, string> = { nl: "Dutch", de: "German", en: "English" };
-      const langName = langNames[lang] ?? "Dutch";
-      try {
-        const prompt = `You are a news analyst. Check if there is any TRULY BREAKING or GROUNDBREAKING news in AI or blockchain in the last 24 hours that would be highly relevant to a CEO of an AI company. Only respond with JSON: { "hasBreakingNews": boolean, "headline": string }. If no truly breaking news, set hasBreakingNews to false. Respond in ${langName}.`;
-        const result = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-        const rawContent = result.choices?.[0]?.message?.content ?? "";
-        const response = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
-        const cleaned = response.replace(/```json\n?|```/g, "").trim();
-        const parsed = JSON.parse(cleaned);
-        if (parsed.hasBreakingNews && parsed.headline) {
-          await sendBreakingNewsNotification(parsed.headline, lang);
-          return { sent: true, headline: parsed.headline };
+    dailyBriefing: publicProcedure
+      .input(z.object({
+        lang: z.string().optional(),
+        location: z.object({
+          lat: z.number(),
+          lon: z.number(),
+          name: z.string(),
+        }).optional(),
+      }))
+      .query(async ({ input }) => {
+        return await getDailyBriefing(input.lang ?? "nl", input.location);
+      }),
+    checkBreakingNews: publicProcedure
+      .input(z.object({ lang: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const lang = input.lang ?? "nl";
+        const langNames: Record<string, string> = { nl: "Dutch", de: "German", en: "English" };
+        const langName = langNames[lang] ?? "Dutch";
+        try {
+          const prompt = `You are a news analyst. Check if there is any TRULY BREAKING or GROUNDBREAKING news in AI or blockchain in the last 24 hours that would be highly relevant to a CEO of an AI company. Only respond with JSON: { "hasBreakingNews": boolean, "headline": string }. If no truly breaking news, set hasBreakingNews to false. Respond in ${langName}.`;
+          const result = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+          const rawContent = result.choices?.[0]?.message?.content ?? "";
+          const response = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
+          const cleaned = response.replace(/```json\n?|```/g, "").trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed.hasBreakingNews && parsed.headline) {
+            await sendBreakingNewsNotification(parsed.headline, lang);
+            return { sent: true, headline: parsed.headline };
+          }
+          return { sent: false, headline: null };
+        } catch (e) {
+          return { sent: false, headline: null };
         }
-        return { sent: false, headline: null };
-      } catch (e) {
-        return { sent: false, headline: null };
-      }
-    }),
+      }),
+  }),
 });
-
 export type AppRouter = typeof appRouter;
 

@@ -96,7 +96,7 @@ export default function DashboardScreen() {
   );
 
   // Daily Briefing: weer, nieuws, spreuk
-  const dailyQuery = trpc.dailyBriefing.useQuery(
+  const dailyQuery = trpc.higgins.dailyBriefing.useQuery(
     { lang: language, location: weatherLocation },
     { staleTime: 30 * 60 * 1000, enabled: true }
   );
@@ -273,7 +273,7 @@ export default function DashboardScreen() {
           </View>
           {expandedSection === "news" && (
             <View style={s.infoCardBody}>
-              {(dailyQuery.data?.worldNews ?? []).map((headline, i) => (
+              {(dailyQuery.data?.worldNews ?? []).map((headline: string, i: number) => (
                 <View key={i} style={s.newsItem}>
                   <View style={s.newsDot} />
                   <Text style={s.newsText}>{headline}</Text>
@@ -300,7 +300,7 @@ export default function DashboardScreen() {
           </View>
           {expandedSection === "tech" && (
             <View style={s.infoCardBody}>
-              {(dailyQuery.data?.techNews ?? []).map((headline, i) => (
+              {(dailyQuery.data?.techNews ?? []).map((headline: string, i: number) => (
                 <View key={i} style={s.newsItem}>
                   <View style={[s.newsDot, { backgroundColor: C.cyan }]} />
                   <Text style={s.newsText}>{headline}</Text>
