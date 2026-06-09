@@ -47,11 +47,19 @@ const config: ExpoConfig = {
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  // App Store metadata
+  description: "Higgins Mission Control is your personal AI-powered executive command center. Stay ahead with real-time weather, breaking AI & blockchain news, intelligent agent management, and your daily briefing — all in one elegant app.",
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
+    buildNumber: "1",
+    appStoreUrl: undefined,
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [],
+    },
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Higgins uses your location to show accurate local weather in your morning briefing.",
       }
   },
   android: {

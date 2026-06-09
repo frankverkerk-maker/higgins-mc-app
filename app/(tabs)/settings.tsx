@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch, TextInput, ActivityIndicator, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
@@ -38,11 +39,51 @@ function hapticNotification(type: Haptics.NotificationFeedbackType) {
   }
 }
 
+const LOCATION_KEY = "@higgins_weather_location";
+
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
   const [notifications, setNotifications] = useState(true);
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [locationInput, setLocationInput] = useState("Bottighofen, CH");
+  const [locationSaving, setLocationSaving] = useState(false);
+  const [locationSaved, setLocationSaved] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(LOCATION_KEY).then((val) => {
+      if (val) setLocationInput(val);
+    });
+  }, []);
+
+  const saveLocation = async () => {
+    if (!locationInput.trim()) return;
+    setLocationSaving(true);
+    try {
+      const query = encodeURIComponent(locationInput.trim());
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=1&language=${language}&format=json`
+      );
+      const data = await res.json();
+      if (!data.results || data.results.length === 0) {
+        Alert.alert("Locatie niet gevonden", `"${locationInput}" kon niet worden gevonden.`);
+        setLocationSaving(false);
+        return;
+      }
+      const r = data.results[0];
+      const locName = `${r.name}, ${r.country_code?.toUpperCase() ?? r.country ?? ""}`;
+      const coords = { lat: r.latitude, lon: r.longitude, name: locName };
+      await AsyncStorage.setItem(LOCATION_KEY, locName);
+      await AsyncStorage.setItem("@higgins_weather_coords", JSON.stringify(coords));
+      setLocationInput(locName);
+      setLocationSaved(true);
+      setTimeout(() => setLocationSaved(false), 2500);
+      haptic(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (_) {
+      Alert.alert("Fout", "Kon locatie niet opslaan.");
+    }
+    setLocationSaving(false);
+  };
 
   const handleToggle = (setter: (v: boolean) => void, value: boolean) => {
     haptic(Haptics.ImpactFeedbackStyle.Medium);
@@ -108,6 +149,54 @@ export default function SettingsScreen() {
                 )}
               </Pressable>
             ))}
+          </View>
+        </View>
+
+        {/* ── Locatie (weer) ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>LOCATIE WEER</Text>
+          <View style={s.card}>
+            <View style={[s.row, { flexDirection: "column", alignItems: "flex-start", gap: 12 }]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(0,212,212,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>📍</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>Stad voor weersvoorspelling</Text>
+                  <Text style={s.rowSub}>Typ een stad en sla op</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
+                <TextInput
+                  style={[s.locationInput, { flex: 1 }]}
+                  value={locationInput}
+                  onChangeText={setLocationInput}
+                  placeholder="Bijv. Baden-Baden, DE"
+                  placeholderTextColor={C.muted}
+                  returnKeyType="done"
+                  onSubmitEditing={saveLocation}
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    s.locationSaveBtn,
+                    locationSaved && { backgroundColor: C.green },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                  onPress={saveLocation}
+                  disabled={locationSaving}
+                >
+                  {locationSaving ? (
+                    <ActivityIndicator size="small" color={C.bg} />
+                  ) : (
+                    <Text style={s.locationSaveBtnText}>
+                      {locationSaved ? "✓" : "Opslaan"}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -347,4 +436,17 @@ const s = StyleSheet.create({
     borderRadius: 16, paddingVertical: 14, alignItems: "center",
   },
   logoutText: { fontSize: 15, color: C.red, fontWeight: "700", fontFamily: FONT_BOLD },
+
+  locationInput: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1, borderColor: "rgba(0,212,212,0.25)",
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14, color: C.text, fontFamily: FONT,
+  },
+  locationSaveBtn: {
+    backgroundColor: C.cyan, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 10,
+    alignItems: "center", justifyContent: "center", minWidth: 80,
+  },
+  locationSaveBtnText: { fontSize: 13, fontWeight: "700", color: C.bg, fontFamily: FONT_BOLD },
 });

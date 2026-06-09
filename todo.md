@@ -125,3 +125,9 @@
 - [x] Taalwisselaar in header van Team Pulse scherm
 - [x] iPad sidebar: taalwisselaar + i18n nav labels
 - [x] Pulserende status dot animatie op dashboard
+
+## Fase 13: Locatie, Push Notificaties & App Store
+- [ ] Locatie instelling in Instellingen voor weersdata (stad + land)
+- [ ] Weer endpoint bijwerken om locatie parameter te accepteren
+- [ ] Push notificaties bij baanbrekend AI/blockchain nieuws
+- [ ] App Store voorbereiding: metadata en build configuratie

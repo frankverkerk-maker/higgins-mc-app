@@ -58,9 +58,19 @@ export interface WeatherData {
   location: string;
 }
 
-async function fetchWeather(lang: string): Promise<WeatherData | null> {
+async function fetchWeather(
+  lang: string,
+  lat: number = 47.66,
+  lon: number = 9.19,
+  locationName: string = "Bottighofen, CH"
+): Promise<WeatherData | null> {
   try {
-    const res = await fetch(WEATHER_URL);
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m" +
+      "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max" +
+      "&timezone=auto&forecast_days=1";
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
     const c = data.current;
@@ -76,7 +86,7 @@ async function fetchWeather(lang: string): Promise<WeatherData | null> {
       humidity: Math.round(c.relative_humidity_2m),
       uvIndex: Math.round(d.uv_index_max[0]),
       precipitation: Math.round(d.precipitation_sum[0] * 10) / 10,
-      location: "Bottighofen, CH",
+      location: locationName,
     };
   } catch (e) {
     console.error("[briefing] Weer ophalen mislukt:", e);
@@ -368,9 +378,22 @@ export interface DailyBriefingData {
   generatedAt: string;
 }
 
-export async function getDailyBriefing(lang: string = "nl"): Promise<DailyBriefingData> {
+export interface LocationConfig {
+  lat: number;
+  lon: number;
+  name: string;
+}
+
+export async function getDailyBriefing(
+  lang: string = "nl",
+  location?: LocationConfig
+): Promise<DailyBriefingData> {
+  const lat = location?.lat ?? 47.66;
+  const lon = location?.lon ?? 9.19;
+  const locationName = location?.name ?? "Bottighofen, CH";
+
   const [weather, worldNews, techNews] = await Promise.allSettled([
-    fetchWeather(lang),
+    fetchWeather(lang, lat, lon, locationName),
     fetchWorldNews(lang),
     fetchTechNews(lang),
   ]);

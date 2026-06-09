@@ -76,6 +76,7 @@ export default function DashboardScreen() {
   const [userName, setUserName] = useState<string | null>(null);
   const [approvals, setApprovals] = useState(APPROVALS);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
+  const [weatherLocation, setWeatherLocation] = useState<{ lat: number; lon: number; name: string } | undefined>(undefined);
 
   // Subtiele puls animatie op de status dot
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -96,8 +97,8 @@ export default function DashboardScreen() {
 
   // Daily Briefing: weer, nieuws, spreuk
   const dailyQuery = trpc.dailyBriefing.useQuery(
-    { lang: language },
-    { staleTime: 30 * 60 * 1000 }
+    { lang: language, location: weatherLocation },
+    { staleTime: 30 * 60 * 1000, enabled: true }
   );
 
   // Uitklapbare secties
@@ -113,6 +114,11 @@ export default function DashboardScreen() {
   useEffect(() => {
     AsyncStorage.getItem(USER_NAME_KEY).then((name) => {
       if (name) setUserName(name);
+    });
+    AsyncStorage.getItem("@higgins_weather_coords").then((val) => {
+      if (val) {
+        try { setWeatherLocation(JSON.parse(val)); } catch (_) {}
+      }
     });
   }, []);
 
