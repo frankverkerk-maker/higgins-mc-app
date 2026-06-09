@@ -9,6 +9,7 @@ import { storagePut, storagePut as storageUpload } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
 import { activateAgent, getTaskStatus } from "./manus-agent-service";
+import { getDailyBriefing } from "./daily-briefing-service";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -500,6 +501,13 @@ export const appRouter = router({
         };
       }),
   }),
+
+  dailyBriefing: publicProcedure
+    .input(z.object({ lang: z.string().optional() }))
+    .query(async ({ input }) => {
+      return await getDailyBriefing(input.lang ?? "nl");
+    }),
 });
 
 export type AppRouter = typeof appRouter;
+

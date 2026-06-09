@@ -94,6 +94,19 @@ export default function DashboardScreen() {
     { enabled: true, staleTime: 5 * 60 * 1000 }
   );
 
+  // Daily Briefing: weer, nieuws, spreuk
+  const dailyQuery = trpc.dailyBriefing.useQuery(
+    { lang: language },
+    { staleTime: 30 * 60 * 1000 }
+  );
+
+  // Uitklapbare secties
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const toggleSection = (id: string) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setExpandedSection((prev) => (prev === id ? null : id));
+  };
+
   // Approval mutation
   const approvalMutation = trpc.higgins.processApproval.useMutation();
 
@@ -186,6 +199,119 @@ export default function DashboardScreen() {
           >
             <Text style={s.briefCtaText}>{t.dashboard.discussWithHiggins}</Text>
           </Pressable>
+        </View>
+
+        {/* ── Weer ── */}
+        <Pressable onPress={() => toggleSection("weather")} style={s.infoCard}>
+          <View style={s.infoCardHeader}>
+            <Text style={s.infoCardIcon}>
+              {dailyQuery.data?.weather?.icon ?? "🌡️"}
+            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.infoCardTitle}>
+                {language === "de" ? "Wetter heute" : language === "en" ? "Today's Weather" : "Weer vandaag"}
+              </Text>
+              {dailyQuery.data?.weather && (
+                <Text style={s.infoCardSubtitle}>
+                  {dailyQuery.data.weather.temperature}°C · {dailyQuery.data.weather.description} · {dailyQuery.data.weather.location}
+                </Text>
+              )}
+            </View>
+            <Text style={[s.chevron, expandedSection === "weather" && s.chevronOpen]}>›</Text>
+          </View>
+          {expandedSection === "weather" && dailyQuery.data?.weather && (
+            <View style={s.infoCardBody}>
+              <View style={s.weatherGrid}>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>{dailyQuery.data.weather.tempMax}°/{dailyQuery.data.weather.tempMin}°</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "Max/Min" : "Max/Min"}</Text>
+                </View>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>{dailyQuery.data.weather.feelsLike}°C</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "Gefühlt" : language === "en" ? "Feels like" : "Gevoeld"}</Text>
+                </View>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>{dailyQuery.data.weather.windSpeed} km/h</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "Wind" : "Wind"}</Text>
+                </View>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>{dailyQuery.data.weather.humidity}%</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "Luftfeuchtigkeit" : language === "en" ? "Humidity" : "Vochtigheid"}</Text>
+                </View>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>UV {dailyQuery.data.weather.uvIndex}</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "UV-Index" : "UV-index"}</Text>
+                </View>
+                <View style={s.weatherItem}>
+                  <Text style={s.weatherValue}>{dailyQuery.data.weather.precipitation} mm</Text>
+                  <Text style={s.weatherLabel}>{language === "de" ? "Niederschlag" : language === "en" ? "Precipitation" : "Neerslag"}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </Pressable>
+
+        {/* ── Wereldnieuws ── */}
+        <Pressable onPress={() => toggleSection("news")} style={s.infoCard}>
+          <View style={s.infoCardHeader}>
+            <Text style={s.infoCardIcon}>🌍</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.infoCardTitle}>
+                {language === "de" ? "Weltnachrichten" : language === "en" ? "World News" : "Wereldnieuws"}
+              </Text>
+              <Text style={s.infoCardSubtitle}>
+                {language === "de" ? "Top 3 heute" : language === "en" ? "Top 3 today" : "Top 3 vandaag"}
+              </Text>
+            </View>
+            <Text style={[s.chevron, expandedSection === "news" && s.chevronOpen]}>›</Text>
+          </View>
+          {expandedSection === "news" && (
+            <View style={s.infoCardBody}>
+              {(dailyQuery.data?.worldNews ?? []).map((headline, i) => (
+                <View key={i} style={s.newsItem}>
+                  <View style={s.newsDot} />
+                  <Text style={s.newsText}>{headline}</Text>
+                </View>
+              ))}
+              {dailyQuery.isLoading && <Text style={s.loadingText}>…</Text>}
+            </View>
+          )}
+        </Pressable>
+
+        {/* ── AI & Blockchain ── */}
+        <Pressable onPress={() => toggleSection("tech")} style={s.infoCard}>
+          <View style={s.infoCardHeader}>
+            <Text style={s.infoCardIcon}>🤖</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.infoCardTitle}>
+                {language === "de" ? "KI & Blockchain" : language === "en" ? "AI & Blockchain" : "AI & Blockchain"}
+              </Text>
+              <Text style={s.infoCardSubtitle}>
+                {language === "de" ? "Neueste Innovationen" : language === "en" ? "Latest innovations" : "Laatste innovaties"}
+              </Text>
+            </View>
+            <Text style={[s.chevron, expandedSection === "tech" && s.chevronOpen]}>›</Text>
+          </View>
+          {expandedSection === "tech" && (
+            <View style={s.infoCardBody}>
+              {(dailyQuery.data?.techNews ?? []).map((headline, i) => (
+                <View key={i} style={s.newsItem}>
+                  <View style={[s.newsDot, { backgroundColor: C.cyan }]} />
+                  <Text style={s.newsText}>{headline}</Text>
+                </View>
+              ))}
+              {dailyQuery.isLoading && <Text style={s.loadingText}>…</Text>}
+            </View>
+          )}
+        </Pressable>
+
+        {/* ── Spreuk van de dag ── */}
+        <View style={s.quoteCard}>
+          <Text style={s.quoteIcon}>💡</Text>
+          <Text style={s.quoteText}>
+            "{dailyQuery.data?.quote?.text ?? ""}"
+          </Text>
+          <Text style={s.quoteAuthor}>— {dailyQuery.data?.quote?.author ?? ""}</Text>
         </View>
 
         {/* ── Goedkeuringen ── */}
@@ -679,5 +805,145 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: "rgba(10,12,14,0.5)",
     fontWeight: "300",
+  },
+
+  // Info cards (weer, nieuws, spreuk)
+  infoCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "rgba(17,20,24,0.85)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.18)",
+    overflow: "hidden",
+  },
+  infoCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 12,
+  },
+  infoCardIcon: {
+    fontSize: 24,
+    width: 32,
+    textAlign: "center",
+  },
+  infoCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.text,
+    fontFamily: FONT_BOLD,
+  },
+  infoCardSubtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+    fontFamily: FONT,
+  },
+  chevron: {
+    fontSize: 22,
+    color: C.muted,
+    fontWeight: "300",
+    transform: [{ rotate: "0deg" }],
+  },
+  chevronOpen: {
+    transform: [{ rotate: "90deg" }],
+    color: C.cyan,
+  },
+  infoCardBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,212,212,0.1)",
+    paddingTop: 12,
+  },
+
+  // Weer grid
+  weatherGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  weatherItem: {
+    width: "30%",
+    backgroundColor: "rgba(0,212,212,0.06)",
+    borderRadius: 10,
+    padding: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,212,212,0.12)",
+  },
+  weatherValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: C.cyan,
+    fontFamily: FONT_BOLD,
+  },
+  weatherLabel: {
+    fontSize: 10,
+    color: C.muted,
+    marginTop: 3,
+    fontFamily: FONT,
+    textAlign: "center",
+  },
+
+  // Nieuws items
+  newsItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 10,
+  },
+  newsDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.amber,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  newsText: {
+    flex: 1,
+    fontSize: 13,
+    color: C.text,
+    lineHeight: 19,
+    fontFamily: FONT,
+  },
+  loadingText: {
+    fontSize: 20,
+    color: C.muted,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+
+  // Spreuk card
+  quoteCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: "rgba(245,166,35,0.06)",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(245,166,35,0.25)",
+    alignItems: "center",
+    gap: 10,
+  },
+  quoteIcon: {
+    fontSize: 28,
+  },
+  quoteText: {
+    fontSize: 14,
+    color: C.text,
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 22,
+    fontFamily: FONT,
+  },
+  quoteAuthor: {
+    fontSize: 12,
+    color: C.amber,
+    fontWeight: "700",
+    fontFamily: FONT_BOLD,
+    letterSpacing: 0.3,
   },
 });
