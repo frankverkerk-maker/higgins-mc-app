@@ -515,18 +515,17 @@ export const appRouter = router({
     checkBreakingNews: publicProcedure
       .input(z.object({ lang: z.string().optional() }))
       .mutation(async ({ input }) => {
-        const lang = input.lang ?? "nl";
-        const langNames: Record<string, string> = { nl: "Dutch", de: "German", en: "English" };
-        const langName = langNames[lang] ?? "Dutch";
+        // Breaking news is always in English — clearest for international AI/blockchain news
         try {
-          const prompt = `You are a news analyst. Check if there is any TRULY BREAKING or GROUNDBREAKING news in AI or blockchain in the last 24 hours that would be highly relevant to a CEO of an AI company. Only respond with JSON: { "hasBreakingNews": boolean, "headline": string }. If no truly breaking news, set hasBreakingNews to false. Respond in ${langName}.`;
+          const prompt = `You are a news analyst. Check if there is any TRULY BREAKING or GROUNDBREAKING news in AI or blockchain in the last 24 hours that would be highly relevant to a CEO of an AI company. Only respond with JSON: { "hasBreakingNews": boolean, "headline": string }. If no truly breaking news, set hasBreakingNews to false. Always respond in English.`;
           const result = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
           const rawContent = result.choices?.[0]?.message?.content ?? "";
           const response = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
           const cleaned = response.replace(/```json\n?|```/g, "").trim();
           const parsed = JSON.parse(cleaned);
           if (parsed.hasBreakingNews && parsed.headline) {
-            await sendBreakingNewsNotification(parsed.headline, lang);
+            // Always send notification in English
+            await sendBreakingNewsNotification(parsed.headline, "en");
             return { sent: true, headline: parsed.headline };
           }
           return { sent: false, headline: null };
