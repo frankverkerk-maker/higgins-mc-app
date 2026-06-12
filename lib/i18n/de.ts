@@ -85,6 +85,12 @@ export const de: Translations = {
     meetingModalSendToChat: "Zusammenfassung an Chat senden →",
     meetingRecordingError: "Aufnahme fehlgeschlagen. Bitte Mikrofonzugriff prüfen.",
     meetingProcessingError: "Verarbeitung fehlgeschlagen. Bitte erneut versuchen.",
+    // PDF upload
+    uploadButton: "Anhang",
+    uploadPickerTitle: "Dokument auswählen",
+    uploadUploading: "Dokument wird hochgeladen...",
+    uploadError: "Upload fehlgeschlagen. Bitte erneut versuchen.",
+    uploadOpenBtn: "Öffnen",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────

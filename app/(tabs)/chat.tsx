@@ -25,6 +25,8 @@ import {
   setAudioModeAsync,
 } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
+import * as DocumentPicker from "expo-document-picker";
+import { getApiBaseUrl } from "@/constants/oauth";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -100,6 +102,7 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   // Dynamische agent statussen — bijgewerkt na echte Manus API activering
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({});
   const listRef = useRef<FlatList>(null);
@@ -121,6 +124,7 @@ export default function ChatScreen() {
   const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
   const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
   const activateAgentMutation = trpc.higgins.activateAgent.useMutation();
+  const uploadPdfMutation = trpc.higgins.uploadPdf.useMutation();
 
   // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -189,6 +193,69 @@ export default function ChatScreen() {
       await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
     } catch (_) {}
   }, []);
+
+  // ─── PDF upload handler ───────────────────────────────────────────────────
+  const handleUploadPdf = useCallback(async () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "*/*"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const fileName = asset.name ?? `document_${Date.now()}.pdf`;
+      const mimeType = asset.mimeType ?? "application/pdf";
+
+      // Lees bestand als base64
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Toon user bericht met bestandsnaam
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: `📎 ${fileName}`,
+        timestamp: new Date(),
+        type: "text",
+      };
+      const withUser = [...messages, userMsg];
+      setMessages(withUser);
+      setIsUploading(true);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+      const uploadResult = await uploadPdfMutation.mutateAsync({
+        base64,
+        fileName,
+        mimeType,
+        userName: userName ?? undefined,
+        language,
+      });
+
+      // Higgins bevestigingsbericht als PDF-kaart
+      const pdfMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: uploadResult.higginsResponse,
+        timestamp: new Date(),
+        type: "pdf",
+        pdfUrl: uploadResult.url,
+        pdfFileName: uploadResult.fileName,
+        pdfSizeBytes: uploadResult.sizeBytes,
+      };
+
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const finalMessages = [...withUser, pdfMsg];
+      setMessages(finalMessages);
+      await saveMessages(finalMessages);
+    } catch (_err) {
+      Alert.alert("Fout", t.chat.uploadError);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [messages, userName, language, uploadPdfMutation, saveMessages, t]);
 
   // Laad gebruikersnaam en chatgeschiedenis bij opstarten
   useEffect(() => {
@@ -559,7 +626,7 @@ export default function ChatScreen() {
       setIsOpening(true);
       try {
         // Bouw de volledige URL op (server-relative pad naar absolute URL)
-        const baseUrl = "https://3000-ijaocie6mkqhn7bw1b1p3-03a7ef55.us2.manus.computer";
+        const baseUrl = getApiBaseUrl();
         const fullUrl = msg.pdfUrl.startsWith("http") ? msg.pdfUrl : `${baseUrl}${msg.pdfUrl}`;
         await Linking.openURL(fullUrl);
       } catch (_) {
@@ -677,12 +744,14 @@ export default function ChatScreen() {
         />
 
         {/* Typing / transcribing / PDF indicator */}
-        {(isLoading || isTranscribing || isGeneratingPdf) && (
+        {(isLoading || isTranscribing || isGeneratingPdf || isUploading) && (
           <View style={styles.typingRow}>
             <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
               {isTranscribing
                 ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>🎙 Transcriberen...</Text>
+                : isUploading
+                  ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📎 {t.chat.uploadUploading}</Text>
                 : isGeneratingPdf
                   ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📄 PDF genereren...</Text>
                   : <ActivityIndicator size="small" color={C.cyan} />
@@ -712,10 +781,22 @@ export default function ChatScreen() {
                 style={[styles.voiceButton, isRecording && styles.voiceButtonActive]}
                 onPress={handleVoicePress}
               >
-                <Text style={styles.voiceButtonIcon}>{isRecording ? "⏹" : "🎙"}</Text>
+                <Text style={styles.voiceButtonIcon}>{isRecording ? "⏹" : "🎤"}</Text>
               </Pressable>
             </Animated.View>
           )}
+
+          {/* Paperclip / bijlage knop */}
+          <Pressable
+            style={({ pressed }) => [styles.attachButton, pressed && { opacity: 0.7 }, isUploading && { opacity: 0.4 }]}
+            onPress={handleUploadPdf}
+            disabled={isUploading || isLoading}
+          >
+            {isUploading
+              ? <ActivityIndicator size="small" color={C.cyan} />
+              : <Text style={styles.attachButtonIcon}>📎</Text>
+            }
+          </Pressable>
 
           <TextInput
             style={styles.input}
@@ -886,6 +967,8 @@ const styles = StyleSheet.create({
   },
   pdfButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.pdfBorder, alignItems: "center", justifyContent: "center" },
   pdfButtonIcon: { fontSize: 18 },
+  attachButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.cyanBorder, alignItems: "center", justifyContent: "center" },
+  attachButtonIcon: { fontSize: 18 },
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   sendButtonText: { fontSize: 24, color: C.bg, fontWeight: "900", marginTop: -2 },

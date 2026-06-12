@@ -84,6 +84,12 @@ export const nl = {
     meetingModalSendToChat: "Stuur samenvatting naar chat →",
     meetingRecordingError: "Opname mislukt. Controleer microfoon toegang.",
     meetingProcessingError: "Verwerking mislukt. Probeer opnieuw.",
+    // PDF upload
+    uploadButton: "Bijlage",
+    uploadPickerTitle: "Document kiezen",
+    uploadUploading: "Document uploaden...",
+    uploadError: "Upload mislukt. Probeer opnieuw.",
+    uploadOpenBtn: "Openen",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────

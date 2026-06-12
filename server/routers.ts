@@ -512,6 +512,45 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await getDailyBriefing(input.lang ?? "nl", input.location);
       }),
+    // ── PDF Upload: ontvang base64 PDF van de app, sla op in S3, geef publieke URL terug ──
+    uploadPdf: publicProcedure
+      .input(
+        z.object({
+          base64: z.string().min(1),
+          fileName: z.string().min(1).max(200),
+          mimeType: z.string().default("application/pdf"),
+          userName: z.string().optional(),
+          language: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const lang = input.language ?? "nl";
+        const userName = input.userName ?? "Frank";
+
+        // Decodeer base64 naar Buffer
+        const buffer = Buffer.from(input.base64, "base64");
+        const safeFileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storageKey = `uploads/${Date.now()}_${safeFileName}`;
+
+        // Upload naar S3 via storagePut
+        const { url } = await storagePut(storageKey, buffer, input.mimeType);
+
+        // Higgins bevestigingsbericht in de juiste taal
+        const confirmMessages: Record<string, string> = {
+          nl: `Uitstekend, ${userName}. Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen. U kunt het op elk moment openen via de knop hieronder.`,
+          de: `Ausgezeichnet, ${userName}. Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert. Sie können es jederzeit über die Schaltfläche unten öffnen.`,
+          en: `Excellent, ${userName}. I have received your document **${input.fileName}** and stored it securely. You can open it at any time using the button below.`,
+        };
+
+        return {
+          url,
+          fileName: input.fileName,
+          sizeBytes: buffer.length,
+          higginsResponse: confirmMessages[lang] ?? confirmMessages.nl,
+          uploadedAt: new Date().toISOString(),
+        };
+      }),
+
     checkBreakingNews: publicProcedure
       .input(z.object({ lang: z.string().optional() }))
       .mutation(async ({ input }) => {

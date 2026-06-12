@@ -131,3 +131,11 @@
 - [ ] Weer endpoint bijwerken om locatie parameter te accepteren
 - [ ] Push notificaties bij baanbrekend AI/blockchain nieuws
 - [ ] App Store voorbereiding: metadata en build configuratie
+
+## Fase 14: PDF Upload in Chat
+- [x] uploadPdf tRPC endpoint op server — base64 ontvangen, S3 upload, publieke URL teruggeven
+- [x] Paperclip-knop (📎) in chat input bar — document picker (PDF + alle bestanden)
+- [x] Upload indicator in chat (Higgins typt... → "Document uploaden...")
+- [x] Higgins bevestigingsbericht als PDF-kaart met "Openen" knop
+- [x] PdfCard open URL fix — hardcoded sandbox URL vervangen door getApiBaseUrl()
+- [x] i18n upload labels toegevoegd (NL/DE/EN)

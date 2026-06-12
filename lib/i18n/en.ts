@@ -85,6 +85,12 @@ export const en: Translations = {
     meetingModalSendToChat: "Send summary to chat →",
     meetingRecordingError: "Recording failed. Please check microphone access.",
     meetingProcessingError: "Processing failed. Please try again.",
+    // PDF upload
+    uploadButton: "Attach",
+    uploadPickerTitle: "Choose document",
+    uploadUploading: "Uploading document...",
+    uploadError: "Upload failed. Please try again.",
+    uploadOpenBtn: "Open",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
