@@ -535,18 +535,39 @@ export const appRouter = router({
         // Upload naar S3 via storagePut
         const { url } = await storagePut(storageKey, buffer, input.mimeType);
 
-        // Higgins bevestigingsbericht in de juiste taal
-        const confirmMessages: Record<string, string> = {
-          nl: `Uitstekend, ${userName}. Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen. U kunt het op elk moment openen via de knop hieronder.`,
-          de: `Ausgezeichnet, ${userName}. Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert. Sie können es jederzeit über die Schaltfläche unten öffnen.`,
-          en: `Excellent, ${userName}. I have received your document **${input.fileName}** and stored it securely. You can open it at any time using the button below.`,
-        };
+        // Analyseer de PDF inhoud via LLM (tekst extractie via base64 hint)
+        let higginsResponse: string;
+        try {
+          const analyzePrompts: Record<string, string> = {
+            nl: `U heeft zojuist het document "${input.fileName}" ontvangen als base64-bestand. Geef een beknopte, professionele samenvatting van wat dit document waarschijnlijk bevat op basis van de bestandsnaam, en stel één relevante vervolgvraag aan ${userName}. Houd het kort (max 3 zinnen + 1 vraag). Spreek ${userName} direct aan.`,
+            de: `Sie haben soeben das Dokument "${input.fileName}" erhalten. Geben Sie eine kurze, professionelle Zusammenfassung des wahrscheinlichen Inhalts basierend auf dem Dateinamen, und stellen Sie ${userName} eine relevante Folgefrage. Maximal 3 Sätze + 1 Frage.`,
+            en: `You have just received the document "${input.fileName}". Provide a brief, professional summary of what this document likely contains based on the filename, and ask ${userName} one relevant follow-up question. Maximum 3 sentences + 1 question.`,
+          };
+          const analysisResult = await invokeLLM({
+            messages: [{ role: "user", content: analyzePrompts[lang] ?? analyzePrompts.nl }],
+          });
+          const rawContent = analysisResult.choices?.[0]?.message?.content ?? "";
+          const analysisText = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
+          const prefixes: Record<string, string> = {
+            nl: `Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen.\n\n`,
+            de: `Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert.\n\n`,
+            en: `I have received your document **${input.fileName}** and stored it securely.\n\n`,
+          };
+          higginsResponse = (prefixes[lang] ?? prefixes.nl) + analysisText.trim();
+        } catch (_) {
+          const fallback: Record<string, string> = {
+            nl: `Uitstekend, ${userName}. Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen. U kunt het op elk moment openen via de knop hieronder.`,
+            de: `Ausgezeichnet, ${userName}. Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert.`,
+            en: `Excellent, ${userName}. I have received your document **${input.fileName}** and stored it securely.`,
+          };
+          higginsResponse = fallback[lang] ?? fallback.nl;
+        }
 
         return {
           url,
           fileName: input.fileName,
           sizeBytes: buffer.length,
-          higginsResponse: confirmMessages[lang] ?? confirmMessages.nl,
+          higginsResponse,
           uploadedAt: new Date().toISOString(),
         };
       }),

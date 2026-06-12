@@ -139,3 +139,11 @@
 - [x] Higgins bevestigingsbericht als PDF-kaart met "Openen" knop
 - [x] PdfCard open URL fix — hardcoded sandbox URL vervangen door getApiBaseUrl()
 - [x] i18n upload labels toegevoegd (NL/DE/EN)
+
+## Fase 15: Manus-stijl PDF lay-out en verbeteringen
+
+- [x] PDF generator herschreven naar Manus-stijl (witte pagina, grote titel, geen aparte titelpagina, bullets, tabellen, codeblokken)
+- [x] PDF chat-kaart bijgewerkt naar witte documentkaart stijl (zoals Manus — blauw icoon, naam, grootte, beschrijving, teal open-knop)
+- [x] Higgins analyseert automatisch geüploade PDF's (LLM samenvatting op basis van bestandsnaam + vervolgvraag)
+- [x] Weerbadge in Command Center header (icoon + temperatuur + stad naast Higgins logo)
+- [x] Locatie-instelling was al aanwezig in Instellingen scherm (bevestigd)

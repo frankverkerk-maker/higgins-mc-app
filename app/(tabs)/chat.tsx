@@ -51,8 +51,8 @@ const C = {
   red:        "#FF4D6A",
   redDim:     "rgba(255,77,106,0.15)",
   amber:      "#F5A623",
-  pdfBg:      "#0D1A2A",
-  pdfBorder:  "rgba(0,212,212,0.35)",
+  pdfBg:      "#FFFFFF",
+  pdfBorder:  "#E5E7EB",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
@@ -638,26 +638,33 @@ export default function ChatScreen() {
 
     return (
       <View style={styles.pdfCard}>
-        <View style={styles.pdfIconWrap}>
-          <Text style={styles.pdfIcon}>📄</Text>
+        {/* Header rij: icoon + naam + grootte */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <View style={styles.pdfIconWrap}>
+            <Text style={styles.pdfIcon}>📄</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pdfName} numberOfLines={1}>
+              {msg.pdfFileName ?? "Higgins Rapport.pdf"}
+            </Text>
+            <Text style={styles.pdfMeta}>
+              PDF · {msg.pdfSizeBytes ? formatFileSize(msg.pdfSizeBytes) : "—"}
+            </Text>
+          </View>
         </View>
-        <View style={styles.pdfInfo}>
-          <Text style={styles.pdfName} numberOfLines={1}>
-            {msg.pdfFileName ?? "Higgins Rapport.pdf"}
-          </Text>
-          <Text style={styles.pdfMeta}>
-            PDF · {msg.pdfSizeBytes ? formatFileSize(msg.pdfSizeBytes) : "—"} · {formatTime(msg.timestamp)}
-          </Text>
-          <Text style={styles.pdfCaption} numberOfLines={2}>{msg.content}</Text>
-        </View>
+        {/* Beschrijving */}
+        {!!msg.content && (
+          <Text style={styles.pdfCaption} numberOfLines={3}>{msg.content}</Text>
+        )}
+        {/* Open knop */}
         <Pressable
           style={({ pressed }) => [styles.pdfOpenBtn, pressed && { opacity: 0.7 }]}
           onPress={handleOpen}
           disabled={isOpening}
         >
           {isOpening
-            ? <ActivityIndicator size="small" color={C.bg} />
-            : <Text style={styles.pdfOpenBtnText}>Openen</Text>
+            ? <ActivityIndicator size="small" color="#FFFFFF" />
+            : <Text style={styles.pdfOpenBtnText}>Openen ↓</Text>
           }
         </Pressable>
       </View>
@@ -972,16 +979,16 @@ const styles = StyleSheet.create({
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   sendButtonText: { fontSize: 24, color: C.bg, fontWeight: "900", marginTop: -2 },
-  // PDF kaart
-  pdfCard: { flex: 1, maxWidth: "85%", flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.pdfBg, borderRadius: 16, borderWidth: 1, borderColor: C.pdfBorder, padding: 12 },
-  pdfIconWrap: { width: 40, height: 48, backgroundColor: "rgba(0,212,212,0.1)", borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  pdfIcon: { fontSize: 22 },
-  pdfInfo: { flex: 1, gap: 3 },
-  pdfName: { fontSize: 13, fontWeight: "700", color: C.text, fontFamily: FONT_BOLD },
-  pdfMeta: { fontSize: 11, color: C.muted, fontFamily: FONT },
-  pdfCaption: { fontSize: 12, color: C.muted, fontFamily: FONT, lineHeight: 17, marginTop: 2 },
-  pdfOpenBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: C.cyan, borderRadius: 10, alignItems: "center", justifyContent: "center", minWidth: 64 },
-  pdfOpenBtnText: { fontSize: 12, fontWeight: "800", color: C.bg, fontFamily: FONT_BOLD },
+  // PDF kaart — Manus witte documentkaart stijl
+  pdfCard: { maxWidth: "88%", backgroundColor: "#FFFFFF", borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2 },
+  pdfIconWrap: { width: 36, height: 36, backgroundColor: "#EBF4FF", borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  pdfIcon: { fontSize: 20 },
+  pdfInfo: { flex: 1, gap: 2 },
+  pdfName: { fontSize: 14, fontWeight: "700", color: "#111111", fontFamily: FONT_BOLD },
+  pdfMeta: { fontSize: 11, color: "#888888", fontFamily: FONT },
+  pdfCaption: { fontSize: 12, color: "#555555", fontFamily: FONT, lineHeight: 18, marginTop: 2, marginBottom: 4 },
+  pdfOpenBtn: { alignSelf: "flex-end", marginTop: 8, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "#0891b2", borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  pdfOpenBtnText: { fontSize: 12, fontWeight: "700", color: "#FFFFFF", fontFamily: FONT_BOLD },
   // Modal
   modal: { flex: 1, backgroundColor: C.bg },
   modalHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surface },

@@ -171,6 +171,15 @@ export default function DashboardScreen() {
             <View style={{ marginLeft: 10 }}>
               <Text style={s.title}>{t.dashboard.title}</Text>
             </View>
+            {/* Weerbadge naast logo */}
+            {dailyQuery.data?.weather && (
+              <View style={s.weatherBadge}>
+                <Text style={s.weatherBadgeIcon}>{dailyQuery.data.weather.icon ?? "🌡️"}</Text>
+                <Text style={s.weatherBadgeText}>
+                  {dailyQuery.data.weather.temperature}°  {dailyQuery.data.weather.location}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={s.headerRight}>
             <LanguageSwitcher />
@@ -501,6 +510,29 @@ const s = StyleSheet.create({
     fontWeight: "700",
     fontFamily: FONT,
     letterSpacing: 0.5,
+  },
+
+  // Weerbadge in header
+  weatherBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    gap: 4,
+    marginLeft: 8,
+  },
+  weatherBadgeIcon: {
+    fontSize: 13,
+  },
+  weatherBadgeText: {
+    fontSize: 11,
+    color: C.muted,
+    fontFamily: FONT,
+    fontWeight: "600",
   },
 
   // Brief card — glassmorphism
