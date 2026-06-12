@@ -32,6 +32,7 @@ const NAV_ITEM_DEFS = [
   { href: "/(tabs)/",        key: "command",    icon: "house.fill"      as const },
   { href: "/(tabs)/chat",    key: "chat",       icon: "bubble.left.fill" as const },
   { href: "/(tabs)/agents",  key: "teamPulse",  icon: "person.2.fill"   as const },
+  { href: "/(tabs)/docs",    key: "docs",       icon: "doc.on.doc.fill" as const },
   { href: "/(tabs)/settings",key: "settings",   icon: "gearshape.fill"  as const },
 ];
 

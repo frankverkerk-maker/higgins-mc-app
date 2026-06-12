@@ -156,3 +156,11 @@
 - [x] Higgins selecteert het juiste teamlid op basis van documentinhoud
 - [x] Agent delegatie via Manus API met PDF-inhoud als context
 - [x] Resultaat van agent-analyse terugkoppelen in chat (delegatie badge + Higgins bericht)
+
+## Fase 17: Agent Resultaat, Batch Upload, Analyse-indicator, Document Bibliotheek
+
+- [ ] Agent resultaat polling: check Manus taakstatus na delegatie
+- [ ] "Bekijk analyse" knop in PDF-kaart die Manus taak opent
+- [ ] Analyse-indicator "Higgins analyseert uw document..." tijdens verwerking
+- [ ] Meerdere PDF's tegelijk uploaden (batch)
+- [ ] Document bibliotheek tabblad met alle geüploade documenten en analyses

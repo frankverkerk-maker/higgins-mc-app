@@ -205,58 +205,75 @@ export default function ChatScreen() {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/pdf", "*/*"],
         copyToCacheDirectory: true,
+        multiple: true,
       });
       if (result.canceled || !result.assets?.length) return;
 
-      const asset = result.assets[0];
-      const fileName = asset.name ?? `document_${Date.now()}.pdf`;
-      const mimeType = asset.mimeType ?? "application/pdf";
-
-      // Lees bestand als base64
-      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Toon user bericht met bestandsnaam
-      const userMsg: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        content: `📎 ${fileName}`,
-        timestamp: new Date(),
-        type: "text",
-      };
-      const withUser = [...messages, userMsg];
-      setMessages(withUser);
       setIsUploading(true);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+      let currentMessages = [...messages];
 
-      const uploadResult = await uploadPdfMutation.mutateAsync({
-        base64,
-        fileName,
-        mimeType,
-        userName: userName ?? undefined,
-        language,
-      });
+      // Verwerk elk geselecteerd bestand sequentieel
+      for (let i = 0; i < result.assets.length; i++) {
+        const asset = result.assets[i];
+        const fileName = asset.name ?? `document_${Date.now()}_${i}.pdf`;
+        const mimeType = asset.mimeType ?? "application/pdf";
 
-      // Higgins bevestigingsbericht als PDF-kaart (inclusief delegatie info)
-      const pdfMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: uploadResult.higginsResponse,
-        timestamp: new Date(),
-        type: "pdf",
-        pdfUrl: uploadResult.url,
-        pdfFileName: uploadResult.fileName,
-        pdfSizeBytes: uploadResult.sizeBytes,
-        delegationTaskId: (uploadResult as any).delegationTaskId,
-        assignedAgent: (uploadResult as any).assignedAgent,
-        pageCount: (uploadResult as any).pageCount,
-      };
+        // Toon user bericht met bestandsnaam
+        const userMsg: Message = {
+          id: `${Date.now()}_u${i}`,
+          role: "user",
+          content: `📎 ${fileName}${result.assets.length > 1 ? ` (${i + 1}/${result.assets.length})` : ""}`,
+          timestamp: new Date(),
+          type: "text",
+        };
+        currentMessages = [...currentMessages, userMsg];
+        setMessages([...currentMessages]);
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+        try {
+          const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          const uploadResult = await uploadPdfMutation.mutateAsync({
+            base64,
+            fileName,
+            mimeType,
+            userName: userName ?? undefined,
+            language,
+          });
+
+          const pdfMsg: Message = {
+            id: `${Date.now()}_p${i}`,
+            role: "assistant",
+            content: uploadResult.higginsResponse,
+            timestamp: new Date(),
+            type: "pdf",
+            pdfUrl: uploadResult.url,
+            pdfFileName: uploadResult.fileName,
+            pdfSizeBytes: uploadResult.sizeBytes,
+            delegationTaskId: (uploadResult as any).delegationTaskId,
+            assignedAgent: (uploadResult as any).assignedAgent,
+            pageCount: (uploadResult as any).pageCount,
+          };
+          currentMessages = [...currentMessages, pdfMsg];
+          setMessages([...currentMessages]);
+          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+        } catch (_fileErr) {
+          const errMsg: Message = {
+            id: `${Date.now()}_e${i}`,
+            role: "assistant",
+            content: `⚠️ Kon ${fileName} niet verwerken. Probeer het opnieuw.`,
+            timestamp: new Date(),
+            type: "text",
+          };
+          currentMessages = [...currentMessages, errMsg];
+          setMessages([...currentMessages]);
+        }
+      }
 
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const finalMessages = [...withUser, pdfMsg];
-      setMessages(finalMessages);
-      await saveMessages(finalMessages);
+      await saveMessages(currentMessages);
     } catch (_err) {
       Alert.alert("Fout", t.chat.uploadError);
     } finally {
@@ -626,6 +643,36 @@ export default function ChatScreen() {
   // ─── PDF kaart component ──────────────────────────────────────────────────
   const PdfCard = ({ msg }: { msg: Message }) => {
     const [isOpening, setIsOpening] = useState(false);
+    const [taskStatus, setTaskStatus] = useState<"running" | "stopped" | "error" | null>(
+      msg.delegationTaskId ? "running" : null
+    );
+    const [taskResult, setTaskResult] = useState<string | null>(null);
+    const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Poll agent taakstatus elke 5 seconden totdat voltooid
+    useEffect(() => {
+      if (!msg.delegationTaskId || taskStatus === "stopped" || taskStatus === "error") return;
+      const poll = async () => {
+        try {
+          const res = await fetch(
+            `${getApiBaseUrl()}/api/trpc/higgins.getTaskStatus?input=${encodeURIComponent(JSON.stringify({ json: { taskId: msg.delegationTaskId, language, userName: userName ?? undefined } }))}`
+          );
+          if (!res.ok) return;
+          const data = await res.json() as { result?: { data?: { json?: { agentStatus: string; lastMessage?: string } } } };
+          const status = data?.result?.data?.json?.agentStatus;
+          const lastMsg = data?.result?.data?.json?.lastMessage;
+          if (status === "stopped" || status === "error") {
+            setTaskStatus(status as "stopped" | "error");
+            if (lastMsg) setTaskResult(lastMsg);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          }
+        } catch (_) { /* stil falen */ }
+      };
+      poll();
+      pollIntervalRef.current = setInterval(poll, 5000);
+      return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [msg.delegationTaskId]);
 
     const handleOpen = async () => {
       if (!msg.pdfUrl) return;
@@ -663,11 +710,28 @@ export default function ChatScreen() {
         {!!msg.content && (
           <Text style={styles.pdfCaption} numberOfLines={3}>{msg.content}</Text>
         )}
-        {/* Delegatie badge als een teamlid is ingeschakeld */}
-        {!!msg.assignedAgent && (
-          <View style={styles.pdfDelegationBadge}>
-            <Text style={styles.pdfDelegationText}>⚡ {msg.assignedAgent} is geactiveerd</Text>
+        {/* Analyse-indicator: agent is actief bezig */}
+        {!!msg.delegationTaskId && taskStatus === "running" && (
+          <View style={styles.pdfAnalysingBadge}>
+            <ActivityIndicator size="small" color="#0891b2" style={{ marginRight: 6 }} />
+            <Text style={styles.pdfAnalysingText}>
+              {msg.assignedAgent ? `${msg.assignedAgent} analyseert uw document…` : "Higgins analyseert uw document…"}
+            </Text>
           </View>
+        )}
+        {/* Delegatie badge: voltooid */}
+        {!!msg.assignedAgent && taskStatus !== "running" && (
+          <View style={[styles.pdfDelegationBadge, taskStatus === "error" && { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+            <Text style={[styles.pdfDelegationText, taskStatus === "error" && { color: "#DC2626" }]}>
+              {taskStatus === "stopped" ? `✅ ${msg.assignedAgent} heeft de analyse voltooid` :
+               taskStatus === "error" ? `⚠️ ${msg.assignedAgent} heeft een fout gemeld` :
+               `⚡ ${msg.assignedAgent} is geactiveerd`}
+            </Text>
+          </View>
+        )}
+        {/* Resultaat van de analyse (eerste 200 tekens) */}
+        {!!taskResult && taskStatus === "stopped" && (
+          <Text style={styles.pdfTaskResult} numberOfLines={4}>{taskResult}</Text>
         )}
         {/* Open knop */}
         <Pressable
@@ -1000,8 +1064,11 @@ const styles = StyleSheet.create({
   pdfName: { fontSize: 14, fontWeight: "700", color: "#111111", fontFamily: FONT_BOLD },
   pdfMeta: { fontSize: 11, color: "#888888", fontFamily: FONT },
   pdfCaption: { fontSize: 12, color: "#555555", fontFamily: FONT, lineHeight: 18, marginTop: 2, marginBottom: 4 },
+  pdfAnalysingBadge: { flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "#EFF6FF", borderRadius: 6, borderWidth: 1, borderColor: "#BFDBFE", alignSelf: "flex-start" },
+  pdfAnalysingText: { fontSize: 11, color: "#1D4ED8", fontFamily: FONT },
   pdfDelegationBadge: { marginTop: 6, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "#F0FDF4", borderRadius: 6, borderWidth: 1, borderColor: "#BBF7D0", alignSelf: "flex-start" },
   pdfDelegationText: { fontSize: 11, color: "#15803D", fontWeight: "700", fontFamily: FONT_BOLD },
+  pdfTaskResult: { fontSize: 11, color: "#374151", fontFamily: FONT, lineHeight: 16, marginTop: 6, marginBottom: 2, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: "#F9FAFB", borderRadius: 6, borderWidth: 1, borderColor: "#E5E7EB" },
   pdfOpenBtn: { alignSelf: "flex-end", marginTop: 8, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "#0891b2", borderRadius: 8, alignItems: "center", justifyContent: "center" },
   pdfOpenBtnText: { fontSize: 12, fontWeight: "700", color: "#FFFFFF", fontFamily: FONT_BOLD },
   // Modal

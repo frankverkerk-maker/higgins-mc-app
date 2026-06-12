@@ -21,6 +21,8 @@ const MAPPING = {
   "bubble.left.fill": "chat-bubble",
   "person.2.fill": "group",
   "gearshape.fill": "settings",
+  "doc.fill": "description",
+  "doc.on.doc.fill": "file-copy",
 } as IconMapping;
 
 /**

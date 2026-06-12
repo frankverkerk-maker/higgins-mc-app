@@ -25,6 +25,7 @@ export const en: Translations = {
     command: "Command",
     chat: "Chat",
     teamPulse: "Team Pulse",
+    docs: "Documents",
     settings: "Settings",
   },
 

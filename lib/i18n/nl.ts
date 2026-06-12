@@ -23,6 +23,7 @@ export const nl = {
     command: "Command",
     chat: "Chat",
     teamPulse: "Team Pulse",
+    docs: "Documenten",
     settings: "Instellingen",
   },
 
