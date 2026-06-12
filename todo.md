@@ -164,3 +164,9 @@
 - [ ] Analyse-indicator "Higgins analyseert uw document..." tijdens verwerking
 - [ ] Meerdere PDF's tegelijk uploaden (batch)
 - [ ] Document bibliotheek tabblad met alle geüploade documenten en analyses
+
+## Fase 18: Zoekbalk, Analyse-link en Weerbadge
+
+- [x] Zoekbalk in Documenten tabblad (filter op naam en inhoud)
+- [x] "Bekijk volledige analyse" knop die Manus-taakpagina opent in browser
+- [x] Weerbadge in Command Center header actief via locatie-instelling (was al correct gekoppeld)

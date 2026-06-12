@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -21,24 +22,29 @@ import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 import { getApiBaseUrl } from "@/constants/oauth";
 
-// ─── Design tokens (zelfde als chat) ─────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
   bg:         "#0A0C0E",
   surface:    "#111418",
-  surface2:   "#161B21",
   border:     "#1E2530",
   cyan:       "#00D4D4",
   cyanDim:    "rgba(0,212,212,0.12)",
   text:       "#E8EDF2",
   muted:      "#5A6472",
-  green:      "#00D4A0",
-  amber:      "#F5A623",
-  red:        "#FF4D6A",
+  inputBg:    "#161B21",
+  inputBorder:"#252D38",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
-// ─── Opgeslagen document type ─────────────────────────────────────────────────
+// ─── Manus taak URL helper ────────────────────────────────────────────────────
+function getManusTaskUrl(taskId: string): string {
+  // Manus task pagina's zijn bereikbaar via https://manus.im/share/{taskId}
+  // of via de app op https://app.manus.ai/task/{taskId}
+  return `https://manus.im/share/${taskId}`;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 type DocEntry = {
   id: string;
   fileName: string;
@@ -48,7 +54,7 @@ type DocEntry = {
   higginsResponse: string;
   assignedAgent?: string;
   delegationTaskId?: string;
-  uploadedAt: string; // ISO string
+  uploadedAt: string;
 };
 
 const DOCS_STORAGE_KEY = "higgins_docs_library";
@@ -59,10 +65,22 @@ export default function DocsScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const uploadPdfMutation = trpc.higgins.uploadPdf.useMutation();
 
-  // Laad opgeslagen documenten
+  // ─── Gefilterde lijst op basis van zoekterm ──────────────────────────────
+  const filteredDocs = useMemo(() => {
+    if (!searchQuery.trim()) return docs;
+    const q = searchQuery.toLowerCase();
+    return docs.filter(d =>
+      d.fileName.toLowerCase().includes(q) ||
+      d.higginsResponse.toLowerCase().includes(q) ||
+      (d.assignedAgent ?? "").toLowerCase().includes(q)
+    );
+  }, [docs, searchQuery]);
+
+  // ─── Laden en opslaan ────────────────────────────────────────────────────
   const loadDocs = useCallback(async () => {
     try {
       const raw = await AsyncStorage.getItem(DOCS_STORAGE_KEY);
@@ -81,7 +99,7 @@ export default function DocsScreen() {
     AsyncStorage.getItem("higgins_user_name").then(n => setUserName(n));
   }, [loadDocs]);
 
-  // Synchroniseer met chat: lees PDF-berichten uit chat history
+  // ─── Synchroniseer met chat history ─────────────────────────────────────
   useEffect(() => {
     const syncFromChat = async () => {
       try {
@@ -133,7 +151,7 @@ export default function DocsScreen() {
     setRefreshing(false);
   }, [loadDocs]);
 
-  // Upload nieuw document direct vanuit de bibliotheek
+  // ─── Upload ──────────────────────────────────────────────────────────────
   const handleUpload = useCallback(async () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -190,6 +208,7 @@ export default function DocsScreen() {
     }
   }, [docs, language, saveDocs, uploadPdfMutation, userName]);
 
+  // ─── Verwijderen ─────────────────────────────────────────────────────────
   const handleDelete = useCallback((id: string) => {
     Alert.alert(
       "Document verwijderen",
@@ -209,6 +228,7 @@ export default function DocsScreen() {
     );
   }, [docs, saveDocs]);
 
+  // ─── PDF openen ──────────────────────────────────────────────────────────
   const handleOpen = useCallback(async (doc: DocEntry) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -220,6 +240,26 @@ export default function DocsScreen() {
     }
   }, []);
 
+  // ─── Manus analyse openen ────────────────────────────────────────────────
+  const handleViewAnalysis = useCallback(async (taskId: string) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const url = getManusTaskUrl(taskId);
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          "Analyse bekijken",
+          `Taak ID: ${taskId}\n\nOpen manus.im om de volledige analyse te bekijken.`
+        );
+      }
+    } catch (_) {
+      Alert.alert("Fout", "Kan de analyse pagina niet openen.");
+    }
+  }, []);
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
   const formatDate = (iso: string) => {
     try {
       return new Date(iso).toLocaleDateString("nl-NL", {
@@ -235,9 +275,10 @@ export default function DocsScreen() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // ─── Document kaart ──────────────────────────────────────────────────────
   const renderDoc = ({ item }: { item: DocEntry }) => (
     <View style={styles.card}>
-      {/* Header */}
+      {/* Header rij */}
       <View style={styles.cardHeader}>
         <View style={styles.docIconWrap}>
           <Text style={styles.docIcon}>📄</Text>
@@ -258,7 +299,7 @@ export default function DocsScreen() {
 
       {/* Higgins samenvatting */}
       {!!item.higginsResponse && (
-        <Text style={styles.docCaption} numberOfLines={3}>{item.higginsResponse}</Text>
+        <Text style={styles.docCaption} numberOfLines={4}>{item.higginsResponse}</Text>
       )}
 
       {/* Agent badge */}
@@ -268,16 +309,29 @@ export default function DocsScreen() {
         </View>
       )}
 
-      {/* Open knop */}
-      <Pressable
-        style={({ pressed }) => [styles.openBtn, pressed && { opacity: 0.7 }]}
-        onPress={() => handleOpen(item)}
-      >
-        <Text style={styles.openBtnText}>Openen ↓</Text>
-      </Pressable>
+      {/* Actie knoppen */}
+      <View style={styles.cardActions}>
+        {/* Bekijk volledige analyse — alleen tonen als er een taak ID is */}
+        {!!item.delegationTaskId && (
+          <Pressable
+            style={({ pressed }) => [styles.analysisBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => handleViewAnalysis(item.delegationTaskId!)}
+          >
+            <Text style={styles.analysisBtnText}>Bekijk analyse →</Text>
+          </Pressable>
+        )}
+        {/* PDF openen */}
+        <Pressable
+          style={({ pressed }) => [styles.openBtn, pressed && { opacity: 0.7 }]}
+          onPress={() => handleOpen(item)}
+        >
+          <Text style={styles.openBtnText}>Openen ↓</Text>
+        </Pressable>
+      </View>
     </View>
   );
 
+  // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <AppBackground>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
@@ -286,7 +340,9 @@ export default function DocsScreen() {
           <View>
             <Text style={styles.headerTitle}>Documenten</Text>
             <Text style={styles.headerSub}>
-              {docs.length === 0 ? "Geen documenten" : `${docs.length} document${docs.length !== 1 ? "en" : ""}`}
+              {docs.length === 0
+                ? "Geen documenten"
+                : `${filteredDocs.length}${searchQuery ? ` van ${docs.length}` : ""} document${docs.length !== 1 ? "en" : ""}`}
             </Text>
           </View>
           <Pressable
@@ -301,7 +357,33 @@ export default function DocsScreen() {
           </Pressable>
         </View>
 
-        {/* Lijst */}
+        {/* Zoekbalk — alleen tonen als er documenten zijn */}
+        {docs.length > 0 && (
+          <View style={styles.searchBar}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Zoek op naam, inhoud of teamlid..."
+              placeholderTextColor={C.muted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable
+                style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => setSearchQuery("")}
+              >
+                <Text style={styles.clearBtnText}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Lege staat of lijst */}
         {docs.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📂</Text>
@@ -310,9 +392,17 @@ export default function DocsScreen() {
               Upload een PDF via de chat of de knop hierboven.{"\n"}Higgins analyseert het document en delegeert naar het juiste teamlid.
             </Text>
           </View>
+        ) : filteredDocs.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={styles.emptyTitle}>Geen resultaten</Text>
+            <Text style={styles.emptySubtitle}>
+              Geen documenten gevonden voor "{searchQuery}".
+            </Text>
+          </View>
         ) : (
           <FlatList
-            data={docs}
+            data={filteredDocs}
             keyExtractor={item => item.id}
             renderItem={renderDoc}
             contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
@@ -368,7 +458,43 @@ const styles = StyleSheet.create({
     color: C.bg,
     fontFamily: FONT_BOLD,
   },
-  // Document kaart (Manus witte stijl)
+  // ─── Zoekbalk ─────────────────────────────────────────────────────────────
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: C.inputBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.inputBorder,
+    gap: 8,
+  },
+  searchIcon: { fontSize: 14 },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: C.text,
+    fontFamily: FONT,
+    paddingVertical: 0,
+  },
+  clearBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: C.muted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearBtnText: {
+    fontSize: 10,
+    color: C.bg,
+    fontWeight: "700",
+  },
+  // ─── Document kaart (Manus witte stijl) ──────────────────────────────────
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -427,7 +553,7 @@ const styles = StyleSheet.create({
     color: "#555555",
     fontFamily: FONT,
     lineHeight: 18,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   agentBadge: {
     alignSelf: "flex-start",
@@ -437,7 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#BBF7D0",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   agentBadgeText: {
     fontSize: 11,
@@ -445,8 +571,30 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontFamily: FONT_BOLD,
   },
+  // ─── Actie knoppen ────────────────────────────────────────────────────────
+  cardActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 8,
+  },
+  analysisBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "#F0FDF4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analysisBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#15803D",
+    fontFamily: FONT_BOLD,
+  },
   openBtn: {
-    alignSelf: "flex-end",
     paddingHorizontal: 14,
     paddingVertical: 7,
     backgroundColor: "#0891b2",
@@ -460,7 +608,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: FONT_BOLD,
   },
-  // Lege staat
+  // ─── Lege staat ───────────────────────────────────────────────────────────
   emptyState: {
     flex: 1,
     alignItems: "center",
