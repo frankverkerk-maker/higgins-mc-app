@@ -8,6 +8,8 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut, storagePut as storageUpload } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
 import { activateAgent, getTaskStatus } from "./manus-agent-service";
 import { getDailyBriefing } from "./daily-briefing-service";
 
@@ -527,38 +529,111 @@ export const appRouter = router({
         const lang = input.language ?? "nl";
         const userName = input.userName ?? "Frank";
 
-        // Decodeer base64 naar Buffer
+        // ── Stap 1: Decodeer base64 naar Buffer en upload naar S3 ─────────────
         const buffer = Buffer.from(input.base64, "base64");
         const safeFileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
         const storageKey = `uploads/${Date.now()}_${safeFileName}`;
-
-        // Upload naar S3 via storagePut
         const { url } = await storagePut(storageKey, buffer, input.mimeType);
 
-        // Analyseer de PDF inhoud via LLM (tekst extractie via base64 hint)
-        let higginsResponse: string;
+        // ── Stap 2: Extraheer de volledige tekst uit de PDF ───────────────────
+        let pdfText = "";
+        let pageCount = 0;
         try {
-          const analyzePrompts: Record<string, string> = {
-            nl: `U heeft zojuist het document "${input.fileName}" ontvangen als base64-bestand. Geef een beknopte, professionele samenvatting van wat dit document waarschijnlijk bevat op basis van de bestandsnaam, en stel één relevante vervolgvraag aan ${userName}. Houd het kort (max 3 zinnen + 1 vraag). Spreek ${userName} direct aan.`,
-            de: `Sie haben soeben das Dokument "${input.fileName}" erhalten. Geben Sie eine kurze, professionelle Zusammenfassung des wahrscheinlichen Inhalts basierend auf dem Dateinamen, und stellen Sie ${userName} eine relevante Folgefrage. Maximal 3 Sätze + 1 Frage.`,
-            en: `You have just received the document "${input.fileName}". Provide a brief, professional summary of what this document likely contains based on the filename, and ask ${userName} one relevant follow-up question. Maximum 3 sentences + 1 question.`,
-          };
-          const analysisResult = await invokeLLM({
-            messages: [{ role: "user", content: analyzePrompts[lang] ?? analyzePrompts.nl }],
-          });
-          const rawContent = analysisResult.choices?.[0]?.message?.content ?? "";
-          const analysisText = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
-          const prefixes: Record<string, string> = {
-            nl: `Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen.\n\n`,
-            de: `Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert.\n\n`,
-            en: `I have received your document **${input.fileName}** and stored it securely.\n\n`,
-          };
-          higginsResponse = (prefixes[lang] ?? prefixes.nl) + analysisText.trim();
+          const parsed = await pdfParse(buffer);
+          pdfText = parsed.text?.trim() ?? "";
+          pageCount = parsed.numpages ?? 0;
+          // Begrens tot max 8000 tekens om LLM context niet te overschrijden
+          if (pdfText.length > 8000) {
+            pdfText = pdfText.substring(0, 8000) + "\n\n[... document afgekort voor analyse ...]";
+          }
         } catch (_) {
+          // PDF tekst extractie mislukt — val terug op bestandsnaam
+          pdfText = "";
+        }
+
+        // ── Stap 3: Higgins analyseert de inhoud en selecteert het juiste teamlid ─
+        // Team mapping: welke agent past bij welk type document
+        const TEAM_ROUTING_PROMPT = `Je bent Higgins, de chief of staff van Frank Verkerk bij Carpe Diem GmbH en Swiss Vitality Clinics AG.
+
+Frank heeft zojuist het volgende document geüpload:
+Bestandsnaam: ${input.fileName}
+Aantal pagina's: ${pageCount}
+
+${pdfText ? `Inhoud (eerste 8000 tekens):\n${pdfText}` : "(tekst kon niet worden geëxtraheerd — baseer je op de bestandsnaam)"}
+
+Jouw taak:
+1. Geef een beknopte samenvatting van het document (2-3 zinnen) in de taal: ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}
+2. Bepaal welk teamlid dit document het beste kan verwerken en analyseren:
+   - Warren (CFO): financiële documenten, investeringen, budgetten, contracten, P&L, balansen
+   - Elena (COO): communicatie, planning, HR, operationele processen, e-mails, vergaderverslagen
+   - Dr. David Sinclair (Chief Medical Officer): medische documenten, longevity, gezondheid, protocollen, klinische data
+   - Justitia (Legal Counsel): juridische documenten, contracten, compliance, regelgeving, GDPR
+   - Marcus (CTO): technische documenten, software architectuur, IT, code, systemen
+   - Sophia (Research Director): onderzoeksrapporten, wetenschappelijke publicaties, marktanalyse, strategie
+3. Formuleer een concrete taakopdracht voor dat teamlid (1-2 zinnen)
+
+Antwoord ALLEEN in dit JSON formaat:
+{
+  "summary": "[samenvatting in ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}]",
+  "assignedAgent": "[naam van het teamlid]",
+  "agentRole": "[rol/titel]",
+  "taskDescription": "[concrete taakopdracht voor het teamlid, in het Engels voor de Manus API]",
+  "higginsMessage": "[persoonlijk bericht van Higgins aan ${userName} over wat er gaat gebeuren, in ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}]"
+}`;
+
+        let higginsResponse: string;
+        let delegationTaskId: string | undefined;
+        let assignedAgent = "";
+
+        try {
+          const routingResult = await invokeLLM({
+            messages: [{ role: "user", content: TEAM_ROUTING_PROMPT }],
+          });
+          const rawContent = routingResult.choices?.[0]?.message?.content ?? "";
+          const responseText = typeof rawContent === "string" ? rawContent : rawContent.map((c: any) => c.text ?? "").join("");
+          const cleaned = responseText.replace(/```json\n?|```/g, "").trim();
+          const routing = JSON.parse(cleaned) as {
+            summary: string;
+            assignedAgent: string;
+            agentRole: string;
+            taskDescription: string;
+            higginsMessage: string;
+          };
+
+          assignedAgent = routing.assignedAgent;
+
+          // ── Stap 4: Activeer het teamlid via Manus API ──────────────────────
+          const fullTaskDescription = `${routing.taskDescription}\n\nDocument: ${input.fileName} (${pageCount} pagina's)\n\n${pdfText ? `Documentinhoud:\n${pdfText}` : "(Documenttekst niet beschikbaar — analyseer op basis van de bestandsnaam en context)"}`;
+
+          try {
+            const agentResult = await activateAgent(routing.assignedAgent, fullTaskDescription, "en");
+            delegationTaskId = agentResult.taskId;
+          } catch (agentErr) {
+            console.error(`[uploadPdf] Agent activatie mislukt voor ${routing.assignedAgent}:`, agentErr);
+          }
+
+          // ── Stap 5: Stel het Higgins bericht samen ──────────────────────────
+          const delegationConfirm: Record<string, string> = {
+            nl: delegationTaskId
+              ? `\n\nIk heb **${routing.assignedAgent}** (${routing.agentRole}) direct geactiveerd om dit document te verwerken. U ontvangt de analyse zodra ${routing.assignedAgent} klaar is.`
+              : `\n\nIk zal **${routing.assignedAgent}** (${routing.agentRole}) inschakelen voor de verdere verwerking.`,
+            de: delegationTaskId
+              ? `\n\nIch habe **${routing.assignedAgent}** (${routing.agentRole}) direkt aktiviert, um dieses Dokument zu verarbeiten.`
+              : `\n\nIch werde **${routing.assignedAgent}** (${routing.agentRole}) für die weitere Bearbeitung einschalten.`,
+            en: delegationTaskId
+              ? `\n\nI have activated **${routing.assignedAgent}** (${routing.agentRole}) directly to process this document. You will receive the analysis once ${routing.assignedAgent} is done.`
+              : `\n\nI will engage **${routing.assignedAgent}** (${routing.agentRole}) for further processing.`,
+          };
+
+          higginsResponse = routing.higginsMessage + (delegationConfirm[lang] ?? delegationConfirm.nl);
+
+        } catch (err) {
+          // Fallback als JSON parsing of LLM mislukt
+          console.error("[uploadPdf] Routing analyse mislukt:", err);
           const fallback: Record<string, string> = {
-            nl: `Uitstekend, ${userName}. Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen. U kunt het op elk moment openen via de knop hieronder.`,
-            de: `Ausgezeichnet, ${userName}. Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert.`,
-            en: `Excellent, ${userName}. I have received your document **${input.fileName}** and stored it securely.`,
+            nl: `Ik heb uw document **${input.fileName}** ontvangen en veilig opgeslagen. Ik analyseer de inhoud en zal het doorsturen naar het juiste teamlid.`,
+            de: `Ich habe Ihr Dokument **${input.fileName}** empfangen und sicher gespeichert. Ich analysiere den Inhalt und leite es an das richtige Teammitglied weiter.`,
+            en: `I have received your document **${input.fileName}** and stored it securely. I am analysing the content and will forward it to the appropriate team member.`,
           };
           higginsResponse = fallback[lang] ?? fallback.nl;
         }
@@ -568,6 +643,9 @@ export const appRouter = router({
           fileName: input.fileName,
           sizeBytes: buffer.length,
           higginsResponse,
+          delegationTaskId,
+          assignedAgent,
+          pageCount,
           uploadedAt: new Date().toISOString(),
         };
       }),

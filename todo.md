@@ -147,3 +147,12 @@
 - [x] Higgins analyseert automatisch geüploade PDF's (LLM samenvatting op basis van bestandsnaam + vervolgvraag)
 - [x] Weerbadge in Command Center header (icoon + temperatuur + stad naast Higgins logo)
 - [x] Locatie-instelling was al aanwezig in Instellingen scherm (bevestigd)
+
+## Fase 16: Volledige PDF Intelligentie Keten
+
+- [x] pdf-parse installeren op server voor tekst extractie
+- [x] uploadPdf endpoint: volledige PDF tekst extraheren uit base64
+- [x] Higgins leest de volledige inhoud en begrijpt het document
+- [x] Higgins selecteert het juiste teamlid op basis van documentinhoud
+- [x] Agent delegatie via Manus API met PDF-inhoud als context
+- [x] Resultaat van agent-analyse terugkoppelen in chat (delegatie badge + Higgins bericht)

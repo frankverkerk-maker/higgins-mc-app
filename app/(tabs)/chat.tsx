@@ -75,6 +75,10 @@ type Message = {
   pdfUrl?: string;
   pdfFileName?: string;
   pdfSizeBytes?: number;
+  // Delegatie velden
+  delegationTaskId?: string;
+  assignedAgent?: string;
+  pageCount?: number;
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
@@ -234,7 +238,7 @@ export default function ChatScreen() {
         language,
       });
 
-      // Higgins bevestigingsbericht als PDF-kaart
+      // Higgins bevestigingsbericht als PDF-kaart (inclusief delegatie info)
       const pdfMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -244,6 +248,9 @@ export default function ChatScreen() {
         pdfUrl: uploadResult.url,
         pdfFileName: uploadResult.fileName,
         pdfSizeBytes: uploadResult.sizeBytes,
+        delegationTaskId: (uploadResult as any).delegationTaskId,
+        assignedAgent: (uploadResult as any).assignedAgent,
+        pageCount: (uploadResult as any).pageCount,
       };
 
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -656,6 +663,12 @@ export default function ChatScreen() {
         {!!msg.content && (
           <Text style={styles.pdfCaption} numberOfLines={3}>{msg.content}</Text>
         )}
+        {/* Delegatie badge als een teamlid is ingeschakeld */}
+        {!!msg.assignedAgent && (
+          <View style={styles.pdfDelegationBadge}>
+            <Text style={styles.pdfDelegationText}>⚡ {msg.assignedAgent} is geactiveerd</Text>
+          </View>
+        )}
         {/* Open knop */}
         <Pressable
           style={({ pressed }) => [styles.pdfOpenBtn, pressed && { opacity: 0.7 }]}
@@ -987,6 +1000,8 @@ const styles = StyleSheet.create({
   pdfName: { fontSize: 14, fontWeight: "700", color: "#111111", fontFamily: FONT_BOLD },
   pdfMeta: { fontSize: 11, color: "#888888", fontFamily: FONT },
   pdfCaption: { fontSize: 12, color: "#555555", fontFamily: FONT, lineHeight: 18, marginTop: 2, marginBottom: 4 },
+  pdfDelegationBadge: { marginTop: 6, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "#F0FDF4", borderRadius: 6, borderWidth: 1, borderColor: "#BBF7D0", alignSelf: "flex-start" },
+  pdfDelegationText: { fontSize: 11, color: "#15803D", fontWeight: "700", fontFamily: FONT_BOLD },
   pdfOpenBtn: { alignSelf: "flex-end", marginTop: 8, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "#0891b2", borderRadius: 8, alignItems: "center", justifyContent: "center" },
   pdfOpenBtnText: { fontSize: 12, fontWeight: "700", color: "#FFFFFF", fontFamily: FONT_BOLD },
   // Modal
