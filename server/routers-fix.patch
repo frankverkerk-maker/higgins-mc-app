@@ -1,0 +1,36 @@
+--- a/server/routers.ts
++++ b/server/routers.ts
+@@ -8,17 +8,26 @@ import { storagePut, storagePut as storageUpload } from "./storage";
+ import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification } from "./push-service";
+ import { generateResponsePdf } from "./pdf-generator";
+-// Dynamic import for pdf-parse (ESM compatible)
+-let pdfParse: ((buffer: Buffer) => Promise<{ text: string; numpages: number }>) | null = null;
++// Dynamic import for pdf-parse (ESM compatible)
++let pdfParseModule: any = null;
+ 
+ (async () => {
+   try {
+-    const module = await import("pdf-parse");
+-    pdfParse = module.default || module;
++    pdfParseModule = await import("pdf-parse");
+   } catch (e) {
+     console.error("Failed to load pdf-parse", e);
+-    // Fallback: empty function
+-    pdfParse = async () => ({ text: "", numpages: 0 });
+   }
+ })();
++
++// Wrapper function for pdf-parse
++async function pdfParse(buffer: Buffer): Promise<{ text: string; numpages: number }> {
++  if (!pdfParseModule) {
++    return { text: "", numpages: 0 };
++  }
++  try {
++    const fn = pdfParseModule.default || pdfParseModule;
++    return await fn(buffer);
++  } catch (e) {
++    console.error("PDF parse error:", e);
++    return { text: "", numpages: 0 };
++  }
++}
+ import { activateAgent, getTaskStatus } from "./manus-agent-service";

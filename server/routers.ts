@@ -8,8 +8,30 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut, storagePut as storageUpload } from "./storage";
 import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
+// Dynamic import for pdf-parse (ESM compatible)
+let pdfParseModule: any = null;
+
+(async () => {
+  try {
+    pdfParseModule = await import("pdf-parse");
+  } catch (e) {
+    console.error("Failed to load pdf-parse", e);
+  }
+})();
+
+// Wrapper function for pdf-parse
+async function pdfParse(buffer: Buffer): Promise<{ text: string; numpages: number }> {
+  if (!pdfParseModule) {
+    return { text: "", numpages: 0 };
+  }
+  try {
+    const fn = pdfParseModule.default || pdfParseModule;
+    return await fn(buffer);
+  } catch (e) {
+    console.error("PDF parse error:", e);
+    return { text: "", numpages: 0 };
+  }
+}
 import { activateAgent, getTaskStatus } from "./manus-agent-service";
 import { getDailyBriefing } from "./daily-briefing-service";
 
