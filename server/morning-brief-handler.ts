@@ -37,12 +37,26 @@ export function getLatestMorningBrief() {
   return cachedBrief;
 }
 
-const HIGGINS_SYSTEM_PROMPT = `Je bent Higgins, de persoonlijke AI-assistent van Frank van Carpe Diem GmbH. 
+function getSystemPrompt(lang: string): string {
+  const prompts: Record<string, string> = {
+    nl: `Je bent Higgins, de persoonlijke AI-assistent van Frank van Carpe Diem GmbH. 
 Je spreekt altijd in het Nederlands. Je toon is professioneel, direct en motiverend.
 Je bent op de hoogte van de laatste ontwikkelingen in AI, crypto en business.
-Houd antwoorden beknopt maar informatief. Geen onnodige opsmuk.`;
+Houd antwoorden beknopt maar informatief. Geen onnodige opsmuk.`,
+    de: `Du bist Higgins, der persönliche KI-Assistent von Frank von Carpe Diem GmbH.
+Du sprichst immer auf Deutsch. Dein Ton ist professionell, direkt und motivierend.
+Du bist über die neuesten Entwicklungen in KI, Krypto und Geschäft informiert.
+Halte Antworten prägnant, aber informativ. Keine unnötige Verzierung.`,
+    en: `You are Higgins, the personal AI assistant of Frank of Carpe Diem GmbH.
+You always speak in English. Your tone is professional, direct and motivating.
+You are aware of the latest developments in AI, crypto and business.
+Keep answers concise but informative. No unnecessary embellishment.`,
+  };
+  return prompts[lang] ?? prompts.nl;
+}
 
-export async function morningBriefScheduledHandler(req: Request, res: Response) {
+export async function morningBriefScheduledHandler(req: Request, res: Response, lang?: string) {
+  const finalLang: string = lang ?? ((req.body?.lang || req.query?.lang || "nl") as string);
   try {
     // Authenticeer als cron job
     let isCron = false;
@@ -62,7 +76,9 @@ export async function morningBriefScheduledHandler(req: Request, res: Response) 
     }
 
     const now = new Date();
-    const date = now.toLocaleDateString("nl-NL", {
+    const localeMap: Record<string, string> = { nl: "nl-NL", de: "de-DE", en: "en-GB" };
+    const locale = localeMap[finalLang] ?? "nl-NL";
+    const date = now.toLocaleDateString(locale, {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -70,31 +86,44 @@ export async function morningBriefScheduledHandler(req: Request, res: Response) 
     });
 
     // Genereer alle briefing secties parallel
+    const systemPrompt = getSystemPrompt(finalLang);
     const [aiNewsRes, cryptoRes, prioritiesRes] = await Promise.allSettled([
       invokeLLM({
         messages: [
-          { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Geef 1-2 zinnen over de meest relevante AI & innovatie ontwikkeling van de afgelopen 24 uur voor een ondernemer. Geen herhaling als er niets nieuws is. Datum: ${date}.`,
+            content: finalLang === "de"
+              ? `Geben Sie 1-2 Sätze über die relevanteste KI- und Innovationsentwicklung der letzten 24 Stunden für einen Unternehmer. Keine Wiederholung, wenn es keine Neuigkeiten gibt. Datum: ${date}.`
+              : finalLang === "en"
+              ? `Give 1-2 sentences about the most relevant AI & innovation development of the last 24 hours for an entrepreneur. No repetition if there's no news. Date: ${date}.`
+              : `Geef 1-2 zinnen over de meest relevante AI & innovatie ontwikkeling van de afgelopen 24 uur voor een ondernemer. Geen herhaling als er niets nieuws is. Datum: ${date}.`,
           },
         ],
       }),
       invokeLLM({
         messages: [
-          { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Geef 1-2 zinnen over de actuele crypto & DeFi markt situatie (Bitcoin, Ethereum, algemene trend). Datum: ${date}. Geen herhaling als er niets nieuws is.`,
+            content: finalLang === "de" 
+              ? `Geben Sie 1-2 Sätze zur aktuellen Krypto- und DeFi-Marktsituation (Bitcoin, Ethereum, allgemeiner Trend). Datum: ${date}. Keine Wiederholung, wenn es keine Neuigkeiten gibt.`
+              : finalLang === "en"
+              ? `Give 1-2 sentences about the current crypto & DeFi market situation (Bitcoin, Ethereum, general trend). Date: ${date}. No repetition if there's no news.`
+              : `Geef 1-2 zinnen over de actuele crypto & DeFi markt situatie (Bitcoin, Ethereum, algemene trend). Datum: ${date}. Geen herhaling als er niets nieuws is.`,
           },
         ],
       }),
       invokeLLM({
         messages: [
-          { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Genereer 3 concrete zakelijke prioriteiten voor Frank van Carpe Diem GmbH voor ${date}. Elke prioriteit max 10 woorden. Formaat: JSON array van strings.`,
+            content: finalLang === "de"
+              ? `Generieren Sie 3 konkrete geschäftliche Prioritäten für Frank von Carpe Diem GmbH für ${date}. Jede Priorität max 10 Wörter. Format: JSON-Array von Strings.`
+              : finalLang === "en"
+              ? `Generate 3 concrete business priorities for Frank of Carpe Diem GmbH for ${date}. Each priority max 10 words. Format: JSON array of strings.`
+              : `Genereer 3 concrete zakelijke prioriteiten voor Frank van Carpe Diem GmbH voor ${date}. Elke prioriteit max 10 woorden. Formaat: JSON array van strings.`,
           },
         ],
       }),
@@ -108,8 +137,14 @@ export async function morningBriefScheduledHandler(req: Request, res: Response) 
       return "";
     };
 
-    const aiNews = extractText(aiNewsRes) || "Geen nieuwe AI-ontwikkelingen vandaag.";
-    const cryptoUpdate = extractText(cryptoRes) || "Cryptomarkt stabiel.";
+    const fallbacks: Record<string, { aiNews: string; crypto: string }> = {
+      nl: { aiNews: "Geen nieuwe AI-ontwikkelingen vandaag.", crypto: "Cryptomarkt stabiel." },
+      de: { aiNews: "Keine neuen KI-Entwicklungen heute.", crypto: "Kryptomarkt stabil." },
+      en: { aiNews: "No new AI developments today.", crypto: "Crypto market stable." },
+    };
+    const langFallbacks = fallbacks[finalLang] ?? fallbacks.nl;
+    const aiNews = extractText(aiNewsRes) || langFallbacks.aiNews;
+    const cryptoUpdate = extractText(cryptoRes) || langFallbacks.crypto;
 
     // Parse prioriteiten (JSON of fallback)
     let priorities: string[] = ["Q2 rapport reviewen", "Team briefing voorbereiden", "Partnervoorstel beoordelen"];
@@ -129,10 +164,30 @@ export async function morningBriefScheduledHandler(req: Request, res: Response) 
     // Genereer de volledige briefing tekst
     const briefRes = await invokeLLM({
       messages: [
-        { role: "system", content: HIGGINS_SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
-          content: `Schrijf een beknopte ochtend briefing voor Frank voor ${date}.
+          content: finalLang === "de"
+            ? `Schreiben Sie eine kurze Morgen-Briefing für Frank für ${date}.
+          
+Kontext:
+- KI-Nachrichten: ${aiNews}
+- Krypto: ${cryptoUpdate}
+- Prioritäten: ${priorities.join(", ")}
+- Team: Elena (E-Mails), Warren (Portfolio), Gary (Kampagnen), Justitia (Recht) sind verfügbar.
+
+Schreiben Sie max 3 Sätze als persönliche Briefing. Professionell, direkt, motivierend.`
+            : finalLang === "en"
+            ? `Write a concise morning briefing for Frank for ${date}.
+          
+Context:
+- AI news: ${aiNews}
+- Crypto: ${cryptoUpdate}
+- Priorities: ${priorities.join(", ")}
+- Team: Elena (emails), Warren (portfolio), Gary (campaigns), Justitia (legal) are available.
+
+Write max 3 sentences as a personal briefing. Professional, direct, motivating.`
+            : `Schrijf een beknopte ochtend briefing voor Frank voor ${date}.
           
 Context:
 - AI nieuws: ${aiNews}
@@ -145,8 +200,13 @@ Schrijf max 3 zinnen als persoonlijke briefing. Professioneel, direct, motiveren
       ],
     });
 
+    const briefFallbacks: Record<string, string> = {
+      nl: `Goedemorgen Frank. Uw team staat klaar voor ${date}. Higgins heeft uw prioriteiten voorbereid.`,
+      de: `Guten Morgen Frank. Ihr Team ist bereit für ${date}. Higgins hat Ihre Prioritäten vorbereitet.`,
+      en: `Good morning Frank. Your team is ready for ${date}. Higgins has prepared your priorities.`,
+    };
     const brief = extractText({ status: "fulfilled", value: briefRes }) ||
-      `Goedemorgen Frank. Uw team staat klaar voor ${date}. Higgins heeft uw prioriteiten voorbereid.`;
+      (briefFallbacks[finalLang] ?? briefFallbacks.nl);
 
     // Cache de briefing
     cachedBrief = {
@@ -157,7 +217,11 @@ Schrijf max 3 zinnen als persoonlijke briefing. Professioneel, direct, motiveren
         ai: aiNews,
         crypto: cryptoUpdate,
         priorities,
-        teamStatus: "Elena, Warren, Gary en Justitia zijn beschikbaar.",
+        teamStatus: finalLang === "de" 
+          ? "Elena, Warren, Gary und Justitia sind verfügbar."
+          : finalLang === "en"
+          ? "Elena, Warren, Gary and Justitia are available."
+          : "Elena, Warren, Gary en Justitia zijn beschikbaar.",
       },
     };
 

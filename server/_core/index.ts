@@ -60,7 +60,10 @@ async function startServer() {
   registerOAuthRoutes(app);
 
   // ── Scheduled endpoints (cron callbacks) ─────────────────────────────────
-  app.post("/api/scheduled/morning-brief", morningBriefScheduledHandler);
+  app.post("/api/scheduled/morning-brief", (req, res) => {
+    const lang = (req.body?.lang || req.query?.lang || "nl") as string;
+    return morningBriefScheduledHandler(req, res, lang);
+  });
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });

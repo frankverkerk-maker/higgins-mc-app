@@ -45,6 +45,25 @@ export function getApiBaseUrl(): string {
     }
   }
 
+  // On native (iOS/Android), also replace 8081 with 3000 for tunnel URLs
+  // This handles Expo Go on devices that connect via the Manus tunnel
+  if (ReactNative.Platform.OS !== "web") {
+    // In Expo Go, the app can access the tunnel URL from the debugger host
+    // We need to replace 8081 (Metro) with 3000 (API server)
+    try {
+      const debuggerHost = (global as any).__DEV__ ? (global as any).debuggerHost : null;
+      if (debuggerHost && typeof debuggerHost === "string") {
+        // Pattern: 8081-sandboxid.region.domain:port -> 3000-sandboxid.region.domain
+        const apiHost = debuggerHost.replace(/^8081-/, "3000-").replace(/:[0-9]+$/, "");
+        if (apiHost !== debuggerHost.replace(/:[0-9]+$/, "")) {
+          return `https://${apiHost}`;
+        }
+      }
+    } catch (_) {
+      // Ignore errors, fall through to empty string
+    }
+  }
+
   // Fallback to empty (will use relative URL)
   return "";
 }
