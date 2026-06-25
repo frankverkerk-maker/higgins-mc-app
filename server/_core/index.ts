@@ -53,6 +53,52 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // ── Legal pages (required by Apple App Store) ────────────────────────────
+  // Apple requires a publicly reachable Privacy Policy URL for every app.
+  // Served here so https://<domain>/privacy works without a separate site.
+  const legalPage = (title: string, bodyHtml: string) => `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${title} — Higgins MC</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:760px;margin:0 auto;padding:40px 20px;line-height:1.6;color:#111;background:#fff}h1{font-size:28px}h2{font-size:19px;margin-top:28px}a{color:#0a7ea4}small{color:#666}</style>
+</head><body>${bodyHtml}</body></html>`;
+
+  app.get("/privacy", (_req, res) => {
+    res.set("Content-Type", "text/html; charset=utf-8").send(
+      legalPage(
+        "Privacy Policy",
+        `<h1>Privacy Policy</h1>
+        <p><small>Last updated: ${new Date().toISOString().slice(0, 10)}</small></p>
+        <p>Higgins Mission Control (“Higgins MC”, “the app”) is a private, personal executive command center. This policy explains what data the app handles and how.</p>
+        <h2>Information we process</h2>
+        <p>The app processes the data you provide to operate its features: your daily briefing content, approvals, agent activity, documents you add, and chat messages with the Higgins assistant. If you enable weather, your approximate location is used solely to retrieve local weather and is not stored for any other purpose.</p>
+        <h2>Push notifications</h2>
+        <p>If you grant permission, the app uses push notifications to alert you to briefings and relevant updates. A device push token is used only to deliver these notifications.</p>
+        <h2>How data is used</h2>
+        <p>Data is used only to provide the app’s functionality to you. We do not sell your data and do not use it for third-party advertising.</p>
+        <h2>Data retention &amp; deletion</h2>
+        <p>You may request deletion of your account data at any time by contacting the address below. Local data stored on your device is removed when you delete the app.</p>
+        <h2>Contact</h2>
+        <p>For privacy questions or data deletion requests, contact: <a href="mailto:privacy@higgins-mc.app">privacy@higgins-mc.app</a></p>
+        <p><a href="/terms">Terms of Use</a></p>`,
+      ),
+    );
+  });
+
+  app.get("/terms", (_req, res) => {
+    res.set("Content-Type", "text/html; charset=utf-8").send(
+      legalPage(
+        "Terms of Use",
+        `<h1>Terms of Use</h1>
+        <p><small>Last updated: ${new Date().toISOString().slice(0, 10)}</small></p>
+        <p>By using Higgins Mission Control you agree to use the app for your own lawful, personal or business purposes. The app is provided “as is” without warranties. We are not liable for decisions made based on information shown in the app.</p>
+        <h2>Contact</h2>
+        <p><a href="mailto:support@higgins-mc.app">support@higgins-mc.app</a></p>
+        <p><a href="/privacy">Privacy Policy</a></p>`,
+      ),
+    );
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({

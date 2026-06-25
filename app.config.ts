@@ -26,6 +26,11 @@ const bundleId =
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
+// Public legal URLs (served by the production backend). Apple requires a
+// reachable Privacy Policy URL for App Store submission.
+const PRIVACY_POLICY_URL = "https://higginsmc-fzaggof9.manus.space/privacy";
+const TERMS_URL = "https://higginsmc-fzaggof9.manus.space/terms";
+
 const env = {
   // App branding - update these values directly (do not use env vars)
   appName: "Higgins MC",
@@ -128,10 +133,28 @@ const config: ExpoConfig = {
         },
       },
     ],
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png",
+        color: "#00E5C7",
+        defaultChannel: "default",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+  },
+  extra: {
+    // EAS project ID — populated automatically by `eas init` once an
+    // Apple Developer account + EAS project exist. Required for production
+    // push notifications. Falls back to env var if provided.
+    eas: {
+      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "",
+    },
+    privacyPolicyUrl: PRIVACY_POLICY_URL,
+    termsUrl: TERMS_URL,
   },
 };
 
