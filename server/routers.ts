@@ -183,6 +183,134 @@ export const appRouter = router({
         };
       }),
 
+    // ── Agent status: haal live agent status op ─────────────────────────────────────
+    getAgentStatus: publicProcedure
+      .input(z.object({}))
+      .query(async () => {
+        // Haal live agent status op van Manus API of database
+        // Dit toont welke agents actief zijn, bezig, of wachten
+        try {
+          const apiKey = process.env.MANUS_API_KEY;
+          if (!apiKey) {
+            // Fallback: return mock data
+            return {
+              "Higgins": { status: "active", task: "Briefing voorbereiden" },
+              "Elena": { status: "active", task: "E-mails verwerken" },
+              "Gary": { status: "busy", task: "Campagne analyse" },
+              "Elon": { status: "idle", task: "Wacht op opdracht" },
+              "Warren": { status: "busy", task: "Q2 rapport opstellen" },
+              "Justitia": { status: "idle", task: "Wacht op opdracht" },
+            };
+          }
+
+          // Haal agent status op van Manus API
+          const response = await fetch(
+            "https://api.manus.ai/v2/agent.status?limit=50",
+            {
+              headers: {
+                "x-manus-api-key": apiKey,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            // Fallback op error
+            return {
+              "Higgins": { status: "active", task: "Briefing voorbereiden" },
+              "Elena": { status: "active", task: "E-mails verwerken" },
+              "Gary": { status: "busy", task: "Campagne analyse" },
+              "Elon": { status: "idle", task: "Wacht op opdracht" },
+              "Warren": { status: "busy", task: "Q2 rapport opstellen" },
+              "Justitia": { status: "idle", task: "Wacht op opdracht" },
+            };
+          }
+
+          const data = await response.json() as { agents?: Array<{ name: string; status: string; current_task?: string }> };
+          const agents = data.agents ?? [];
+
+          // Transform Manus agents naar activity format
+          const result: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {};
+          agents.forEach(agent => {
+            const status = agent.status === "running" ? "active" : agent.status === "busy" ? "busy" : "idle";
+            result[agent.name] = {
+              status: status as "active" | "idle" | "busy",
+              task: agent.current_task ?? "Wacht op opdracht",
+            };
+          });
+
+          return result;
+        } catch (error) {
+          console.error("Error fetching agent status:", error);
+          // Fallback op error
+          return {
+            "Higgins": { status: "active", task: "Briefing voorbereiden" },
+            "Elena": { status: "active", task: "E-mails verwerken" },
+            "Gary": { status: "busy", task: "Campagne analyse" },
+            "Elon": { status: "idle", task: "Wacht op opdracht" },
+            "Warren": { status: "busy", task: "Q2 rapport opstellen" },
+            "Justitia": { status: "idle", task: "Wacht op opdracht" },
+          };
+        }
+      }),
+
+    // ── Goedkeuring: haal alle pending approvals op ────────────────────────────
+    getPendingApprovals: publicProcedure
+      .input(
+        z.object({
+          userName: z.string().optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        // Haal pending approvals op van Manus API
+        // Dit zijn taken die wachten op goedkeuring van Frank
+        try {
+          const apiKey = process.env.MANUS_API_KEY;
+          if (!apiKey) {
+            // Fallback: return mock data als API key niet beschikbaar is
+            return [
+              { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+              { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
+            ];
+          }
+
+          // Haal taken op van Manus API
+          const response = await fetch(
+            "https://api.manus.ai/v2/task.list?status=waiting_for_approval&limit=10",
+            {
+              headers: {
+                "x-manus-api-key": apiKey,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            // Fallback op error
+            return [
+              { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+              { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
+            ];
+          }
+
+          const data = await response.json() as { tasks?: Array<{ id: string; title: string; created_at: string; agent_name?: string }> };
+          const tasks = data.tasks ?? [];
+
+          // Transform Manus tasks naar approval format
+          return tasks.map((task, idx) => ({
+            id: task.id,
+            agent: task.agent_name ?? "Higgins",
+            action: task.title,
+            time: new Date(task.created_at).toLocaleString("nl-NL"),
+          }));
+        } catch (error) {
+          console.error("Error fetching pending approvals:", error);
+          // Fallback op error
+          return [
+            { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+            { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
+          ];
+        }
+      }),
+
     // ── Goedkeuring: verwerk een goedkeuring of afwijzing ────────────────────
     processApproval: publicProcedure
       .input(

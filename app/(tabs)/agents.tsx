@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from "react-native";
+import { useState, useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppBackground } from "@/components/app-background";
 import { TEAM } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
+import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -45,8 +46,8 @@ function agentInitial(name: string) {
   return name.replace("Dr. ", "").charAt(0).toUpperCase();
 }
 
-// Gesimuleerde activiteit per agent (in productie: live data van Hermes)
-const ACTIVITY: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {
+// Mock activiteit als fallback
+const MOCK_ACTIVITY: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {
   "Higgins":  { status: "active", task: "Briefing voorbereiden" },
   "Elena":    { status: "active", task: "E-mails verwerken" },
   "Gary":     { status: "busy",   task: "Campagne analyse" },
@@ -81,6 +82,21 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 export default function TeamPulseScreen() {
   const { t } = useLanguage();
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [activity, setActivity] = useState(MOCK_ACTIVITY);
+
+  // Live agent status from server
+  const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
+    {},
+    { staleTime: 15 * 1000, refetchInterval: 15 * 1000 }
+  );
+
+  // Update activity when server data changes
+  useEffect(() => {
+    if (agentStatusQuery.data) {
+      const typedData = agentStatusQuery.data as Record<string, { status: "active" | "idle" | "busy"; task: string }>;
+      setActivity(typedData);
+    }
+  }, [agentStatusQuery.data]);
 
   const handleAgentPress = (name: string) => {
     haptic(Haptics.ImpactFeedbackStyle.Light);
@@ -110,7 +126,7 @@ export default function TeamPulseScreen() {
           <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
             {["Higgins", "Elena", "Gary", "Warren"].map((name, i) => {
-              const act = ACTIVITY[name] ?? { status: "idle", task: "Wacht op opdracht" };
+              const act = activity[name] ?? { status: "idle", task: "Wacht op opdracht" };
               const agent = TEAM.find(a => a.name === name)!;
               const isHiggins = name === "Higgins";
               const isExpanded = expandedAgent === name;
@@ -187,11 +203,11 @@ export default function TeamPulseScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={s.agentName}>{agent.name}</Text>
                         <Text style={s.agentRole}>{agent.role}</Text>
-                        {isExpanded && ACTIVITY[agent.name] && (
+                        {isExpanded && activity[agent.name] && (
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-                            <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[ACTIVITY[agent.name].status] }]} />
-                            <Text style={[s.agentTask, { color: STATUS_COLORS[ACTIVITY[agent.name].status] }]}>
-                              {ACTIVITY[agent.name].task}
+                            <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[activity[agent.name].status] }]} />
+                            <Text style={[s.agentTask, { color: STATUS_COLORS[activity[agent.name].status] }]}>
+                              {activity[agent.name].task}
                             </Text>
                           </View>
                         )}

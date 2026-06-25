@@ -74,7 +74,6 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const [userName, setUserName] = useState<string | null>(null);
-  const [approvals, setApprovals] = useState(APPROVALS);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
   const [weatherLocation, setWeatherLocation] = useState<{ lat: number; lon: number; name: string } | undefined>(undefined);
 
@@ -101,6 +100,21 @@ export default function DashboardScreen() {
     { staleTime: 30 * 60 * 1000, enabled: true }
   );
 
+  // Live approvals from server
+  const approvalsQuery = trpc.higgins.getPendingApprovals.useQuery(
+    { userName: userName ?? undefined },
+    { staleTime: 30 * 1000, refetchInterval: 30 * 1000 }
+  );
+
+  // Use live approvals from server, fallback to APPROVALS if loading
+  const [approvals, setApprovals] = useState(APPROVALS);
+
+  useEffect(() => {
+    if (approvalsQuery.data) {
+      setApprovals(approvalsQuery.data);
+    }
+  }, [approvalsQuery.data]);
+
   // Uitklapbare secties
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const toggleSection = (id: string) => {
@@ -121,6 +135,12 @@ export default function DashboardScreen() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (userName) {
+      approvalsQuery.refetch();
+    }
+  }, [userName, approvalsQuery]);
 
   const handleApproval = useCallback(async (item: typeof APPROVALS[0], action: "approve" | "reject") => {
     if (Platform.OS !== "web") {
