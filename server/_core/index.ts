@@ -9,24 +9,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { morningBriefScheduledHandler } from "../morning-brief-handler";
 
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
-
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
+// REMOVED: findAvailablePort caused port mismatch bugs
+// Server MUST always bind to port 3000 so client can reliably connect
+// If port 3000 is busy, fail loudly so you notice and fix it
 
 async function startServer() {
   const app = express();
@@ -77,15 +62,20 @@ async function startServer() {
     }),
   );
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
+  const port = parseInt(process.env.PORT || "3000");
 
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
+  });
+
+  server.on("error", (err: any) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n❌ FATAL: Port ${port} is already in use!`);
+      console.error(`Kill the process using port ${port} and restart.`);
+      console.error(`On macOS/Linux: lsof -i :${port} | grep LISTEN | awk '{print $2}' | xargs kill -9`);
+      process.exit(1);
+    }
+    throw err;
   });
 }
 
