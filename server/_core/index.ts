@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
-import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -78,5 +77,18 @@ async function startServer() {
     throw err;
   });
 }
+
+// ── Global resilience: never let a single error kill the whole server ─────
+// WHY: An unhandled rejection or uncaught exception (e.g. a failed LLM call
+// in a cron handler) would otherwise crash the Node process, taking the API
+// offline and causing 502s in the app until a restart. Logging instead of
+// crashing keeps the API reachable.
+process.on("unhandledRejection", (reason) => {
+  console.error("[api] Unhandled promise rejection (non-fatal):", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[api] Uncaught exception (non-fatal):", err);
+});
 
 startServer().catch(console.error);

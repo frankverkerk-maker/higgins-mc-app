@@ -78,7 +78,16 @@ export default function RootLayout() {
           queries: {
             // Disable automatic refetching on window focus for mobile
             refetchOnWindowFocus: false,
-            // Retry failed requests once
+            // Retry failed requests with exponential backoff. Combined with the
+            // resilient fetch in lib/trpc.ts, this lets the app survive brief
+            // server restarts / hibernation wake-ups without surfacing errors.
+            retry: 2,
+            retryDelay: (attemptIndex) =>
+              Math.min(1000 * 2 ** attemptIndex, 5000),
+            // Keep showing last good data while refetching in the background.
+            staleTime: 30_000,
+          },
+          mutations: {
             retry: 1,
           },
         },
