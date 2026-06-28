@@ -1,6 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -106,6 +109,38 @@ async function startServer() {
       createContext,
     }),
   );
+
+  // ── Serve the exported Expo web app (static SPA) ─────────────────────────
+  // WHY: The published domain should open the actual app UI in a browser, not
+  // a 404. `pnpm build:web` exports the web bundle to dist/web. We serve it
+  // here AFTER all /api, /privacy, /terms routes so those keep working, and
+  // add a catch-all fallback to index.html for client-side routing.
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  // dist/index.js (bundled server) sits next to dist/web after build
+  const webDirCandidates = [
+    path.resolve(__dirname, "web"),
+    path.resolve(__dirname, "../web"),
+    path.resolve(process.cwd(), "dist/web"),
+  ];
+  const webDir = webDirCandidates.find((d) => fs.existsSync(path.join(d, "index.html")));
+
+  if (webDir) {
+    console.log(`[web] serving static web app from ${webDir}`);
+    app.use(express.static(webDir));
+    // SPA fallback: any non-API GET returns index.html so Expo Router handles it
+    app.get("*", (req, res, next) => {
+      if (req.method !== "GET") return next();
+      if (req.path.startsWith("/api")) return next();
+      // Serve the route's own static html if it exists (Expo exports per-route html)
+      const routeHtml = path.join(webDir, req.path.replace(/^\/+/, ""), "index.html");
+      if (req.path !== "/" && fs.existsSync(routeHtml)) {
+        return res.sendFile(routeHtml);
+      }
+      return res.sendFile(path.join(webDir, "index.html"));
+    });
+  } else {
+    console.warn("[web] no exported web app found (dist/web/index.html missing) — root will 404 until `pnpm build:web` runs");
+  }
 
   const port = parseInt(process.env.PORT || "3000");
 
