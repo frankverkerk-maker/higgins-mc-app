@@ -126,7 +126,63 @@ async function startServer() {
 
   if (webDir) {
     console.log(`[web] serving static web app from ${webDir}`);
-    app.use(express.static(webDir));
+
+    // ── Inject iOS "Add to Home Screen" icon + PWA meta tags ───────────────
+    // WHY: Expo's exported index.html only has a small <link rel="icon"> for the
+    // browser tab. iOS Safari uses <link rel="apple-touch-icon"> for the Home
+    // Screen icon; without it Safari falls back to a screenshot of the page.
+    // We inject the Higgins logo (served from public/ -> dist/web) so the Home
+    // Screen shortcut shows the real app icon. Tags are added once into <head>.
+    const HEAD_INJECT = [
+      '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />',
+      '<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />',
+      '<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />',
+      '<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />',
+      '<meta name="apple-mobile-web-app-capable" content="yes" />',
+      '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />',
+      '<meta name="apple-mobile-web-app-title" content="Higgins MC" />',
+      '<meta name="theme-color" content="#0b1416" />',
+      '<link rel="manifest" href="/manifest.webmanifest" />',
+    ].join("");
+
+    const htmlCache = new Map<string, string>();
+    const readHtmlWithIcons = (filePath: string): string => {
+      const cached = htmlCache.get(filePath);
+      if (cached) return cached;
+      let html = fs.readFileSync(filePath, "utf8");
+      if (!html.includes("apple-touch-icon")) {
+        html = html.replace(/<\/head>/i, `${HEAD_INJECT}</head>`);
+      }
+      htmlCache.set(filePath, html);
+      return html;
+    };
+    const sendHtml = (res: express.Response, filePath: string) => {
+      res.type("html").send(readHtmlWithIcons(filePath));
+    };
+
+    // Serve a minimal web manifest so iOS/Android recognise it as an app.
+    app.get("/manifest.webmanifest", (_req, res) => {
+      res.type("application/manifest+json").send(
+        JSON.stringify({
+          name: "Higgins MC",
+          short_name: "Higgins MC",
+          start_url: "/",
+          display: "standalone",
+          background_color: "#0b1416",
+          theme_color: "#0b1416",
+          icons: [
+            { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+            { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          ],
+        }),
+      );
+    });
+
+    // index: false -> do NOT let static middleware auto-serve index.html for "/",
+    // otherwise the raw (icon-less) HTML would be returned before our injector.
+    app.use(express.static(webDir, { index: false }));
+    // Explicit root: serve the injected HTML.
+    app.get("/", (_req, res) => sendHtml(res, path.join(webDir, "index.html")));
     // SPA fallback: any non-API GET returns index.html so Expo Router handles it
     app.get("*", (req, res, next) => {
       if (req.method !== "GET") return next();
@@ -134,9 +190,9 @@ async function startServer() {
       // Serve the route's own static html if it exists (Expo exports per-route html)
       const routeHtml = path.join(webDir, req.path.replace(/^\/+/, ""), "index.html");
       if (req.path !== "/" && fs.existsSync(routeHtml)) {
-        return res.sendFile(routeHtml);
+        return sendHtml(res, routeHtml);
       }
-      return res.sendFile(path.join(webDir, "index.html"));
+      return sendHtml(res, path.join(webDir, "index.html"));
     });
   } else {
     console.warn("[web] no exported web app found (dist/web/index.html missing) — root will 404 until `pnpm build:web` runs");
