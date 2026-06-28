@@ -1,5 +1,5 @@
 // ─── Higgins MC — Officieel Team Overzicht ────────────────────────────────────
-// Carpe Diem GmbH · 36 Agents · 7 Departments
+// Carpe Diem GmbH · 43 Agents · 9 Departments
 
 export type Agent = {
   name: string;
@@ -61,6 +61,17 @@ export const TEAM: Agent[] = [
   { name: "Oscar",  role: "Project Manager",           department: "Enterprise", isAddOn: true },
   { name: "Felix",  role: "Business Intelligence",     department: "Enterprise", isAddOn: true },
   { name: "Herald", role: "PR & Communications",       department: "Enterprise", isAddOn: true },
+
+  // ── Web Solutions ──────────────────────────────────────────────────────────
+  { name: "Leonardo", role: "Web Solutions Specialist", department: "Web Solutions" },
+
+  // ── Einstein Research Lab (R&D) ──────────────────────────────────────────────
+  { name: "Einstein", role: "Head of Research & Development", department: "Einstein Research Lab" },
+  { name: "Curie",    role: "Applied AI Researcher",          department: "Einstein Research Lab" },
+  { name: "Tesla",    role: "Prototype Engineer",            department: "Einstein Research Lab" },
+  { name: "Turing",   role: "Algorithm Researcher",          department: "Einstein Research Lab" },
+  { name: "Lovelace", role: "Data & Experimentation",        department: "Einstein Research Lab" },
+  { name: "Newton",   role: "Innovation Analyst",            department: "Einstein Research Lab" },
 ];
 
 // Kernteam voor Team Pulse weergave in de app (Orchestrators + afdelingshoofden)
@@ -71,4 +82,6 @@ export const PULSE_TEAM: Agent[] = [
   { name: "Elon",     role: "CTO / Chief Technology Officer",department: "Team Elon — IT" },
   { name: "Warren",   role: "CFO / Chief Financial Officer", department: "Revenue" },
   { name: "Justitia", role: "CLO / Chief Legal Officer",     department: "Justitia Legal Council", isAddOn: true },
+  { name: "Leonardo", role: "Web Solutions Specialist",      department: "Web Solutions" },
+  { name: "Einstein", role: "Head of Research & Development", department: "Einstein Research Lab" },
 ];

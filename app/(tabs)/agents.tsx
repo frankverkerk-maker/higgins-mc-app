@@ -39,6 +39,8 @@ const DEPT_COLORS: Record<string, { bg: string; text: string }> = {
   "Specialists":            { bg: "rgba(249,115,22,0.12)", text: "#FB923C" },
   "Justitia Legal Council": { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
   "Enterprise":             { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
+  "Web Solutions":          { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
+  "Einstein Research Lab":  { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
 };
 
 // Initiaal voor agent avatar
@@ -69,6 +71,8 @@ const DEPARTMENTS = [
   "Team Elon — IT",
   "Revenue",
   "Specialists",
+  "Web Solutions",
+  "Einstein Research Lab",
   "Justitia Legal Council",
   "Enterprise",
 ];
@@ -116,7 +120,7 @@ export default function TeamPulseScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
             <Text style={s.headerTitle}>{t.agents.title}</Text>
-            <Text style={s.headerSub}>36 {t.agents.activeAgents} · 7 {t.agents.department}en</Text>
+            <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.department}en</Text>
           </View>
           <LanguageSwitcher />
         </View>
