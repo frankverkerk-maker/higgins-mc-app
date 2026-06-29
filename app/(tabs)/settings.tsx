@@ -5,7 +5,6 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
-import { useEdition } from "@/lib/edition-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -44,7 +43,6 @@ const LOCATION_KEY = "@higgins_weather_location";
 
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
-  const { edition, setEdition } = useEdition();
   const [notifications, setNotifications] = useState(true);
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -151,40 +149,6 @@ export default function SettingsScreen() {
                 )}
               </Pressable>
             ))}
-          </View>
-        </View>
-
-        {/* ── Editie (Intern / Whitelab) — operator only ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>{t.settings.edition.toUpperCase()}</Text>
-          <View style={s.card}>
-            {(["internal", "whitelab"] as const).map((ed, i) => {
-              const selected = edition === ed;
-              const label = ed === "internal" ? t.settings.editionInternal : t.settings.editionWhitelab;
-              return (
-                <Pressable
-                  key={ed}
-                  style={({ pressed }) => [s.row, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
-                  onPress={() => { haptic(Haptics.ImpactFeedbackStyle.Medium); setEdition(ed); }}
-                >
-                  <View style={s.rowLeft}>
-                    <View style={[s.rowIcon, { backgroundColor: ed === "internal" ? C.cyanDim : "rgba(248,113,113,0.12)" }]}>
-                      <Text style={{ fontSize: 14 }}>{ed === "internal" ? "🏢" : "🏷️"}</Text>
-                    </View>
-                    <Text style={[s.rowLabel, selected && { color: C.cyan }]}>{label}</Text>
-                  </View>
-                  {selected && (
-                    <View style={[s.connectedBadge, { backgroundColor: C.cyanDim }]}>
-                      <View style={[s.statusDot, { backgroundColor: C.cyan }]} />
-                      <Text style={[s.statusText, { color: C.cyan }]}>✓</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-            <View style={[s.row, s.rowBorder, { paddingTop: 10 }]}>
-              <Text style={s.rowSub}>{t.settings.editionDesc}  ·  {t.settings.editionOperatorNote}</Text>
-            </View>
           </View>
         </View>
 
