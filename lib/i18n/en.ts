@@ -86,6 +86,9 @@ export const en: Translations = {
     approvalWarrenAction: "Execute portfolio rebalancing (€12,400)",
     timeMinAgo: "min ago",
     timeHourAgo: "hr ago",
+    timeDayAgo: "d ago",
+    timeJustNow: "just now",
+    noApprovals: "No pending approvals",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

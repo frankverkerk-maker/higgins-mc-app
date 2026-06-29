@@ -7,6 +7,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { SidebarNav, SIDEBAR_WIDTH } from "@/components/sidebar-nav";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/language-provider";
+import { useChatUnread } from "@/lib/chat-unread-provider";
 
 /** True when the device is wide enough for a sidebar (iPad ≥ 768pt) */
 function useIsPad(): boolean {
@@ -19,6 +20,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const isPad = useIsPad();
   const { t } = useLanguage();
+  const { unread } = useChatUnread();
 
   // Ensure enough room: icon (26) + label (10) + padding top (10) + safe area bottom
   const bottomPadding = Platform.OS === "web" ? 14 : Math.max(insets.bottom, 16);
@@ -74,6 +76,13 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: t.tabs.chat,
+          tabBarBadge: unread > 0 ? unread : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: "#FF4D6A",
+            color: "#FFFFFF",
+            fontSize: 11,
+            fontWeight: "700",
+          },
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="bubble.left.fill" color={color} />
           ),

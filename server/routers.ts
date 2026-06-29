@@ -294,12 +294,15 @@ export const appRouter = router({
           const data = await response.json() as { tasks?: Array<{ id: string; title: string; created_at: string; agent_name?: string }> };
           const tasks = data.tasks ?? [];
 
-          // Transform Manus tasks naar approval format
-          return tasks.map((task, idx) => ({
+          // Transform Manus tasks naar approval format. We return the REAL list
+          // here — including an empty array when there is genuinely nothing to
+          // approve — so the app can show an honest "no pending approvals" state.
+          // The ISO timestamp is sent raw; the client renders it relative + localized.
+          return tasks.map((task) => ({
             id: task.id,
             agent: task.agent_name ?? "Higgins",
             action: task.title,
-            time: new Date(task.created_at).toLocaleString("nl-NL"),
+            time: task.created_at,
           }));
         } catch (error) {
           console.error("Error fetching pending approvals:", error);

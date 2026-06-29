@@ -128,11 +128,28 @@ export default function DashboardScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
+  // Render an ISO timestamp as a localized relative time ("zojuist", "14 min geleden", "2 u geleden").
+  // Non-ISO strings (the no-key mock already says e.g. "14 min geleden") are passed through unchanged.
+  const formatApprovalTime = useCallback((raw: string): string => {
+    const ts = Date.parse(raw);
+    if (Number.isNaN(ts)) return raw;
+    const diffMin = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (diffMin < 1) return t.dashboard.timeJustNow;
+    if (diffMin < 60) return `${diffMin} ${t.dashboard.timeMinAgo}`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `${diffH} ${t.dashboard.timeHourAgo}`;
+    const diffD = Math.round(diffH / 24);
+    return `${diffD} ${t.dashboard.timeDayAgo}`;
+  }, [t]);
+
   useEffect(() => {
     if (approvalsQuery.data) {
-      setApprovals(approvalsQuery.data);
+      // Trust the server's real list — including an empty array (nothing to approve).
+      setApprovals(
+        approvalsQuery.data.map((a) => ({ ...a, time: formatApprovalTime(a.time) })),
+      );
     }
-  }, [approvalsQuery.data]);
+  }, [approvalsQuery.data, formatApprovalTime]);
 
   // Uitklapbare secties
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -369,6 +386,14 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Goedkeuringen ── */}
+        {approvals.length === 0 && approvalsQuery.isSuccess && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t.dashboard.awaitingApproval}</Text>
+            <View style={s.approvalEmpty}>
+              <Text style={s.approvalEmptyText}>{t.dashboard.noApprovals}</Text>
+            </View>
+          </View>
+        )}
         {approvals.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeaderRow}>
@@ -680,6 +705,20 @@ const s = StyleSheet.create({
   },
 
   // Approvals — glassmorphism
+  approvalEmpty: {
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: "rgba(52,211,153,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.18)",
+    alignItems: "center",
+  },
+  approvalEmptyText: {
+    color: "#8FB7AC",
+    fontSize: 13,
+    fontWeight: "500",
+  },
   approvalCard: {
     backgroundColor: "rgba(255,77,106,0.06)",
     borderRadius: 16,

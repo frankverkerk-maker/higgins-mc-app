@@ -86,6 +86,9 @@ export const de: Translations = {
     approvalWarrenAction: "Portfolio-Neugewichtung durchführen (€12.400)",
     timeMinAgo: "Min. zuvor",
     timeHourAgo: "Std. zuvor",
+    timeDayAgo: "Tg. zuvor",
+    timeJustNow: "gerade eben",
+    noApprovals: "Keine offenen Genehmigungen",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

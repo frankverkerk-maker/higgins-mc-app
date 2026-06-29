@@ -84,6 +84,9 @@ export const nl = {
     approvalWarrenAction: "Portfolio herbalancering uitvoeren (€12.400)",
     timeMinAgo: "min geleden",
     timeHourAgo: "uur geleden",
+    timeDayAgo: "dag geleden",
+    timeJustNow: "zojuist",
+    noApprovals: "Geen openstaande goedkeuringen",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ import { USER_NAME_KEY } from "@/app/onboarding";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { LanguageProvider } from "@/lib/language-provider";
 import { EditionProvider } from "@/lib/edition-provider";
+import { ChatUnreadProvider } from "@/lib/chat-unread-provider";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -135,15 +136,17 @@ export default function RootLayout() {
     return (
       <LanguageProvider>
         <EditionProvider>
-          <ThemeProvider>
-            <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-              <SafeAreaFrameContext.Provider value={frame}>
-                <SafeAreaInsetsContext.Provider value={insets}>
-                  {content}
-                </SafeAreaInsetsContext.Provider>
-              </SafeAreaFrameContext.Provider>
-            </SafeAreaProvider>
-          </ThemeProvider>
+          <ChatUnreadProvider>
+            <ThemeProvider>
+              <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+                <SafeAreaFrameContext.Provider value={frame}>
+                  <SafeAreaInsetsContext.Provider value={insets}>
+                    {content}
+                  </SafeAreaInsetsContext.Provider>
+                </SafeAreaFrameContext.Provider>
+              </SafeAreaProvider>
+            </ThemeProvider>
+          </ChatUnreadProvider>
         </EditionProvider>
       </LanguageProvider>
     );
@@ -152,9 +155,11 @@ export default function RootLayout() {
   return (
     <LanguageProvider>
       <EditionProvider>
-        <ThemeProvider>
-          <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
-        </ThemeProvider>
+        <ChatUnreadProvider>
+          <ThemeProvider>
+            <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+          </ThemeProvider>
+        </ChatUnreadProvider>
       </EditionProvider>
     </LanguageProvider>
   );

@@ -33,6 +33,10 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppBackground } from "@/components/app-background";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
+import { useChatUnread } from "@/lib/chat-unread-provider";
+import { useFocusEffect } from "expo-router";
+import * as Notifications from "expo-notifications";
+import { TypingDots } from "@/components/typing-dots";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -100,6 +104,34 @@ const getInitialMessage = (name: string | null, lang: string): Message => {
 
 export default function ChatScreen() {
   const { t, language } = useLanguage();
+  const { setChatActive, notifyReply } = useChatUnread();
+
+  // Flag the chat as focused so incoming replies don't count as unread while reading.
+  useFocusEffect(
+    useCallback(() => {
+      setChatActive(true);
+      return () => setChatActive(false);
+    }, [setChatActive]),
+  );
+
+  // Fire a light local notification when Higgins replies while the app is backgrounded
+  // or the user is on another tab. No-op on web / when permission is missing.
+  const notifyHigginsReply = useCallback(async (preview: string) => {
+    notifyReply();
+    if (Platform.OS === "web") return;
+    try {
+      const settings = await Notifications.getPermissionsAsync();
+      if (!settings.granted) return;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Higgins",
+          body: preview.length > 120 ? preview.slice(0, 117) + "…" : preview,
+          sound: true,
+        },
+        trigger: null,
+      });
+    } catch (_) {}
+  }, [notifyReply]);
   const [userName, setUserName] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -447,6 +479,7 @@ export default function ChatScreen() {
         const updatedMessages = [...newMessages, assistantMsg];
         setMessages(updatedMessages);
         await saveMessages(updatedMessages);
+        notifyHigginsReply(activationResult.higginsResponse);
       } else {
         // ── Normaal chat bericht naar Higgins ────────────────────────────────
         // Voeg agent context toe aan het bericht voor eerlijke antwoorden
@@ -478,6 +511,7 @@ export default function ChatScreen() {
         const updatedMessages = [...newMessages, assistantMsg];
         setMessages(updatedMessages);
         await saveMessages(updatedMessages);
+        notifyHigginsReply(result.reply);
       }
     } catch (error) {
       const errorMsg: Message = {
@@ -494,7 +528,7 @@ export default function ChatScreen() {
 
     setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [input, isLoading, userName, chatMutation, activateAgentMutation, messages, language, saveMessages]);
+  }, [input, isLoading, userName, chatMutation, activateAgentMutation, messages, language, saveMessages, notifyHigginsReply]);
 
   // ─── PDF genereren van het laatste Higgins antwoord ───────────────────────
   const handleGeneratePdf = useCallback(async () => {
@@ -838,7 +872,7 @@ export default function ChatScreen() {
                   ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📎 {t.chat.uploadUploading}</Text>
                 : isGeneratingPdf
                   ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📄 PDF genereren...</Text>
-                  : <ActivityIndicator size="small" color={C.cyan} />
+                  : <TypingDots color={C.cyan} />
               }
             </View>
           </View>
