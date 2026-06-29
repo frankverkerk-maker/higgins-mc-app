@@ -168,6 +168,11 @@ export const nl = {
     logoutButton: "Uitloggen",
     saveChanges: "Wijzigingen opslaan",
     changesSaved: "Opgeslagen",
+    edition: "Editie",
+    editionInternal: "Intern (volledig FMC)",
+    editionWhitelab: "Whitelab (klantweergave)",
+    editionDesc: "Whitelab verbergt vertrouwelijke afdelingen voor klanten",
+    editionOperatorNote: "Alleen beheerder · klanten kunnen dit niet wijzigen",
   },
 
   // ─── Push notificaties ───────────────────────────────────────────────────────

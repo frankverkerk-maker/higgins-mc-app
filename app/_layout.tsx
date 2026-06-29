@@ -23,6 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { USER_NAME_KEY } from "@/app/onboarding";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { LanguageProvider } from "@/lib/language-provider";
+import { EditionProvider } from "@/lib/edition-provider";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -133,24 +134,28 @@ export default function RootLayout() {
   if (shouldOverrideSafeArea) {
     return (
       <LanguageProvider>
-        <ThemeProvider>
-          <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-            <SafeAreaFrameContext.Provider value={frame}>
-              <SafeAreaInsetsContext.Provider value={insets}>
-                {content}
-              </SafeAreaInsetsContext.Provider>
-            </SafeAreaFrameContext.Provider>
-          </SafeAreaProvider>
-        </ThemeProvider>
+        <EditionProvider>
+          <ThemeProvider>
+            <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+              <SafeAreaFrameContext.Provider value={frame}>
+                <SafeAreaInsetsContext.Provider value={insets}>
+                  {content}
+                </SafeAreaInsetsContext.Provider>
+              </SafeAreaFrameContext.Provider>
+            </SafeAreaProvider>
+          </ThemeProvider>
+        </EditionProvider>
       </LanguageProvider>
     );
   }
 
   return (
     <LanguageProvider>
-      <ThemeProvider>
-        <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
-      </ThemeProvider>
+      <EditionProvider>
+        <ThemeProvider>
+          <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+        </ThemeProvider>
+      </EditionProvider>
     </LanguageProvider>
   );
 }

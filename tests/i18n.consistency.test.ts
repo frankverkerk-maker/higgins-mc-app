@@ -46,6 +46,17 @@ describe("i18n locale consistency", () => {
     }
   });
 
+  it("settings section has edition keys in every locale", () => {
+    const required = ["edition", "editionInternal", "editionWhitelab", "editionDesc", "editionOperatorNote"];
+    for (const key of required) {
+      expect((nl.settings as any)[key], `nl.${key}`).toBeTruthy();
+      expect((de.settings as any)[key], `de.${key}`).toBeTruthy();
+      expect((en.settings as any)[key], `en.${key}`).toBeTruthy();
+    }
+    // DE moet echt vertaald zijn (geen NL-kopie)
+    expect((de.settings as any).editionInternal).not.toBe((nl.settings as any).editionInternal);
+  });
+
   it("agents section has departmentsPlural in every locale", () => {
     expect((nl.agents as any).departmentsPlural).toBe("Departementen");
     expect((de.agents as any).departmentsPlural).toBe("Abteilungen");

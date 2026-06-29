@@ -169,6 +169,11 @@ export const en: Translations = {
     logoutButton: "Log out",
     saveChanges: "Save changes",
     changesSaved: "Saved",
+    edition: "Edition",
+    editionInternal: "Internal (full FMC)",
+    editionWhitelab: "Whitelabel (client view)",
+    editionDesc: "Whitelabel hides confidential departments from clients",
+    editionOperatorNote: "Administrator only · clients cannot change this",
   },
 
   // ─── Push notifications ──────────────────────────────────────────────────────

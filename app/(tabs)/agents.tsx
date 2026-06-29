@@ -5,8 +5,9 @@ import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppBackground } from "@/components/app-background";
-import { TEAM, DEPARTMENTS, DEPARTMENT_ORDER } from "@/constants/team";
+import { getTeam, getDepartments } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
+import { useEdition } from "@/lib/edition-provider";
 import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -81,6 +82,10 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 
 export default function TeamPulseScreen() {
   const { t } = useLanguage();
+  const { edition } = useEdition();
+  const TEAM = getTeam(edition);
+  const DEPARTMENTS = getDepartments(edition);
+  const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
 
