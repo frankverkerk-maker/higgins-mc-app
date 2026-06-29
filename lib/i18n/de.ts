@@ -135,6 +135,11 @@ export const de: Translations = {
     lastActivity: "Letzte Aktivität",
     noResults: "Keine Agenten gefunden",
     noResultsSubtext: "Bitte andere Suchanfrage versuchen",
+    reportsTo: "Berichtet an",
+    pipelineTeam: "Content-Pipeline",
+    pipelineTeamSub: "7-Agenten-Produktionsteam · kreative Leitung durch Gary",
+    classifiedRoster: "Abgeschirmtes Team",
+    classifiedRosterSub: "Agentennamen verborgen · operative Sicherheit",
   },
 
   // ─── Settings / Einstellungen ────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppBackground } from "@/components/app-background";
-import { TEAM } from "@/constants/team";
+import { TEAM, DEPARTMENTS, DEPARTMENT_ORDER } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
 import { trpc } from "@/lib/trpc";
 
@@ -26,30 +26,32 @@ const C = {
   amberDim:   "rgba(245,166,35,0.12)",
   purple:     "#A78BFA",
   purpleDim:  "rgba(167,139,250,0.12)",
+  red:        "#FF6B6B",
+  redDim:     "rgba(239,68,68,0.10)",
 };
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
-// Departement kleur mapping
+// Departement kleur mapping (display naam → kleur)
 const DEPT_COLORS: Record<string, { bg: string; text: string }> = {
-  "Orchestrators":          { bg: C.cyanDim,   text: C.cyan },
-  "Marketing Command":      { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
-  "Team Elon — IT":         { bg: C.purpleDim, text: C.purple },
-  "Revenue":                { bg: C.greenDim,  text: C.green },
-  "Specialists":            { bg: "rgba(249,115,22,0.12)", text: "#FB923C" },
-  "Justitia Legal Council": { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
-  "Enterprise":             { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
-  "Web Solutions":          { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
-  "Einstein Research Lab":  { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
+  "Higgins Mission Control":      { bg: C.cyanDim,               text: C.cyan },
+  "Technology & Engineering":     { bg: C.purpleDim,             text: C.purple },
+  "Gary's Marketing Department":  { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
+  "Functional Medicine Center":   { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
+  "Einstein Research Lab":        { bg: "rgba(16,185,129,0.12)", text: "#10B981" },
+  "Justitia Legal Council":       { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
+  "Operations & Finance":         { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
+  "Content Studio":               { bg: "rgba(236,72,153,0.12)", text: "#F472B6" },
+  "Shared Services & Specialists":{ bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
   // Classified — rood/donker accent
-  "Task Force Ghost":       { bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
-  "Ultratrust Agency (UTA)":{ bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
-  "WTD":                    { bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
+  "United Trust Agency":          { bg: C.redDim, text: C.red },
+  "Warren Trading Desk":          { bg: C.redDim, text: C.red },
+  "Task Force Ghost":             { bg: C.redDim, text: C.red },
 };
 
 // Initiaal voor agent avatar
 function agentInitial(name: string) {
-  return name.replace("Dr. ", "").charAt(0).toUpperCase();
+  return name.replace(/^(Dr\.|Prof\.)\s+/, "").charAt(0).toUpperCase();
 }
 
 // Mock activiteit als fallback (taken worden vertaald via buildMockActivity)
@@ -70,23 +72,6 @@ const STATUS_COLORS = {
   busy:   C.amber,
   idle:   C.muted,
 };
-
-// Groepeer team per departement
-const DEPARTMENTS = [
-  "Orchestrators",
-  "Marketing Command",
-  "Team Elon — IT",
-  "Revenue",
-  "Specialists",
-  "Web Solutions",
-  "Einstein Research Lab",
-  "Justitia Legal Council",
-  "Enterprise",
-  // Classified — altijd onderaan
-  "Task Force Ghost",
-  "Ultratrust Agency (UTA)",
-  "WTD",
-];
 
 function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) {
   if (Platform.OS !== "web") {
@@ -147,7 +132,7 @@ export default function TeamPulseScreen() {
           <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
             {["Higgins", "Elena", "Gary", "Warren"].map((name, i) => {
-              const act = activity[name] ?? { status: "idle", task: "Wacht op opdracht" };
+              const act = activity[name] ?? { status: "idle", task: t.dashboard.taskAwaitingOrder };
               const agent = TEAM.find(a => a.name === name)!;
               const isHiggins = name === "Higgins";
               const isExpanded = expandedAgent === name;
@@ -187,15 +172,23 @@ export default function TeamPulseScreen() {
         </View>
 
         {/* ── Alle departementen ── */}
-        {DEPARTMENTS.map(dept => {
+        {DEPARTMENT_ORDER.map(dept => {
+          const meta = DEPARTMENTS.find(d => d.name === dept);
           const agents = TEAM.filter(a => a.department === dept);
           const colors = DEPT_COLORS[dept] ?? { bg: C.surface2, text: C.muted };
-          const isAddOn = agents[0]?.isAddOn;
-          const isClassified = agents[0]?.isClassified;
+          const isAddOn = meta?.addOn;
+          const isClassified = meta?.classified;
+          // Afdelingen zonder zichtbare agents (Content Studio: pipeline; TFG: opsec)
+          const isPipeline = dept === "Content Studio";
+          const isGhost = dept === "Task Force Ghost";
+          const showNoAgents = agents.length === 0;
+
           return (
             <View key={dept} style={s.section}>
               <View style={s.deptHeader}>
-                <Text style={[s.sectionTitle, isClassified && { color: "#FF6B6B" }]}>{dept.toUpperCase()}</Text>
+                <Text style={[s.sectionTitle, isClassified && { color: C.red }]}>
+                  {dept.toUpperCase()}{meta?.shortName ? `  ·  ${meta.shortName}` : ""}
+                </Text>
                 {isAddOn && (
                   <View style={s.addOnBadge}>
                     <Text style={s.addOnText}>ADD-ON</Text>
@@ -207,42 +200,77 @@ export default function TeamPulseScreen() {
                   </View>
                 )}
               </View>
-              <View style={s.card}>
-                {agents.map((agent, i) => {
-                  const isHiggins = agent.name === "Higgins";
-                  const isExpanded = expandedAgent === agent.name;
-                  return (
-                    <Pressable
-                      key={agent.name}
-                      style={({ pressed }) => [s.agentRow, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
-                      onPress={() => handleAgentPress(agent.name)}
-                    >
-                      {isHiggins
-                        ? <HigginsAvatar size={38} />
-                        : (
-                          <View style={[s.agentAvatar, { backgroundColor: colors.bg }]}>
-                            <Text style={[s.agentAvatarText, { color: colors.text }]}>
-                              {agentInitial(agent.name)}
-                            </Text>
-                          </View>
-                        )
-                      }
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.agentName}>{agent.name}</Text>
-                        <Text style={s.agentRole}>{agent.role}</Text>
-                        {isExpanded && activity[agent.name] && (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-                            <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[activity[agent.name].status] }]} />
-                            <Text style={[s.agentTask, { color: STATUS_COLORS[activity[agent.name].status] }]}>
-                              {activity[agent.name].task}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={s.chevron}>›</Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={[s.card, isClassified && s.cardClassified]}>
+                {/* Afdelingen zonder agentlijst tonen een nette placeholder-rij */}
+                {showNoAgents ? (
+                  <View style={s.emptyRow}>
+                    <View style={[s.agentAvatar, { backgroundColor: colors.bg }]}>
+                      <Text style={[s.agentAvatarText, { color: colors.text }]}>
+                        {isGhost ? "•" : (meta?.shortName?.charAt(0) ?? "•")}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.agentName}>
+                        {isGhost ? t.agents.classifiedRoster : t.agents.pipelineTeam}
+                      </Text>
+                      <Text style={s.agentRole}>
+                        {isGhost ? t.agents.classifiedRosterSub : t.agents.pipelineTeamSub}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  agents.map((agent, i) => {
+                    const isHiggins = agent.name === "Higgins";
+                    const isExpanded = expandedAgent === agent.name;
+                    const act = activity[agent.name];
+                    return (
+                      <Pressable
+                        key={agent.name}
+                        style={({ pressed }) => [s.agentRow, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
+                        onPress={() => handleAgentPress(agent.name)}
+                      >
+                        {isHiggins
+                          ? <HigginsAvatar size={38} />
+                          : (
+                            <View style={[s.agentAvatar, { backgroundColor: colors.bg }]}>
+                              <Text style={[s.agentAvatarText, { color: colors.text }]}>
+                                {agentInitial(agent.name)}
+                              </Text>
+                            </View>
+                          )
+                        }
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.agentName}>{agent.name}</Text>
+                          <Text style={s.agentRole}>{agent.role}</Text>
+                          {isExpanded && (
+                            <View style={{ marginTop: 6, gap: 4 }}>
+                              {act && (
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[act.status] }]} />
+                                  <Text style={[s.agentTask, { color: STATUS_COLORS[act.status] }]}>{act.task}</Text>
+                                </View>
+                              )}
+                              {!!agent.model && (
+                                <Text style={s.agentMeta}>
+                                  {agent.model}{agent.provider ? `  ·  ${agent.provider}` : ""}
+                                </Text>
+                              )}
+                              {!!agent.reportsTo && (
+                                <Text style={s.agentMeta}>{t.agents.reportsTo}: {agent.reportsTo}</Text>
+                              )}
+                              {!!agent.specialties?.length && (
+                                <Text style={s.agentMeta} numberOfLines={2}>
+                                  {agent.specialties.slice(0, 4).join(" · ")}
+                                </Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                        <Text style={s.chevron}>›</Text>
+                      </Pressable>
+                    );
+                  })
+                )}
               </View>
             </View>
           );
@@ -266,7 +294,7 @@ const s = StyleSheet.create({
   addOnBadge: { backgroundColor: C.amberDim, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: C.amber + "44" },
   addOnText: { fontSize: 9, color: C.amber, fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
   classifiedBadge: { backgroundColor: "rgba(239,68,68,0.12)", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "rgba(255,107,107,0.45)" },
-  classifiedText: { fontSize: 9, color: "#FF6B6B", fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
+  classifiedText: { fontSize: 9, color: C.red, fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
 
   card: {
     backgroundColor: "rgba(0,212,212,0.05)",
@@ -279,6 +307,11 @@ const s = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
+  cardClassified: {
+    backgroundColor: "rgba(239,68,68,0.04)",
+    borderColor: "rgba(255,107,107,0.25)",
+    shadowColor: "#FF6B6B",
+  },
   rowBorder: { borderTopWidth: 1, borderTopColor: "rgba(0,212,212,0.12)" },
 
   // Pulse rijen (actief nu)
@@ -286,11 +319,13 @@ const s = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
   agentTask: { fontSize: 11, color: C.muted, fontFamily: FONT, marginTop: 2 },
+  agentMeta: { fontSize: 10, color: C.muted, fontFamily: FONT },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusBadgeText: { fontSize: 11, fontWeight: "700", fontFamily: FONT_BOLD },
 
   // Agent rijen (departement overzicht)
   agentRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  emptyRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   agentAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   agentAvatarText: { fontSize: 15, fontWeight: "800", fontFamily: FONT_BOLD },
   agentName: { fontSize: 14, fontWeight: "700", color: C.text, fontFamily: FONT_BOLD },

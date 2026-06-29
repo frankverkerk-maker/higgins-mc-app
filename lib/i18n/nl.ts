@@ -134,6 +134,11 @@ export const nl = {
     lastActivity: "Laatste activiteit",
     noResults: "Geen agents gevonden",
     noResultsSubtext: "Probeer een andere zoekopdracht",
+    reportsTo: "Rapporteert aan",
+    pipelineTeam: "Content Pipeline",
+    pipelineTeamSub: "7-agent productieteam · creatief beheer door Gary",
+    classifiedRoster: "Afgeschermd team",
+    classifiedRosterSub: "Agentnamen verborgen · operational security",
   },
 
   // ─── Settings / Instellingen ─────────────────────────────────────────────────

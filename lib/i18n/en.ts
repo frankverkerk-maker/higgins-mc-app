@@ -135,6 +135,11 @@ export const en: Translations = {
     lastActivity: "Last activity",
     noResults: "No agents found",
     noResultsSubtext: "Try a different search query",
+    reportsTo: "Reports to",
+    pipelineTeam: "Content Pipeline",
+    pipelineTeamSub: "7-agent production team · creative oversight by Gary",
+    classifiedRoster: "Shielded team",
+    classifiedRosterSub: "Agent names hidden · operational security",
   },
 
   // ─── Settings ────────────────────────────────────────────────────────────────
