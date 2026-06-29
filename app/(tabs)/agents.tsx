@@ -41,6 +41,10 @@ const DEPT_COLORS: Record<string, { bg: string; text: string }> = {
   "Enterprise":             { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
   "Web Solutions":          { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
   "Einstein Research Lab":  { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
+  // Classified — rood/donker accent
+  "Task Force Ghost":       { bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
+  "Ultratrust Agency (UTA)":{ bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
+  "WTD":                    { bg: "rgba(239,68,68,0.10)",  text: "#FF6B6B" },
 };
 
 // Initiaal voor agent avatar
@@ -48,15 +52,18 @@ function agentInitial(name: string) {
   return name.replace("Dr. ", "").charAt(0).toUpperCase();
 }
 
-// Mock activiteit als fallback
-const MOCK_ACTIVITY: Record<string, { status: "active" | "idle" | "busy"; task: string }> = {
-  "Higgins":  { status: "active", task: "Briefing voorbereiden" },
-  "Elena":    { status: "active", task: "E-mails verwerken" },
-  "Gary":     { status: "busy",   task: "Campagne analyse" },
-  "Elon":     { status: "idle",   task: "Wacht op opdracht" },
-  "Warren":   { status: "busy",   task: "Q2 rapport opstellen" },
-  "Justitia": { status: "idle",   task: "Wacht op opdracht" },
-};
+// Mock activiteit als fallback (taken worden vertaald via buildMockActivity)
+type ActivityMap = Record<string, { status: "active" | "idle" | "busy"; task: string }>;
+function buildMockActivity(t: any): ActivityMap {
+  return {
+    "Higgins":  { status: "active", task: t.dashboard.taskPrepBriefing },
+    "Elena":    { status: "active", task: t.dashboard.taskProcessEmails },
+    "Gary":     { status: "busy",   task: t.dashboard.qcSendReport },
+    "Elon":     { status: "idle",   task: t.dashboard.taskAwaitingOrder },
+    "Warren":   { status: "busy",   task: t.dashboard.prio1 },
+    "Justitia": { status: "idle",   task: t.dashboard.taskAwaitingOrder },
+  };
+}
 
 const STATUS_COLORS = {
   active: C.green,
@@ -75,6 +82,10 @@ const DEPARTMENTS = [
   "Einstein Research Lab",
   "Justitia Legal Council",
   "Enterprise",
+  // Classified — altijd onderaan
+  "Task Force Ghost",
+  "Ultratrust Agency (UTA)",
+  "WTD",
 ];
 
 function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) {
@@ -86,7 +97,7 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 export default function TeamPulseScreen() {
   const { t } = useLanguage();
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
-  const [activity, setActivity] = useState(MOCK_ACTIVITY);
+  const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
 
   // Live agent status from server
   const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
@@ -101,6 +112,12 @@ export default function TeamPulseScreen() {
       setActivity(typedData);
     }
   }, [agentStatusQuery.data]);
+
+  // Houd fallback-taken in sync met de gekozen taal zolang er geen live data is
+  useEffect(() => {
+    if (!agentStatusQuery.data) setActivity(buildMockActivity(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, agentStatusQuery.data]);
 
   const handleAgentPress = (name: string) => {
     haptic(Haptics.ImpactFeedbackStyle.Light);
@@ -120,7 +137,7 @@ export default function TeamPulseScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
             <Text style={s.headerTitle}>{t.agents.title}</Text>
-            <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.department}en</Text>
+            <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}</Text>
           </View>
           <LanguageSwitcher />
         </View>
@@ -174,13 +191,19 @@ export default function TeamPulseScreen() {
           const agents = TEAM.filter(a => a.department === dept);
           const colors = DEPT_COLORS[dept] ?? { bg: C.surface2, text: C.muted };
           const isAddOn = agents[0]?.isAddOn;
+          const isClassified = agents[0]?.isClassified;
           return (
             <View key={dept} style={s.section}>
               <View style={s.deptHeader}>
-                <Text style={s.sectionTitle}>{dept.toUpperCase()}</Text>
+                <Text style={[s.sectionTitle, isClassified && { color: "#FF6B6B" }]}>{dept.toUpperCase()}</Text>
                 {isAddOn && (
                   <View style={s.addOnBadge}>
                     <Text style={s.addOnText}>ADD-ON</Text>
+                  </View>
+                )}
+                {isClassified && (
+                  <View style={s.classifiedBadge}>
+                    <Text style={s.classifiedText}>CLASSIFIED</Text>
                   </View>
                 )}
               </View>
@@ -242,6 +265,8 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 10, fontWeight: "700", color: C.muted, fontFamily: FONT_BOLD, textTransform: "uppercase", letterSpacing: 2 },
   addOnBadge: { backgroundColor: C.amberDim, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: C.amber + "44" },
   addOnText: { fontSize: 9, color: C.amber, fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
+  classifiedBadge: { backgroundColor: "rgba(239,68,68,0.12)", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "rgba(255,107,107,0.45)" },
+  classifiedText: { fontSize: 9, color: "#FF6B6B", fontWeight: "700", fontFamily: FONT_BOLD, letterSpacing: 1 },
 
   card: {
     backgroundColor: "rgba(0,212,212,0.05)",

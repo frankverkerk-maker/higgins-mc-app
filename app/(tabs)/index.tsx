@@ -41,38 +41,51 @@ const C = {
 const FONT      = Platform.OS === "ios" ? "Avenir" : undefined;
 const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const PRIORITIES = [
-  { id: "p1", label: "Q2 financieel rapport goedkeuren", agent: "Warren", urgent: true },
-  { id: "p2", label: "Voorstel nieuwe partner clinic bekijken", agent: "Justitia", urgent: false },
-  { id: "p3", label: "Agenda volgende week bevestigen", agent: "Elena", urgent: false },
-];
+// ─── Mock data (vertaald via builders zodat alles meedraait met de taal) ────────
+type Approval = { id: string; agent: string; action: string; time: string };
 
-const QUICK_COMMANDS = [
-  { id: "q1", icon: "📋", label: "Dagbriefing" },
-  { id: "q2", icon: "📅", label: "Plan vergadering" },
-  { id: "q3", icon: "📊", label: "Stuur rapport" },
-  { id: "q4", icon: "✉️", label: "Delegeer e-mail" },
-  { id: "q5", icon: "🔍", label: "Zoek informatie" },
-  { id: "q6", icon: "⚡", label: "Snelle actie" },
-];
+function buildPriorities(t: any) {
+  return [
+    { id: "p1", label: t.dashboard.prio1, agent: "Warren", urgent: true },
+    { id: "p2", label: t.dashboard.prio2, agent: "Justitia", urgent: false },
+    { id: "p3", label: t.dashboard.prio3, agent: "Elena", urgent: false },
+  ];
+}
 
-const APPROVALS = [
-  { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
-  { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
-];
+function buildQuickCommands(t: any) {
+  return [
+    { id: "q1", icon: "📋", label: t.dashboard.qcDailyBrief },
+    { id: "q2", icon: "📅", label: t.dashboard.qcPlanMeeting },
+    { id: "q3", icon: "📊", label: t.dashboard.qcSendReport },
+    { id: "q4", icon: "✉️", label: t.dashboard.qcDelegateEmail },
+    { id: "q5", icon: "🔍", label: t.dashboard.qcSearchInfo },
+    { id: "q6", icon: "⚡", label: t.dashboard.qcQuickAction },
+  ];
+}
 
-const AGENT_PULSE = [
-  { id: "ag1", name: "Higgins", status: "active", task: "Briefing voorbereiden" },
-  { id: "ag2", name: "Elena",   status: "active", task: "E-mails verwerken" },
-  { id: "ag3", name: "Warren",  status: "idle",   task: "Wacht op opdracht" },
-  { id: "ag4", name: "Justitia",status: "idle",   task: "Wacht op opdracht" },
-];
+function buildApprovals(t: any): Approval[] {
+  return [
+    { id: "a1", agent: "Elena",  action: t.dashboard.approvalElenaAction,  time: `14 ${t.dashboard.timeMinAgo}` },
+    { id: "a2", agent: "Warren", action: t.dashboard.approvalWarrenAction, time: `1 ${t.dashboard.timeHourAgo}` },
+  ];
+}
+
+function buildAgentPulse(t: any) {
+  return [
+    { id: "ag1", name: "Higgins", status: "active", task: t.dashboard.taskPrepBriefing },
+    { id: "ag2", name: "Elena",   status: "active", task: t.dashboard.taskProcessEmails },
+    { id: "ag3", name: "Warren",  status: "idle",   task: t.dashboard.taskAwaitingOrder },
+    { id: "ag4", name: "Justitia",status: "idle",   task: t.dashboard.taskAwaitingOrder },
+  ];
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const PRIORITIES = buildPriorities(t);
+  const QUICK_COMMANDS = buildQuickCommands(t);
+  const AGENT_PULSE = buildAgentPulse(t);
   const [userName, setUserName] = useState<string | null>(null);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
   const [weatherLocation, setWeatherLocation] = useState<{ lat: number; lon: number; name: string } | undefined>(undefined);
@@ -106,8 +119,14 @@ export default function DashboardScreen() {
     { staleTime: 30 * 1000, refetchInterval: 30 * 1000 }
   );
 
-  // Use live approvals from server, fallback to APPROVALS if loading
-  const [approvals, setApprovals] = useState(APPROVALS);
+  // Use live approvals from server, fallback to localized mock if loading
+  const [approvals, setApprovals] = useState<Approval[]>(() => buildApprovals(t));
+
+  // Houd fallback-goedkeuringen in sync met de taal zolang er geen live data is
+  useEffect(() => {
+    if (!approvalsQuery.data) setApprovals(buildApprovals(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   useEffect(() => {
     if (approvalsQuery.data) {
@@ -142,7 +161,7 @@ export default function DashboardScreen() {
     }
   }, [userName, approvalsQuery]);
 
-  const handleApproval = useCallback(async (item: typeof APPROVALS[0], action: "approve" | "reject") => {
+  const handleApproval = useCallback(async (item: Approval, action: "approve" | "reject") => {
     if (Platform.OS !== "web") {
       action === "approve"
         ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -409,7 +428,7 @@ export default function DashboardScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.priorityLabel}>{item.label}</Text>
-                <Text style={s.priorityAgent}>via {item.agent}</Text>
+                <Text style={s.priorityAgent}>{t.dashboard.via} {item.agent}</Text>
               </View>
               {item.urgent && (
                 <View style={s.urgentTag}>
@@ -423,7 +442,7 @@ export default function DashboardScreen() {
 
         {/* ── Snelle Opdrachten ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Snelle opdrachten</Text>
+          <Text style={s.sectionTitle}>{t.dashboard.quickCommands}</Text>
           <View style={s.commandGrid}>
             {QUICK_COMMANDS.map((cmd) => (
               <Pressable
@@ -468,8 +487,8 @@ export default function DashboardScreen() {
         >
           <HigginsAvatar size={42} />
           <View style={{ flex: 1 }}>
-            <Text style={s.chatCtaTitle}>Spreek met Higgins</Text>
-            <Text style={s.chatCtaSub}>Stel een vraag of geef een opdracht</Text>
+            <Text style={s.chatCtaTitle}>{t.dashboard.speakWithHiggins}</Text>
+            <Text style={s.chatCtaSub}>{t.dashboard.speakWithHigginsSub}</Text>
           </View>
           <Text style={s.chatCtaArrow}>›</Text>
         </Pressable>

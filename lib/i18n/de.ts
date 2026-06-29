@@ -62,6 +62,30 @@ export const de: Translations = {
     morning: "GUTEN MORGEN",
     afternoon: "GUTEN TAG",
     evening: "GUTEN ABEND",
+    quickCommands: "Schnellbefehle",
+    speakWithHiggins: "Mit Higgins sprechen",
+    speakWithHigginsSub: "Stellen Sie eine Frage oder erteilen Sie einen Auftrag",
+    via: "über",
+    // Prioritäten
+    prio1: "Q2-Finanzbericht genehmigen",
+    prio2: "Vorschlag für neue Partnerklinik prüfen",
+    prio3: "Termine für nächste Woche bestätigen",
+    // Schnellbefehle
+    qcDailyBrief: "Tagesbriefing",
+    qcPlanMeeting: "Besprechung planen",
+    qcSendReport: "Bericht senden",
+    qcDelegateEmail: "E-Mail delegieren",
+    qcSearchInfo: "Informationen suchen",
+    qcQuickAction: "Schnellaktion",
+    // Agenten-Aufgaben (Team Pulse auf Dashboard)
+    taskPrepBriefing: "Briefing vorbereiten",
+    taskProcessEmails: "E-Mails bearbeiten",
+    taskAwaitingOrder: "Wartet auf Auftrag",
+    // Mock-Genehmigungen (Fallback)
+    approvalElenaAction: "E-Mail an 3 Partnerkliniken zur Q3-Planung senden",
+    approvalWarrenAction: "Portfolio-Neugewichtung durchführen (€12.400)",
+    timeMinAgo: "Min. zuvor",
+    timeHourAgo: "Std. zuvor",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────
@@ -107,6 +131,7 @@ export const de: Translations = {
     statusOffline: "Offline",
     role: "Rolle",
     department: "Abteilung",
+    departmentsPlural: "Abteilungen",
     lastActivity: "Letzte Aktivität",
     noResults: "Keine Agenten gefunden",
     noResultsSubtext: "Bitte andere Suchanfrage versuchen",

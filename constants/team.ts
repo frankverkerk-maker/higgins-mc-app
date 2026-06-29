@@ -1,5 +1,5 @@
 // ─── Higgins MC — Officieel Team Overzicht ────────────────────────────────────
-// Carpe Diem GmbH · 43 Agents · 9 Departments
+// Carpe Diem GmbH · 53 Agents · 12 Departments (incl. 3 classified)
 
 export type Agent = {
   name: string;
@@ -7,6 +7,8 @@ export type Agent = {
   department: string;
   isOrchestrator?: boolean;
   isAddOn?: boolean;
+  /** Geheime/interne afdeling. Wordt verborgen in de Whitelab-klantversie. */
+  isClassified?: boolean;
 };
 
 export const TEAM: Agent[] = [
@@ -72,6 +74,25 @@ export const TEAM: Agent[] = [
   { name: "Turing",   role: "Algorithm Researcher",          department: "Einstein Research Lab" },
   { name: "Lovelace", role: "Data & Experimentation",        department: "Einstein Research Lab" },
   { name: "Newton",   role: "Innovation Analyst",            department: "Einstein Research Lab" },
+
+  // ── CLASSIFIED — Task Force Ghost (BlackOps Division, Module AS) ──────────────
+  // Bron: Innovation Master Doc v53.0 (Module AS). Verborgen in Whitelab.
+  { name: "Ghost",  role: "BlackOps Commander",          department: "Task Force Ghost", isClassified: true },
+  { name: "Zero",   role: "Infiltration & Recon",         department: "Task Force Ghost", isClassified: true },
+  { name: "Reaper", role: "Offensive Operations",         department: "Task Force Ghost", isClassified: true },
+  { name: "Viper",  role: "Counter-Intelligence",         department: "Task Force Ghost", isClassified: true },
+
+  // ── CLASSIFIED — Ultratrust Agency (UTA) ─────────────────────────────────────
+  // Agents zijn placeholders; bevestig/pas namen aan waar nodig.
+  { name: "Sentinel-X", role: "Trust Operations Lead",      department: "Ultratrust Agency (UTA)", isClassified: true },
+  { name: "Aegis",      role: "Asset Protection",           department: "Ultratrust Agency (UTA)", isClassified: true },
+  { name: "Custos",     role: "Estate & Trust Structuring", department: "Ultratrust Agency (UTA)", isClassified: true },
+
+  // ── CLASSIFIED — WTD ─────────────────────────────────────────────────────────
+  // Agents zijn placeholders; bevestig/pas namen aan waar nodig.
+  { name: "Warden", role: "WTD Division Lead",     department: "WTD", isClassified: true },
+  { name: "Cipher", role: "Secure Data Handling",  department: "WTD", isClassified: true },
+  { name: "Onyx",   role: "Special Operations",    department: "WTD", isClassified: true },
 ];
 
 // Kernteam voor Team Pulse weergave in de app (Orchestrators + afdelingshoofden)

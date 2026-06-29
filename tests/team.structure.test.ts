@@ -49,4 +49,29 @@ describe("Higgins MC team structure", () => {
     expect(depts.has("Justitia Legal Council")).toBe(true);
     expect(depts.has("Enterprise")).toBe(true);
   });
+
+  it("includes the classified departments with Task Force Ghost agents from the master doc", () => {
+    const depts = new Set(TEAM.map((a: Agent) => a.department));
+    expect(depts.has("Task Force Ghost")).toBe(true);
+    expect(depts.has("Ultratrust Agency (UTA)")).toBe(true);
+    expect(depts.has("WTD")).toBe(true);
+    const ghostNames = TEAM.filter((a: Agent) => a.department === "Task Force Ghost").map((a) => a.name);
+    for (const n of ["Ghost", "Zero", "Reaper", "Viper"]) {
+      expect(ghostNames).toContain(n);
+    }
+  });
+
+  it("marks every agent in a classified department with isClassified", () => {
+    const classifiedDepts = ["Task Force Ghost", "Ultratrust Agency (UTA)", "WTD"];
+    const classifiedAgents = TEAM.filter((a: Agent) => classifiedDepts.includes(a.department));
+    expect(classifiedAgents.length).toBeGreaterThan(0);
+    for (const a of classifiedAgents) {
+      expect(a.isClassified).toBe(true);
+    }
+    // Non-classified agents must NOT carry the flag
+    const nonClassified = TEAM.filter((a: Agent) => !classifiedDepts.includes(a.department));
+    for (const a of nonClassified) {
+      expect(a.isClassified).toBeFalsy();
+    }
+  });
 });

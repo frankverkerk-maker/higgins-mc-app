@@ -60,6 +60,30 @@ export const nl = {
     morning: "GOEDEMORGEN",
     afternoon: "GOEDEMIDDAG",
     evening: "GOEDENAVOND",
+    quickCommands: "Snelle opdrachten",
+    speakWithHiggins: "Spreek met Higgins",
+    speakWithHigginsSub: "Stel een vraag of geef een opdracht",
+    via: "via",
+    // Prioriteiten
+    prio1: "Q2 financieel rapport goedkeuren",
+    prio2: "Voorstel nieuwe partner clinic bekijken",
+    prio3: "Agenda volgende week bevestigen",
+    // Snelle opdrachten
+    qcDailyBrief: "Dagbriefing",
+    qcPlanMeeting: "Plan vergadering",
+    qcSendReport: "Stuur rapport",
+    qcDelegateEmail: "Delegeer e-mail",
+    qcSearchInfo: "Zoek informatie",
+    qcQuickAction: "Snelle actie",
+    // Agent-taken (Team Pulse op dashboard)
+    taskPrepBriefing: "Briefing voorbereiden",
+    taskProcessEmails: "E-mails verwerken",
+    taskAwaitingOrder: "Wacht op opdracht",
+    // Mock goedkeuringen (fallback)
+    approvalElenaAction: "E-mail versturen naar 3 partner clinics over Q3-planning",
+    approvalWarrenAction: "Portfolio herbalancering uitvoeren (€12.400)",
+    timeMinAgo: "min geleden",
+    timeHourAgo: "uur geleden",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────
@@ -106,6 +130,7 @@ export const nl = {
     statusOffline: "Offline",
     role: "Rol",
     department: "Departement",
+    departmentsPlural: "Departementen",
     lastActivity: "Laatste activiteit",
     noResults: "Geen agents gevonden",
     noResultsSubtext: "Probeer een andere zoekopdracht",
