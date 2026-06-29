@@ -87,6 +87,7 @@ export const nl = {
     timeDayAgo: "dag geleden",
     timeJustNow: "zojuist",
     noApprovals: "Geen openstaande goedkeuringen",
+    quoteLoading: "Spreuk van de dag wordt geladen…",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

@@ -89,6 +89,7 @@ export const de: Translations = {
     timeDayAgo: "Tg. zuvor",
     timeJustNow: "gerade eben",
     noApprovals: "Keine offenen Genehmigungen",
+    quoteLoading: "Spruch des Tages wird geladen…",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

@@ -89,6 +89,7 @@ export const en: Translations = {
     timeDayAgo: "d ago",
     timeJustNow: "just now",
     noApprovals: "No pending approvals",
+    quoteLoading: "Loading quote of the day…",
   },
 
   // ─── Chat ────────────────────────────────────────────────────────────────────

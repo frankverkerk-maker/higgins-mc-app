@@ -376,14 +376,23 @@ export default function DashboardScreen() {
           )}
         </Pressable>
 
-        {/* ── Spreuk van de dag ── */}
-        <View style={s.quoteCard}>
-          <Text style={s.quoteIcon}>💡</Text>
-          <Text style={s.quoteText}>
-            "{dailyQuery.data?.quote?.text ?? ""}"
-          </Text>
-          <Text style={s.quoteAuthor}>— {dailyQuery.data?.quote?.author ?? ""}</Text>
-        </View>
+        {/* ── Spreuk van de dag ── (alleen tonen als er een quote is) */}
+        {dailyQuery.data?.quote?.text ? (
+          <View style={s.quoteCard}>
+            <Text style={s.quoteIcon}>💡</Text>
+            <Text style={s.quoteText}>
+              "{dailyQuery.data.quote.text}"
+            </Text>
+            {dailyQuery.data.quote.author ? (
+              <Text style={s.quoteAuthor}>— {dailyQuery.data.quote.author}</Text>
+            ) : null}
+          </View>
+        ) : dailyQuery.isLoading ? (
+          <View style={s.quoteCard}>
+            <Text style={s.quoteIcon}>💡</Text>
+            <Text style={s.quoteText}>{t.dashboard.quoteLoading}</Text>
+          </View>
+        ) : null}
 
         {/* ── Goedkeuringen ── */}
         {approvals.length === 0 && approvalsQuery.isSuccess && (
