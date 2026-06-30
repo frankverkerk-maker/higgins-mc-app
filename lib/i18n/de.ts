@@ -144,6 +144,8 @@ export const de: Translations = {
     pipelineTeamSub: "7-Agenten-Produktionsteam · kreative Leitung durch Gary",
     classifiedRoster: "Abgeschirmtes Team",
     classifiedRosterSub: "Agentennamen verborgen · operative Sicherheit",
+    sourceLive: "Live über Mission Control",
+    sourceBuiltin: "Integrierte Liste",
   },
 
   // ─── Settings / Einstellungen ────────────────────────────────────────────────
@@ -178,6 +180,13 @@ export const de: Translations = {
     editionWhitelab: "Whitelabel (Kundenansicht)",
     editionDesc: "Whitelabel blendet vertrauliche Abteilungen für Kunden aus",
     editionOperatorNote: "Nur Administrator · Kunden können dies nicht ändern",
+    connection: "Verbindung",
+    mcFeedUrl: "MC Team-Feed URL",
+    mcFeedUrlDesc: "Adresse der Mission-Control-Runtime (Mac Mini), z. B. http://100.x.x.x:3007/api/app/team-feed",
+    mcFeedUrlPlaceholder: "http://<mac-mini>:3007/api/app/team-feed",
+    mcFeedConnected: "Verbunden · Live-Daten",
+    mcFeedFallback: "Nicht erreichbar · integrierte Liste",
+    mcFeedEmpty: "Nicht konfiguriert · integrierte Liste",
   },
 
   // ─── Push notificaties ───────────────────────────────────────────────────────

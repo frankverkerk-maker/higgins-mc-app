@@ -143,6 +143,8 @@ export const nl = {
     pipelineTeamSub: "7-agent productieteam · creatief beheer door Gary",
     classifiedRoster: "Afgeschermd team",
     classifiedRosterSub: "Agentnamen verborgen · operational security",
+    sourceLive: "Live via Mission Control",
+    sourceBuiltin: "Ingebouwde lijst",
   },
 
   // ─── Settings / Instellingen ─────────────────────────────────────────────────
@@ -177,6 +179,13 @@ export const nl = {
     editionWhitelab: "Whitelab (klantweergave)",
     editionDesc: "Whitelab verbergt vertrouwelijke afdelingen voor klanten",
     editionOperatorNote: "Alleen beheerder · klanten kunnen dit niet wijzigen",
+    connection: "Verbinding",
+    mcFeedUrl: "MC Team-feed URL",
+    mcFeedUrlDesc: "Adres van de Mission Control runtime (Mac Mini), bijv. http://100.x.x.x:3007/api/app/team-feed",
+    mcFeedUrlPlaceholder: "http://<mac-mini>:3007/api/app/team-feed",
+    mcFeedConnected: "Verbonden · live data",
+    mcFeedFallback: "Niet bereikbaar · ingebouwde lijst",
+    mcFeedEmpty: "Niet ingesteld · ingebouwde lijst",
   },
 
   // ─── Push notificaties ───────────────────────────────────────────────────────

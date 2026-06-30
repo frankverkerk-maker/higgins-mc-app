@@ -5,9 +5,9 @@ import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppBackground } from "@/components/app-background";
-import { getTeam, getDepartments } from "@/constants/team";
 import { useLanguage } from "@/lib/language-provider";
 import { useEdition } from "@/lib/edition-provider";
+import { useTeamFeed } from "@/lib/team-feed";
 import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -82,9 +82,9 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 
 export default function TeamPulseScreen() {
   const { t } = useLanguage();
-  const { edition } = useEdition();
-  const TEAM = getTeam(edition);
-  const DEPARTMENTS = getDepartments(edition);
+  const { edition: fallbackEdition } = useEdition();
+  // Live MC-feed met nette terugval op de ingebouwde lijst.
+  const { team: TEAM, departments: DEPARTMENTS, source } = useTeamFeed(fallbackEdition);
   const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
@@ -128,6 +128,10 @@ export default function TeamPulseScreen() {
             <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
             <Text style={s.headerTitle}>{t.agents.title}</Text>
             <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}</Text>
+            <View style={s.sourceRow}>
+              <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : C.muted }]} />
+              <Text style={s.sourceText}>{source === "live" ? t.agents.sourceLive : t.agents.sourceBuiltin}</Text>
+            </View>
           </View>
           <LanguageSwitcher />
         </View>
@@ -292,6 +296,9 @@ const s = StyleSheet.create({
   headerLabel: { fontSize: 10, color: C.muted, fontFamily: FONT, letterSpacing: 2, textTransform: "uppercase" },
   headerTitle: { fontSize: 28, fontWeight: "800", color: C.text, fontFamily: FONT_BOLD, letterSpacing: -0.5, marginTop: 4 },
   headerSub: { fontSize: 13, color: C.cyan, fontFamily: FONT, marginTop: 4, letterSpacing: 0.5 },
+  sourceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  sourceDot: { width: 6, height: 6, borderRadius: 3 },
+  sourceText: { fontSize: 11, color: C.muted, fontFamily: FONT, letterSpacing: 0.3 },
 
   section: { paddingHorizontal: 16, marginBottom: 20 },
   deptHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },

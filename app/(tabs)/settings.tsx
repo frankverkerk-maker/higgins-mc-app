@@ -6,6 +6,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
+import { MC_TEAM_FEED_URL_KEY } from "@/lib/team-feed";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -50,11 +51,44 @@ export default function SettingsScreen() {
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSaved, setLocationSaved] = useState(false);
 
+  // MC Team-feed URL (operator-instelling)
+  const [feedInput, setFeedInput] = useState("");
+  const [feedSaving, setFeedSaving] = useState(false);
+  const [feedStatus, setFeedStatus] = useState<"unknown" | "connected" | "fallback" | "empty">("empty");
+
   useEffect(() => {
     AsyncStorage.getItem(LOCATION_KEY).then((val) => {
       if (val) setLocationInput(val);
     });
+    AsyncStorage.getItem(MC_TEAM_FEED_URL_KEY).then((val) => {
+      if (val) { setFeedInput(val); setFeedStatus("unknown"); }
+    });
   }, []);
+
+  const saveFeedUrl = async () => {
+    const url = feedInput.trim();
+    setFeedSaving(true);
+    try {
+      await AsyncStorage.setItem(MC_TEAM_FEED_URL_KEY, url);
+      if (!url) { setFeedStatus("empty"); setFeedSaving(false); return; }
+      // Test de feed direct
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+        const data = await res.json().catch(() => null);
+        setFeedStatus(res.ok && data && Array.isArray(data.agents) ? "connected" : "fallback");
+      } catch (_) {
+        setFeedStatus("fallback");
+      } finally {
+        clearTimeout(timer);
+      }
+      haptic(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (_) {
+      Alert.alert("Fout", "Kon feed-URL niet opslaan.");
+    }
+    setFeedSaving(false);
+  };
 
   const saveLocation = async () => {
     if (!locationInput.trim()) return;
@@ -202,11 +236,59 @@ export default function SettingsScreen() {
 
         {/* ── Verbinding ── */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Verbinding</Text>
+          <Text style={s.sectionTitle}>{t.settings.connection.toUpperCase()}</Text>
           <View style={s.card}>
+            {/* MC Team-feed URL (operator) */}
+            <View style={[s.row, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
+                  <Text style={{ fontSize: 14 }}>🛰️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.rowLabel}>{t.settings.mcFeedUrl}</Text>
+                  <Text style={s.rowSub}>{t.settings.mcFeedUrlDesc}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
+                <TextInput
+                  style={[s.locationInput, { flex: 1 }]}
+                  value={feedInput}
+                  onChangeText={setFeedInput}
+                  placeholder={t.settings.mcFeedUrlPlaceholder}
+                  placeholderTextColor={C.muted}
+                  returnKeyType="done"
+                  onSubmitEditing={saveFeedUrl}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+                <Pressable
+                  style={({ pressed }) => [s.locationSaveBtn, pressed && { opacity: 0.8 }]}
+                  onPress={saveFeedUrl}
+                  disabled={feedSaving}
+                >
+                  {feedSaving ? (
+                    <ActivityIndicator size="small" color={C.bg} />
+                  ) : (
+                    <Text style={s.locationSaveBtnText}>{t.common.save}</Text>
+                  )}
+                </Pressable>
+              </View>
+              <View style={s.connectedBadge}>
+                <View style={[s.statusDot, { backgroundColor: feedStatus === "connected" ? C.green : C.muted }]} />
+                <Text style={[s.statusText, { color: feedStatus === "connected" ? C.green : C.muted }]}>
+                  {feedStatus === "connected"
+                    ? t.settings.mcFeedConnected
+                    : feedStatus === "fallback"
+                      ? t.settings.mcFeedFallback
+                      : t.settings.mcFeedEmpty}
+                </Text>
+              </View>
+            </View>
+
             {/* Mission Control */}
             <Pressable
-              style={({ pressed }) => [s.row, pressed && { opacity: 0.75 }]}
+              style={({ pressed }) => [s.row, s.rowBorder, pressed && { opacity: 0.75 }]}
               onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
             >
               <View style={s.rowLeft}>

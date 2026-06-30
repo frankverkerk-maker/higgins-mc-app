@@ -144,6 +144,8 @@ export const en: Translations = {
     pipelineTeamSub: "7-agent production team · creative oversight by Gary",
     classifiedRoster: "Shielded team",
     classifiedRosterSub: "Agent names hidden · operational security",
+    sourceLive: "Live via Mission Control",
+    sourceBuiltin: "Built-in list",
   },
 
   // ─── Settings ────────────────────────────────────────────────────────────────
@@ -178,6 +180,13 @@ export const en: Translations = {
     editionWhitelab: "Whitelabel (client view)",
     editionDesc: "Whitelabel hides confidential departments from clients",
     editionOperatorNote: "Administrator only · clients cannot change this",
+    connection: "Connection",
+    mcFeedUrl: "MC Team-feed URL",
+    mcFeedUrlDesc: "Address of the Mission Control runtime (Mac Mini), e.g. http://100.x.x.x:3007/api/app/team-feed",
+    mcFeedUrlPlaceholder: "http://<mac-mini>:3007/api/app/team-feed",
+    mcFeedConnected: "Connected · live data",
+    mcFeedFallback: "Unreachable · built-in list",
+    mcFeedEmpty: "Not configured · built-in list",
   },
 
   // ─── Push notifications ──────────────────────────────────────────────────────
