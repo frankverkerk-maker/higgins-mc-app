@@ -38,9 +38,9 @@ const SAMPLE_FEED = {
   edition: "internal" as const,
   count: 3,
   agents: [
-    { name: "Higgins", role: "COO / Chief of Staff", department: "Higgins Mission Control", departmentId: "higgins-mc", isClassified: 0, isActive: 1, status: "standby", currentTask: null },
-    { name: "Warren", role: "CRO", department: "Warren Trading Desk", departmentId: "wtd", isClassified: 1, isActive: 1, status: "busy", currentTask: null },
-    { name: "BrandNewAgent", role: "Special Ops", department: "Higgins Mission Control", departmentId: "higgins-mc", isClassified: 0, isActive: 1, status: "active", currentTask: null },
+    { name: "Higgins", role: "Chief Operating Officer", department: "Executive Office", departmentId: "executive", isClassified: 0, isActive: 1, status: "standby", currentTask: null },
+    { name: "Warren", role: "Head of Trading", department: "Warren Trading Desk", departmentId: "wtd", isClassified: 1, isActive: 1, status: "busy", currentTask: null },
+    { name: "BrandNewAgent", role: "Special Ops", department: "Executive Office", departmentId: "executive", isClassified: 0, isActive: 1, status: "active", currentTask: null },
   ],
 };
 
@@ -49,7 +49,7 @@ describe("Higgins MC — team feed mapping", () => {
 
   it("preserves the feed's name/role/department", () => {
     const merged = SAMPLE_FEED.agents.map((fa) => mergeFeedAgent(fa, builtinByName.get(fa.name)));
-    expect(merged[0]).toMatchObject({ name: "Higgins", role: "COO / Chief of Staff", department: "Higgins Mission Control" });
+    expect(merged[0]).toMatchObject({ name: "Higgins", role: "Chief Operating Officer", department: "Executive Office" });
   });
 
   it("enriches known agents with built-in metadata (model/provider)", () => {

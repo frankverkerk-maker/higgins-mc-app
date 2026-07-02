@@ -35,19 +35,17 @@ const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 // Departement kleur mapping (display naam → kleur)
 const DEPT_COLORS: Record<string, { bg: string; text: string }> = {
-  "Higgins Mission Control":      { bg: C.cyanDim,               text: C.cyan },
-  "Technology & Engineering":     { bg: C.purpleDim,             text: C.purple },
-  "Gary's Marketing Department":  { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
+  "Executive Office":             { bg: C.cyanDim,               text: C.cyan },
+  "Technology Division":          { bg: C.purpleDim,             text: C.purple },
+  "Marketing & Creative":         { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
   "Functional Medicine Center":   { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
-  "Einstein Research Lab":        { bg: "rgba(16,185,129,0.12)", text: "#10B981" },
-  "Justitia Legal Council":       { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
-  "Operations & Finance":         { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
-  "Content Studio":               { bg: "rgba(236,72,153,0.12)", text: "#F472B6" },
-  "Shared Services & Specialists":{ bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
+  "Justitia Legal Council":       { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
+  "Sales & Revenue":              { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
+  "Enterprise Operations":        { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
+  "Cross-Functional Specialists": { bg: "rgba(236,72,153,0.12)", text: "#F472B6" },
   // Classified — rood/donker accent
-  "United Trust Agency":          { bg: C.redDim, text: C.red },
   "Warren Trading Desk":          { bg: C.redDim, text: C.red },
-  "Task Force Ghost":             { bg: C.redDim, text: C.red },
+  "Ultra Trust Agency":           { bg: C.redDim, text: C.red },
 };
 
 // Initiaal voor agent avatar
@@ -65,6 +63,7 @@ function buildMockActivity(t: any): ActivityMap {
     "Elon":     { status: "idle",   task: t.dashboard.taskAwaitingOrder },
     "Warren":   { status: "busy",   task: t.dashboard.prio1 },
     "Justitia": { status: "idle",   task: t.dashboard.taskAwaitingOrder },
+    "Victoria": { status: "idle",   task: t.dashboard.taskAwaitingOrder },
   };
 }
 
@@ -187,9 +186,9 @@ export default function TeamPulseScreen() {
           const colors = DEPT_COLORS[dept] ?? { bg: C.surface2, text: C.muted };
           const isAddOn = meta?.addOn;
           const isClassified = meta?.classified;
-          // Afdelingen zonder zichtbare agents (Content Studio: pipeline; TFG: opsec)
-          const isPipeline = dept === "Content Studio";
-          const isGhost = dept === "Task Force Ghost";
+          // In v2.0 heeft elke afdeling zichtbare agents; placeholder blijft
+          // als vangnet voor een eventueel lege afdeling.
+          const isGhost = false;
           const showNoAgents = agents.length === 0;
 
           return (

@@ -8,19 +8,21 @@ import {
   type Agent,
 } from "../constants/team";
 
-// These tests lock in the full HCC team structure (master document v1.0.0).
-// They guard against accidental removal of departments/agents and verify the
-// classified flags + whitelab edition filtering behave correctly.
+// These tests lock in the full HCC team structure (v2.0.0, July 2026).
+// 10 departments · 66 agents · 2 classified (Warren Trading Desk, Ultra Trust Agency).
 
 const CLASSIFIED_DEPTS = [
-  "United Trust Agency",
   "Warren Trading Desk",
-  "Task Force Ghost",
+  "Ultra Trust Agency",
 ];
 
-describe("Higgins MC — HCC team structure", () => {
-  it("defines 12 departments", () => {
-    expect(DEPARTMENTS.length).toBe(12);
+describe("Higgins MC — HCC team structure (v2.0)", () => {
+  it("defines 10 departments", () => {
+    expect(DEPARTMENTS.length).toBe(10);
+  });
+
+  it("defines 66 agents", () => {
+    expect(TEAM.length).toBe(66);
   });
 
   it("has unique agent names (no duplicates)", () => {
@@ -43,41 +45,57 @@ describe("Higgins MC — HCC team structure", () => {
     }
   });
 
+  it("has the expected agent count per department", () => {
+    const counts: Record<string, number> = {
+      "Executive Office": 3,
+      "Technology Division": 6,
+      "Marketing & Creative": 6,
+      "Functional Medicine Center": 5,
+      "Justitia Legal Council": 6,
+      "Sales & Revenue": 3,
+      "Enterprise Operations": 14,
+      "Cross-Functional Specialists": 4,
+      "Warren Trading Desk": 2,
+      "Ultra Trust Agency": 17,
+    };
+    for (const [dept, expected] of Object.entries(counts)) {
+      const actual = TEAM.filter((a) => a.department === dept).length;
+      expect(actual, dept).toBe(expected);
+    }
+  });
+
   it("includes the key leadership agents", () => {
     const names = new Set(TEAM.map((a) => a.name));
-    for (const n of ["Higgins", "Elena", "Elon", "Gary", "Vita", "Catharina", "Warren", "Victoria"]) {
+    for (const n of ["Higgins", "Elena", "Elon", "Gary", "Justitia", "Warren", "Victoria", "Sophia"]) {
       expect(names.has(n)).toBe(true);
     }
   });
 
-  it("includes the FMC scientific board", () => {
+  it("includes the FMC scientific directors", () => {
     const fmc = TEAM.filter((a) => a.department === "Functional Medicine Center").map((a) => a.name);
-    for (const n of [
-      "Prof. David Sinclair",
-      "Prof. Vladimir Khavinson",
-      "Prof. Rosalind Franklin",
-      "Prof. Samuel Hahnemann",
-      "Prof. Maria Blasco",
-    ]) {
+    for (const n of ["David", "Vladimir", "Samuel", "Rosalind", "Maria"]) {
       expect(fmc).toContain(n);
     }
   });
 
-  it("marks UTA, WTD and Task Force Ghost departments as classified", () => {
+  it("Ultra Trust Agency holds 17 agents led by Victoria", () => {
+    const uta = TEAM.filter((a) => a.department === "Ultra Trust Agency");
+    expect(uta.length).toBe(17);
+    expect(uta.some((a) => a.name === "Victoria")).toBe(true);
+    const utaDept = DEPARTMENTS.find((d) => d.name === "Ultra Trust Agency");
+    expect(utaDept?.shortName).toBe("UTA");
+  });
+
+  it("marks WTD and UTA departments as classified", () => {
     for (const name of CLASSIFIED_DEPTS) {
       const d = DEPARTMENTS.find((x) => x.name === name);
       expect(d?.classified).toBe(true);
     }
   });
 
-  it("Task Force Ghost exposes no named agents (operational security)", () => {
-    const ghost = TEAM.filter((a) => a.department === "Task Force Ghost");
-    expect(ghost.length).toBe(0);
-  });
-
   it("every agent in a classified department carries isClassified", () => {
     const classified = TEAM.filter((a) => CLASSIFIED_DEPTS.includes(a.department));
-    expect(classified.length).toBeGreaterThan(0);
+    expect(classified.length).toBe(19); // 2 WTD + 17 UTA
     for (const a of classified) expect(a.isClassified).toBe(true);
     // Non-classified agents must NOT carry the flag
     for (const a of TEAM.filter((a) => !CLASSIFIED_DEPTS.includes(a.department))) {
@@ -90,6 +108,9 @@ describe("Higgins MC — HCC team structure", () => {
     const wlDepts = getDepartments("whitelab");
     expect(wlTeam.some((a) => a.isClassified)).toBe(false);
     expect(wlDepts.some((d) => d.classified)).toBe(false);
+    // Whitelab drops 19 classified agents and 2 classified departments
+    expect(wlTeam.length).toBe(66 - 19);
+    expect(wlDepts.length).toBe(10 - 2);
     // Internal edition keeps everything
     expect(getTeam("internal").length).toBe(TEAM.length);
     expect(getDepartments("internal").length).toBe(DEPARTMENTS.length);

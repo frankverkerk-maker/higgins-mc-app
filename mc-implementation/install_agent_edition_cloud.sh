@@ -1,53 +1,58 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  Higgins Mission Control — Agent & Edition Management
+#  Higgins Mission Control — Agent & Edition Management  (CLOUD-kant)
 #  PAN-KLAAR INSTALLATIESCRIPT  (één commando, geen handmatige stappen)
 # ==============================================================================
 #
-#  Wat dit script doet (idempotent — veilig om vaker te draaien):
-#    1. Maakt 2 nieuwe tabellen aan in de MC-database:
-#         - agent_registry   : de volledige 66-agent / 10-afdeling roster
-#         - edition_config    : de actieve editie (internal | whitelab)
-#    2. Seedt de volledige roster met is_active + is_classified vlaggen.
-#       (development = alle agents actief en geregistreerd)
-#    3. Installeert een read-only feed-endpoint waarmee de slanke iPhone-app
-#       de juiste agents/status/editie ophaalt:
-#         GET  /api/app/team-feed          -> roster + status (editie-gefilterd)
-#       en operator-endpoints voor het dashboard:
-#         POST /api/mc/agent/toggle        -> agent aan/uit (operator-only)
-#         POST /api/mc/edition             -> editie wisselen (operator-only)
-#    4. Verifieert dat TypeScript compileert en de server draait.
+#  Dit is de CLOUD-tegenhanger van install_agent_edition_mc.sh (Mac Mini).
+#  Het installeert in de Mission Control CLOUD-omgeving (Manus webdev project,
+#  MySQL-database) exact dezelfde besturing voor agents en editie:
 #
-#  GEBRUIK (op de Mac Mini, in een terminal):
-#       bash install_agent_edition_mc.sh
+#    1. Twee tabellen in de cloud-database:
+#         - agent_registry  : de volledige 66-agent / 10-afdeling roster
+#                             met de vlaggen is_active + is_classified.
+#         - edition_config  : de actieve editie (internal | whitelab), singleton.
+#    2. De volledige roster geseed (development = alle agents actief).
+#    3. Drie endpoints, identiek aan de Mac Mini-kant:
+#         GET  /api/app/team-feed   -> read-only feed voor de iPhone-app
+#                                      (alleen actieve agents; whitelab verbergt
+#                                       classified afdelingen automatisch).
+#         POST /api/mc/agent/toggle -> agent aan/uit  (operator-only, met token).
+#         POST /api/mc/edition      -> editie wisselen (operator-only, met token).
+#    4. Drizzle-schema aangevuld (GEEN introspect — dat genereert kapotte TS).
+#    5. Verificatie: TypeScript compileert + server draait.
 #
-#  VEREIST: het MC-project staat in MC_DIR (zie hieronder). Pas alleen die
-#  variabele aan als jouw pad anders is. Verder hoef je NIETS te doen.
+#  GEBRUIK (in de cloud-sandbox van het MC-project, in een terminal):
+#       bash install_agent_edition_cloud.sh
+#
+#  Staat het cloud-project ergens anders? Geef het pad mee:
+#       MC_DIR=/pad/naar/higgins-mission-control bash install_agent_edition_cloud.sh
+#
+#  Het script is IDEMPOTENT: veilig om vaker te draaien. Een agent die jij
+#  handmatig hebt uitgezet, blijft uit (herinstallatie zet 'm niet terug op actief).
 # ==============================================================================
-
 set -euo pipefail
 
 # ─── 0. Configuratie ──────────────────────────────────────────────────────────
 MC_DIR="${MC_DIR:-/home/ubuntu/higgins-mission-control}"
-# Operator-token beschermt de schakel-endpoints zodat klanten niets kunnen wijzigen.
-# Wordt automatisch gegenereerd als hij nog niet bestaat.
 OPERATOR_TOKEN_FILE="${MC_DIR}/.operator-token"
 
 echo "==============================================================="
-echo "  Higgins MC — Agent & Edition Management installatie"
+echo "  Higgins MC (CLOUD) — Agent & Edition Management installatie"
 echo "  Project: ${MC_DIR}"
 echo "==============================================================="
 
 if [ ! -d "${MC_DIR}" ]; then
-  echo "FOUT: MC-project niet gevonden op ${MC_DIR}"
+  echo "FOUT: cloud MC-project niet gevonden op ${MC_DIR}"
   echo "Zet MC_DIR naar het juiste pad en draai opnieuw:"
-  echo "    MC_DIR=/pad/naar/higgins-mission-control bash install_agent_edition_mc.sh"
+  echo "    MC_DIR=/pad/naar/higgins-mission-control bash install_agent_edition_cloud.sh"
   exit 1
 fi
-
 cd "${MC_DIR}"
 
 # ─── 1. Operator-token (genereer eenmalig) ────────────────────────────────────
+# Beschermt de schakel-endpoints zodat klanten/whitelab-gebruikers niets kunnen
+# wijzigen. Alleen jij (operator) kent dit token.
 if [ ! -f "${OPERATOR_TOKEN_FILE}" ]; then
   TOKEN="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | xxd -p | tr -d '\n')"
   echo "${TOKEN}" > "${OPERATOR_TOKEN_FILE}"
@@ -58,9 +63,7 @@ else
 fi
 
 # ─── 2. SQL: tabellen + seed (idempotent) ─────────────────────────────────────
-# We schrijven de SQL naar een bestand en voeren die uit via de bestaande
-# MC-database-CLI. Het script detecteert automatisch hoe de DB benaderd wordt.
-SQL_FILE="$(mktemp /tmp/mc_agent_edition.XXXXXX.sql)"
+SQL_FILE="$(mktemp /tmp/mc_cloud_agent_edition.XXXXXX.sql)"
 cat > "${SQL_FILE}" <<'SQL'
 -- ── Tabel: agent_registry ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `agent_registry` (
@@ -99,9 +102,6 @@ SELECT UUID(), 'internal'
 WHERE NOT EXISTS (SELECT 1 FROM `edition_config`);
 
 -- ── Seed: 66 agents / 10 afdelingen ──────────────────────────────────────────
--- INSERT ... ON DUPLICATE KEY UPDATE => idempotent, herstelt rol/afdeling,
--- maar respecteert handmatige is_active wijzigingen NIET te overschrijven
--- (we updaten metadata, niet is_active na de eerste seed).
 INSERT INTO `agent_registry`
   (`name`,`role`,`department`,`department_id`,`model`,`provider`,`team`,`reports_to`,`is_orchestrator`,`is_addon`,`is_classified`,`is_active`)
 VALUES
@@ -199,7 +199,8 @@ SQL
 
 echo "[2/6] SQL-bestand gegenereerd."
 
-# ─── 3. SQL uitvoeren via de juiste MC-database-CLI (auto-detect) ─────────────
+# ─── 3. SQL uitvoeren op de CLOUD-database (auto-detect) ──────────────────────
+# In de cloud is DATABASE_URL doorgaans gezet door de webdev-runtime.
 run_sql() {
   local sql_path="$1"
   # Voorkeur 1: project-script 'db:sql' indien aanwezig
@@ -214,19 +215,34 @@ run_sql() {
     mysql "${DATABASE_URL}" < "${sql_path}"
     return
   fi
-  # Voorkeur 3: losse MYSQL_* variabelen
+  # Voorkeur 3: DATABASE_URL zonder mysql client -> via Node (mysql2 in node_modules)
+  if [ -n "${DATABASE_URL:-}" ]; then
+    echo "      -> via Node + mysql2 (DATABASE_URL)"
+    SQL_PATH="${sql_path}" node --input-type=module <<'NODE'
+import { readFileSync } from "node:fs";
+import mysql from "mysql2/promise";
+const url = process.env.DATABASE_URL;
+const sql = readFileSync(process.env.SQL_PATH, "utf8");
+const conn = await mysql.createConnection({ uri: url, multipleStatements: true });
+await conn.query(sql);
+await conn.end();
+console.log("      SQL toegepast via mysql2.");
+NODE
+    return
+  fi
+  # Voorkeur 4: losse MYSQL_* variabelen
   if [ -n "${MYSQL_HOST:-}" ] && command -v mysql >/dev/null 2>&1; then
     echo "      -> via mysql client (MYSQL_* env)"
     mysql -h "${MYSQL_HOST}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER:-root}" \
       ${MYSQL_PASSWORD:+-p"${MYSQL_PASSWORD}"} "${MYSQL_DATABASE:-higgins_mc}" < "${sql_path}"
     return
   fi
-  echo "WAARSCHUWING: geen database-CLI gevonden."
-  echo "Voer dit SQL-bestand handmatig uit in de MC-database: ${sql_path}"
-  echo "(Daarna is de installatie compleet — de rest is al geplaatst.)"
+  echo "WAARSCHUWING: geen database-toegang gevonden (DATABASE_URL / MYSQL_* leeg)."
+  echo "Voer dit SQL-bestand handmatig uit in de cloud-database: ${sql_path}"
+  echo "(Of plak de inhoud in het Database-paneel van het webdev-project.)"
 }
 
-echo "[3/6] SQL uitvoeren op de MC-database..."
+echo "[3/6] SQL uitvoeren op de CLOUD-database..."
 run_sql "${SQL_FILE}" || {
   echo "Let op: SQL-uitvoer gaf een waarschuwing; controleer bovenstaande melding."
 }
@@ -237,10 +253,10 @@ mkdir -p "${ROUTE_DIR}"
 ROUTE_FILE="${ROUTE_DIR}/agent-edition.ts"
 
 cat > "${ROUTE_FILE}" <<'TS'
-// AUTO-GEGENEREERD door install_agent_edition_mc.sh
-// Agent & Edition feed + operator-schakelaars voor Higgins MC.
+// AUTO-GEGENEREERD door install_agent_edition_cloud.sh
+// Agent & Edition feed + operator-schakelaars voor Higgins MC (CLOUD).
 //
-// Koppel deze router aan je Express/tRPC server. Voor een kale Express-app:
+// Koppel deze router aan je Express server. Voor een kale Express-app:
 //   import { registerAgentEditionRoutes } from "./routes/agent-edition";
 //   registerAgentEditionRoutes(app, db);
 //
@@ -250,6 +266,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 function readOperatorToken(mcDir: string): string {
+  // In de cloud kan het token ook via een env var komen (OPERATOR_TOKEN).
+  if (process.env.OPERATOR_TOKEN) return process.env.OPERATOR_TOKEN.trim();
   try {
     return readFileSync(join(mcDir, ".operator-token"), "utf8").trim();
   } catch {
@@ -338,12 +356,12 @@ TS
 
 echo "[4/6] Server-route geplaatst: ${ROUTE_FILE}"
 
-# ─── 5. Drizzle-schema aanvullen (handmatige introspectie wordt vermeden) ─────
+# ─── 5. Drizzle-schema aanvullen (NOOIT introspect) ───────────────────────────
 SCHEMA_FILE="${MC_DIR}/drizzle/schema.ts"
 if [ -f "${SCHEMA_FILE}" ] && ! grep -q "agent_registry" "${SCHEMA_FILE}"; then
   cat >> "${SCHEMA_FILE}" <<'TS'
 
-// ── Agent & Edition Management (toegevoegd door install_agent_edition_mc.sh) ──
+// ── Agent & Edition Management (toegevoegd door install_agent_edition_cloud.sh) ──
 export const agentRegistry = mysqlTable("agent_registry", {
   id: varchar("id", { length: 36 }).primaryKey().notNull().default(sql`(UUID())`),
   name: varchar("name", { length: 128 }).notNull(),
@@ -385,16 +403,19 @@ fi
 rm -f "${SQL_FILE}"
 
 echo "==============================================================="
-echo "  KLAAR. Agent & Edition Management is geïnstalleerd."
+echo "  KLAAR. Agent & Edition Management is geïnstalleerd in de CLOUD."
 echo ""
 echo "  Volgende (eenmalige) handeling in je server-opstart:"
 echo "    import { registerAgentEditionRoutes } from \"./routes/agent-edition\";"
 echo "    registerAgentEditionRoutes(app, db);   // db = mysql2 pool"
 echo ""
 echo "  De iPhone-app haalt voortaan op:  GET /api/app/team-feed"
+echo "  Zet dezelfde cloud-URL in de app onder Instellingen > Verbinding >"
+echo "  'MC Team-feed URL', bijv. https://<jouw-mc-cloud>/api/app/team-feed"
+echo ""
 echo "  Operator-schakelaars (dashboard):"
 echo "    POST /api/mc/agent/toggle   { name, isActive }   + header x-operator-token"
 echo "    POST /api/mc/edition        { edition }          + header x-operator-token"
 echo ""
-echo "  Operator-token staat in: ${OPERATOR_TOKEN_FILE}"
+echo "  Operator-token: env OPERATOR_TOKEN of bestand ${OPERATOR_TOKEN_FILE}"
 echo "==============================================================="
