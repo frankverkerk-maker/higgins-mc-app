@@ -170,3 +170,15 @@
 - [x] Zoekbalk in Documenten tabblad (filter op naam en inhoud)
 - [x] "Bekijk volledige analyse" knop die Manus-taakpagina opent in browser
 - [x] Weerbadge in Command Center header actief via locatie-instelling (was al correct gekoppeld)
+
+## Fase 19: Intelligente Command Router (data-entree keten)
+
+- [x] Create shared/roster.ts as single source of truth for agent names, departments, and routing metadata
+- [x] Update Higgins system prompt (server/routers.ts) to v2.0 roster (10 depts, 66 agents)
+- [x] Build server-side command router with LLM-based intent classification + confidence scoring
+- [x] Confidence ≥0.85: direct delegation without confirmation
+- [x] Confidence <0.85: return confirmation request to app with proposed agent/dept
+- [x] Slim down app-side detectAgentActivation — server does all routing now (no hardcoded names)
+- [x] Add inline confirmation UX in Chat for ambiguous commands (one-tap Akkoord/Nee)
+- [x] Update PDF routing prompt to use v2.0 roster from shared source
+- [x] Verify full chain with tests (32 passed, 0 errors)

@@ -34,6 +34,8 @@ async function pdfParse(buffer: Buffer): Promise<{ text: string; numpages: numbe
 }
 import { activateAgent, getTaskStatus } from "./manus-agent-service";
 import { getDailyBriefing } from "./daily-briefing-service";
+import { buildRosterPromptBlock, buildRoutingTable, AGENT_MAP, DEPT_KEYWORDS, DEPARTMENTS } from "../shared/roster";
+import { routeCommand, type RoutingResult } from "./command-router";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -55,12 +57,15 @@ function buildSystemPrompt(lang?: string, userName?: string, agentStatuses?: Rec
     agentStatusContext = `\n\nHuidige agent-statussen (realtime):\n${statusLines}`;
   }
 
+  // Dynamisch roster uit shared/roster.ts (single source of truth)
+  const rosterBlock = buildRosterPromptBlock("internal");
+
   const prompt = `Je bent Higgins, de Chief of Staff en persoonlijke butler van ${userName ?? "Frank Verkerk"}, directeur van Carpe Diem GmbH en Swiss Vitality Clinics AG.
 
 Jouw karakter:
 - Je spreekt altijd beleefd, professioneel en direct — zoals een ervaren butler betaamt
 - Je bent proactief: je denkt mee, anticipeert op behoeften en geeft concrete adviezen
-- Je bent de enige schakel tussen ${userName ?? "Frank"} en zijn AI-team van 36 agents in 7 departementen
+- Je bent de enige schakel tussen ${userName ?? "Frank"} en zijn AI-team van 66 agents in 10 departementen
 - ${langInstruction}
 - Je bent beknopt maar volledig — geen onnodige uitweidingen
 - Je spreekt de gebruiker aan bij naam of formeel afhankelijk van de context
@@ -74,19 +79,15 @@ KRITISCHE EERLIJKHEIDSREGELS — NOOIT OVERTREDEN:
 - Je kunt WEL: informatie opzoeken, documenten genereren (PDF), vragen beantwoorden, plannen maken, agents activeren via Manus API, en de gebruiker adviseren.
 - Je kunt NIET: e-mails rechtstreeks versturen, vergaderingen boeken in externe agenda's, of externe systemen aansturen buiten de Manus API om.
 
-Wanneer de gebruiker vraagt om een agent te activeren of een taak door te sturen:
-1. Bevestig dat je de taak doorzet via de Manus API
-2. Noem de agent bij naam en beschrijf de taak kort
-3. Geef de task ID terug zodat de gebruiker de voortgang kan volgen
+Wanneer de gebruiker een opdracht geeft:
+1. Bepaal of het een directe vraag is (beantwoord zelf) of een taak die gedelegeerd moet worden.
+2. Bij delegatie: kies de juiste afdeling en agent op basis van het onderwerp en de specialismen.
+3. Activeer de agent via de Manus API, noem de agent bij naam, beschrijf de taak kort.
+4. Geef de task ID terug zodat de gebruiker de voortgang kan volgen.
+5. Bij twijfel over de juiste agent: stel een voorstel voor en vraag bevestiging.
 
-Jouw team (je coördineert alle communicatie):
-- Orchestrators: Elena (Office Manager)
-- Marketing Command: Gary (CMO), Bard, Picasso, Echo, Anna, Larry, Flash
-- Team Elon IT: Elon (CTO), Oracle, Nano, Pixel, Shield, Sentinel
-- Revenue: Warren (CFO), Abacus, Closer, Carson, Strategos, Fortuna
-- Specialists: Catharina, Victoria, Barbara, Vera, Rosi
-- Justitia Legal Council (Add-On): Justitia (CLO), Adrian, Isabelle, Matteo, Elena V., Dr. Nadia
-- Enterprise: Hugo (HR), Atlas, Max, Oscar, Felix, Herald${agentStatusContext}
+Jouw team (10 afdelingen, 66 agents — je coördineert alle communicatie):
+${rosterBlock}${agentStatusContext}
 
 Jouw missie: ${userName ?? "Frank"} ontzorgen, zijn tijd beschermen en zijn bedrijven laten floreren.`;
 
@@ -108,7 +109,7 @@ export const appRouter = router({
   }),
 
   higgins: router({
-    // ── Chat: stuur een bericht naar Higgins en ontvang een AI antwoord ──────
+    // ── Chat: stuur een bericht naar Higgins — met intelligente command routing ──
     chat: publicProcedure
       .input(
         z.object({
@@ -125,11 +126,90 @@ export const appRouter = router({
           userName: z.string().optional(),
           language: z.string().optional(),
           agentStatuses: z.record(z.string(), z.string()).optional(),
+          // When user confirms a pending delegation proposal
+          confirmDelegation: z.object({
+            targetAgent: z.string(),
+            taskDescription: z.string(),
+          }).optional(),
         })
       )
       .mutation(async ({ input }) => {
-        const systemPrompt = buildSystemPrompt(input.language, input.userName, input.agentStatuses);
+        const lang = input.language ?? "nl";
+        const userName = input.userName ?? "Frank";
 
+        // ── Handle confirmed delegation (user tapped "Akkoord") ──────────────
+        if (input.confirmDelegation) {
+          const { targetAgent, taskDescription } = input.confirmDelegation;
+          try {
+            const result = await activateAgent(targetAgent, taskDescription, "en");
+            const confirmMsgs: Record<string, string> = {
+              nl: `Uitstekend, ${userName}. Ik heb **${targetAgent}** geactiveerd. Taak-ID: \`${result.taskId}\`. U ontvangt bericht zodra de taak is afgerond.`,
+              de: `Ausgezeichnet, ${userName}. Ich habe **${targetAgent}** aktiviert. Aufgaben-ID: \`${result.taskId}\`. Sie erhalten Nachricht sobald die Aufgabe abgeschlossen ist.`,
+              en: `Excellent, ${userName}. I have activated **${targetAgent}**. Task ID: \`${result.taskId}\`. You will be notified once the task is complete.`,
+            };
+            return {
+              reply: confirmMsgs[lang] ?? confirmMsgs.nl,
+              timestamp: new Date().toISOString(),
+              delegation: { taskId: result.taskId, agent: targetAgent, status: "activated" as const },
+            };
+          } catch (err) {
+            return {
+              reply: `Mijn excuses, de activering van ${targetAgent} is mislukt. Ik probeer het opnieuw wanneer u dat wenst.`,
+              timestamp: new Date().toISOString(),
+            };
+          }
+        }
+
+        // ── Step 1: Route the command ────────────────────────────────────────
+        const routing = await routeCommand(input.message, lang, userName);
+
+        // ── Step 2a: Direct delegation (high confidence) ─────────────────────
+        if (routing.shouldDelegateDirect && routing.targetAgent && routing.taskDescription) {
+          try {
+            const result = await activateAgent(routing.targetAgent, routing.taskDescription, "en");
+            // Also generate a Higgins reply that acknowledges the delegation
+            const systemPrompt = buildSystemPrompt(lang, userName, input.agentStatuses);
+            const delegationContext = `De gebruiker gaf de opdracht: "${input.message}". Je hebt zojuist ${routing.targetAgent} (${routing.targetDepartment}) geactiveerd via de Manus API met taak-ID ${result.taskId}. Bevestig dit kort en professioneel aan de gebruiker. Noem de agent, de afdeling, en de taak-ID.`;
+            const response = await invokeLLM({
+              messages: [
+                { role: "system", content: systemPrompt },
+                ...input.history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
+                { role: "user", content: delegationContext },
+              ],
+            });
+            const rawContent = response.choices?.[0]?.message?.content;
+            const reply = typeof rawContent === "string" ? rawContent
+              : Array.isArray(rawContent) ? rawContent.map((c: any) => c.text ?? "").join("")
+              : routing.explanation;
+
+            return {
+              reply,
+              timestamp: new Date().toISOString(),
+              delegation: { taskId: result.taskId, agent: routing.targetAgent, status: "activated" as const },
+            };
+          } catch (err) {
+            console.error("[chat] Direct delegation failed:", err);
+            // Fall through to normal chat if delegation fails
+          }
+        }
+
+        // ── Step 2b: Confirmation needed (low confidence delegation) ──────────
+        if (routing.intent !== "question" && !routing.shouldDelegateDirect && routing.targetAgent && routing.taskDescription) {
+          return {
+            reply: routing.explanation,
+            timestamp: new Date().toISOString(),
+            pendingDelegation: {
+              targetAgent: routing.targetAgent,
+              targetDepartment: routing.targetDepartment,
+              taskDescription: routing.taskDescription,
+              confidence: routing.confidence,
+              additionalTargets: routing.additionalTargets ?? [],
+            },
+          };
+        }
+
+        // ── Step 2c: Normal question — Higgins answers directly ──────────────
+        const systemPrompt = buildSystemPrompt(lang, userName, input.agentStatuses);
         const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
           { role: "system", content: systemPrompt },
           ...input.history.map((h) => ({

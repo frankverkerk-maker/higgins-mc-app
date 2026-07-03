@@ -364,56 +364,73 @@ export default function ChatScreen() {
     return `\n\nGEACTIVEERDE AGENTS VIA MANUS API (dit zijn echte actieve taken):\n${lines.join("\n")}`;
   };
 
-  // ─── Detecteer agent-activering intentie ─────────────────────────────────
-  const detectAgentActivation = (text: string): { agentName: string; taskDescription: string } | null => {
-    // Bekende agentnamen in het team
-    const knownAgents = [
-      "Elena", "Gary", "Bard", "Picasso", "Echo", "Anna", "Larry", "Flash",
-      "Elon", "Oracle", "Nano", "Pixel", "Shield", "Sentinel",
-      "Warren", "Abacus", "Closer", "Carson", "Strategos", "Fortuna",
-      "Catharina", "Victoria", "Barbara", "Vera", "Rosi",
-      "Justitia", "Adrian", "Isabelle", "Matteo", "Elena V.", "Dr. Nadia",
-      "Hugo", "Atlas", "Max", "Oscar", "Felix", "Herald",
-    ];
+  // ─── Pending delegation state (for confirmation UX) ─────────────────────
+  const [pendingDelegation, setPendingDelegation] = useState<{
+    targetAgent: string;
+    targetDepartment: string | null;
+    taskDescription: string;
+    confidence: number;
+    msgId: string;
+  } | null>(null);
 
-    // Activeringspatronen in NL/DE/EN
-    const activationPatterns = [
-      // Nederlands
-      /(?:activeer|stuur|geef opdracht aan|zet|schakel in|laat)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:om|voor|met de taak|de taak|aan om)/i,
-      /([A-Z][a-zA-Z\s\.]+?)\s+(?:moet|kan|zou moeten)\s+(.+)/i,
-      // Duits
-      /(?:aktiviere|beauftrage|schicke|lass)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:mit|für|um)/i,
-      // Engels
-      /(?:activate|assign|send|task|tell|ask)\s+([A-Z][a-zA-Z\s\.]+?)\s+(?:to|with|for)/i,
-    ];
+  // ─── Bevestig een pending delegatie ("Akkoord" knop) ─────────────────────
+  const confirmDelegation = useCallback(async () => {
+    if (!pendingDelegation) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsLoading(true);
 
-    const lowerText = text.toLowerCase();
-    const hasActivationKeyword = [
-      "activeer", "stuur door", "geef opdracht", "laat uitvoeren", "schakel in",
-      "aktiviere", "beauftrage",
-      "activate", "assign to", "task ", "delegate",
-    ].some(kw => lowerText.includes(kw));
+    try {
+      const result = await chatMutation.mutateAsync({
+        message: "__confirm__",
+        history: [],
+        userName: userName ?? undefined,
+        language,
+        confirmDelegation: {
+          targetAgent: pendingDelegation.targetAgent,
+          taskDescription: pendingDelegation.taskDescription,
+        },
+      });
 
-    if (!hasActivationKeyword) return null;
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: result.reply,
+        timestamp: new Date(),
+        type: "text",
+      };
 
-    // Zoek welke agent genoemd wordt
-    for (const agentName of knownAgents) {
-      if (text.includes(agentName)) {
-        // Extraheer de taakomschrijving (alles na de agentnaam)
-        const agentIdx = text.indexOf(agentName);
-        const afterAgent = text.substring(agentIdx + agentName.length).trim();
-        // Verwijder voorzetsels aan het begin
-        const taskDescription = afterAgent
-          .replace(/^(om|voor|met|to|with|for|mit|für|:)\s*/i, "")
-          .trim() || text;
-        return { agentName, taskDescription };
+      // Update agent status if delegation succeeded
+      if ((result as any).delegation) {
+        setAgentStatuses(prev => ({
+          ...prev,
+          [pendingDelegation.targetAgent]: {
+            status: "busy",
+            task: pendingDelegation.taskDescription.substring(0, 60),
+            taskId: (result as any).delegation.taskId,
+          },
+        }));
       }
+
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMessages(prev => [...prev, assistantMsg]);
+      await saveMessages([...messages, assistantMsg]);
+      notifyHigginsReply(result.reply);
+    } catch (_) {
+      // silently fail — user can retry
     }
 
-    return null;
-  };
+    setPendingDelegation(null);
+    setIsLoading(false);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [pendingDelegation, chatMutation, userName, language, messages, saveMessages, notifyHigginsReply]);
 
-  // ─── Stuur bericht naar Higgins ───────────────────────────────────────────
+  // ─── Wijs een pending delegatie af ──────────────────────────────────────
+  const rejectDelegation = useCallback(() => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPendingDelegation(null);
+  }, []);
+
+  // ─── Stuur bericht naar Higgins (server doet nu alle routing) ──────────
   const sendMessage = useCallback(async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text || isLoading) return;
@@ -437,82 +454,62 @@ export default function ChatScreen() {
     const history: Array<{ role: "user" | "assistant"; content: string }> = historyRef.current.slice(-10);
 
     try {
-      // ── Detecteer agent-activering intentie ──────────────────────────────
-      const agentActivation = detectAgentActivation(text);
+      // ── Alle routing gebeurt nu server-side via de command router ────────
+      const agentContext = buildAgentContext();
+      const messageWithContext = agentContext ? text + agentContext : text;
 
-      if (agentActivation) {
-        // Activeer de agent via de Manus API
-        const activationResult = await activateAgentMutation.mutateAsync({
-          agentName: agentActivation.agentName,
-          taskDescription: agentActivation.taskDescription,
-          language,
-          userName: userName ?? undefined,
-        });
+      const result = await chatMutation.mutateAsync({
+        message: messageWithContext,
+        history: history.map(h => ({ role: h.role, content: String(h.content) })),
+        userName: userName ?? undefined,
+        language,
+      });
 
-        historyRef.current = [
-          ...historyRef.current,
-          { role: "user" as const, content: text },
-          { role: "assistant" as const, content: activationResult.higginsResponse },
-        ].slice(-20);
+      historyRef.current = [
+        ...historyRef.current,
+        { role: "user" as const, content: text },
+        { role: "assistant" as const, content: result.reply },
+      ].slice(-20);
 
-        const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: activationResult.higginsResponse,
-          timestamp: new Date(),
-          type: "text",
-        };
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: result.reply,
+        timestamp: new Date(),
+        type: "text",
+      };
 
-        // Bijwerken van de dynamische agent status na succesvolle activering
-        if (activationResult.success) {
-          setAgentStatuses(prev => ({
-            ...prev,
-            [agentActivation.agentName]: {
-              status: "busy",
-              task: agentActivation.taskDescription.substring(0, 60) + (agentActivation.taskDescription.length > 60 ? "..." : ""),
-              taskId: activationResult.taskId,
-            },
-          }));
-        }
-
+      // ── Handle direct delegation (server already activated the agent) ──
+      if ((result as any).delegation) {
+        const del = (result as any).delegation;
+        setAgentStatuses(prev => ({
+          ...prev,
+          [del.agent]: {
+            status: "busy",
+            task: text.substring(0, 60) + (text.length > 60 ? "..." : ""),
+            taskId: del.taskId,
+          },
+        }));
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const updatedMessages = [...newMessages, assistantMsg];
-        setMessages(updatedMessages);
-        await saveMessages(updatedMessages);
-        notifyHigginsReply(activationResult.higginsResponse);
+      } else if ((result as any).pendingDelegation) {
+        // ── Handle pending delegation (needs user confirmation) ──────────
+        const pd = (result as any).pendingDelegation;
+        setPendingDelegation({
+          targetAgent: pd.targetAgent,
+          targetDepartment: pd.targetDepartment,
+          taskDescription: pd.taskDescription,
+          confidence: pd.confidence,
+          msgId: assistantMsg.id,
+        });
+        if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } else {
-        // ── Normaal chat bericht naar Higgins ────────────────────────────────
-        // Voeg agent context toe aan het bericht voor eerlijke antwoorden
-        const agentContext = buildAgentContext();
-        const messageWithContext = text + agentContext;
-
-        const result = await chatMutation.mutateAsync({
-          message: messageWithContext,
-          history: history.map(h => ({ role: h.role, content: String(h.content) })),
-          userName: userName ?? undefined,
-          language,
-        });
-
-        historyRef.current = [
-          ...historyRef.current,
-          { role: "user" as const, content: text },
-          { role: "assistant" as const, content: result.reply },
-        ].slice(-20);
-
-        const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: result.reply,
-          timestamp: new Date(),
-          type: "text",
-        };
-
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const updatedMessages = [...newMessages, assistantMsg];
-        setMessages(updatedMessages);
-        await saveMessages(updatedMessages);
-        notifyHigginsReply(result.reply);
       }
+
+      const updatedMessages = [...newMessages, assistantMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
+      notifyHigginsReply(result.reply);
     } catch (error) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -802,6 +799,30 @@ export default function ChatScreen() {
           <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>
             {item.content}
           </Text>
+          {/* Inline delegatie-bevestiging knoppen */}
+          {!isUser && pendingDelegation && pendingDelegation.msgId === item.id && (
+            <View style={styles.delegationConfirmRow}>
+              <View style={styles.delegationInfoRow}>
+                <Text style={styles.delegationInfoText}>
+                  → {pendingDelegation.targetAgent}{pendingDelegation.targetDepartment ? ` (${pendingDelegation.targetDepartment})` : ""}
+                </Text>
+              </View>
+              <View style={styles.delegationBtnRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.delegationBtnConfirm, pressed && { opacity: 0.7 }]}
+                  onPress={confirmDelegation}
+                >
+                  <Text style={styles.delegationBtnConfirmText}>Akkoord ✓</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.delegationBtnReject, pressed && { opacity: 0.7 }]}
+                  onPress={rejectDelegation}
+                >
+                  <Text style={styles.delegationBtnRejectText}>Nee</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
           <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser]}>
             {formatTime(item.timestamp)}
           </Text>
@@ -1122,4 +1143,13 @@ const styles = StyleSheet.create({
   modalFooter: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
   modalBtn: { backgroundColor: C.cyan, borderRadius: 14, paddingVertical: 14, alignItems: "center" },
   modalBtnText: { fontSize: 15, fontWeight: "800", color: C.bg, fontFamily: FONT_BOLD },
+  // Delegation confirmation inline styles
+  delegationConfirmRow: { marginTop: 10, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: "rgba(255,255,255,0.15)" },
+  delegationInfoRow: { marginBottom: 6 },
+  delegationInfoText: { fontSize: 12, color: C.cyan, fontFamily: FONT, opacity: 0.9 },
+  delegationBtnRow: { flexDirection: "row", gap: 8 },
+  delegationBtnConfirm: { backgroundColor: C.cyan, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14 },
+  delegationBtnConfirmText: { fontSize: 13, fontWeight: "700", color: C.bg, fontFamily: FONT_BOLD },
+  delegationBtnReject: { backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.2)" },
+  delegationBtnRejectText: { fontSize: 13, fontWeight: "600", color: C.muted, fontFamily: FONT },
 });
