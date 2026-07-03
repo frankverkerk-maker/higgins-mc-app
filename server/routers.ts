@@ -6,7 +6,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut, storagePut as storageUpload } from "./storage";
-import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification } from "./push-service";
+import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification, registerPushToken } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
 // Dynamic import for pdf-parse (ESM compatible)
 let pdfParseModule: any = null;
@@ -36,6 +36,7 @@ import { activateAgent, getTaskStatus } from "./manus-agent-service";
 import { getDailyBriefing } from "./daily-briefing-service";
 import { buildRosterPromptBlock, buildRoutingTable, AGENT_MAP, DEPT_KEYWORDS, DEPARTMENTS } from "../shared/roster";
 import { routeCommand, type RoutingResult } from "./command-router";
+import { watchTask } from "./task-watcher";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -147,6 +148,8 @@ export const appRouter = router({
               de: `Ausgezeichnet, ${userName}. Ich habe **${targetAgent}** aktiviert. Aufgaben-ID: \`${result.taskId}\`. Sie erhalten Nachricht sobald die Aufgabe abgeschlossen ist.`,
               en: `Excellent, ${userName}. I have activated **${targetAgent}**. Task ID: \`${result.taskId}\`. You will be notified once the task is complete.`,
             };
+            // Register with task watcher for push notification on completion
+            watchTask({ taskId: result.taskId, agentName: targetAgent, language: lang });
             return {
               reply: confirmMsgs[lang] ?? confirmMsgs.nl,
               timestamp: new Date().toISOString(),
@@ -169,12 +172,14 @@ export const appRouter = router({
             const result = await activateAgent(routing.targetAgent, routing.taskDescription, "en");
             // Also generate a Higgins reply that acknowledges the delegation
             const systemPrompt = buildSystemPrompt(lang, userName, input.agentStatuses);
-            const delegationContext = `De gebruiker gaf de opdracht: "${input.message}". Je hebt zojuist ${routing.targetAgent} (${routing.targetDepartment}) geactiveerd via de Manus API met taak-ID ${result.taskId}. Bevestig dit kort en professioneel aan de gebruiker. Noem de agent, de afdeling, en de taak-ID.`;
+            // T1 fix: delegation context as system instruction, NOT as fake user message
+            const delegationInstruction = `[ACTIE VOLTOOID] Je hebt zojuist ${routing.targetAgent} (${routing.targetDepartment}) geactiveerd via de Manus API met taak-ID ${result.taskId}. De oorspronkelijke opdracht van de gebruiker was: "${input.message}". Bevestig dit kort en professioneel aan de gebruiker. Noem de agent, de afdeling, en de taak-ID.`;
             const response = await invokeLLM({
               messages: [
                 { role: "system", content: systemPrompt },
                 ...input.history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
-                { role: "user", content: delegationContext },
+                { role: "user", content: input.message },
+                { role: "system", content: delegationInstruction },
               ],
             });
             const rawContent = response.choices?.[0]?.message?.content;
@@ -182,6 +187,8 @@ export const appRouter = router({
               : Array.isArray(rawContent) ? rawContent.map((c: any) => c.text ?? "").join("")
               : routing.explanation;
 
+            // Register with task watcher for push notification on completion
+            watchTask({ taskId: result.taskId, agentName: routing.targetAgent, language: lang });
             return {
               reply,
               timestamp: new Date().toISOString(),
@@ -505,14 +512,8 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        // Sla token op in geheugen (in productie: database)
-        pushTokenStore.set(input.token, {
-          token: input.token,
-          platform: input.platform,
-          registeredAt: new Date().toISOString(),
-          language: input.language ?? "nl",
-        });
-        console.log(`[push] Token geregistreerd voor ${input.platform} (${input.language ?? "nl"}): ${input.token.substring(0, 30)}...`);
+        // Persist token in database + memory cache
+        await registerPushToken(input.token, input.platform, input.language);
         return { success: true };
       }),
 
@@ -590,6 +591,9 @@ export const appRouter = router({
           input.taskDescription,
           lang
         );
+
+        // Register with task watcher for push notification on completion
+        watchTask({ taskId: result.taskId, agentName: input.agentName, language: lang });
 
         // Genereer een Higgins bevestigingsbericht in de juiste taal
         const confirmMessages: Record<string, string> = {
@@ -785,7 +789,13 @@ export const appRouter = router({
         }
 
         // ── Stap 3: Higgins analyseert de inhoud en selecteert het juiste teamlid ─
-        // Team mapping: welke agent past bij welk type document
+        // Routing table is dynamically built from the shared v2.0 roster (66 agents, 10 depts)
+        const routingTable = buildRoutingTable("internal");
+        const agentListForPrompt = routingTable.map(a =>
+          `- ${a.name} (${a.role}, ${a.department})${a.specialties.length ? ": " + a.specialties.join(", ") : ""}`
+        ).join("\n");
+
+        const langLabel = lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels";
         const TEAM_ROUTING_PROMPT = `Je bent Higgins, de chief of staff van Frank Verkerk bij Carpe Diem GmbH en Swiss Vitality Clinics AG.
 
 Frank heeft zojuist het volgende document geüpload:
@@ -794,24 +804,27 @@ Aantal pagina's: ${pageCount}
 
 ${pdfText ? `Inhoud (eerste 8000 tekens):\n${pdfText}` : "(tekst kon niet worden geëxtraheerd — baseer je op de bestandsnaam)"}
 
+Jouw beschikbare team (v2.0 — 66 agenten, 10 afdelingen):
+${agentListForPrompt}
+
 Jouw taak:
-1. Geef een beknopte samenvatting van het document (2-3 zinnen) in de taal: ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}
-2. Bepaal welk teamlid dit document het beste kan verwerken en analyseren:
-   - Warren (CFO): financiële documenten, investeringen, budgetten, contracten, P&L, balansen
-   - Elena (COO): communicatie, planning, HR, operationele processen, e-mails, vergaderverslagen
-   - Dr. David Sinclair (Chief Medical Officer): medische documenten, longevity, gezondheid, protocollen, klinische data
-   - Justitia (Legal Counsel): juridische documenten, contracten, compliance, regelgeving, GDPR
-   - Marcus (CTO): technische documenten, software architectuur, IT, code, systemen
-   - Sophia (Research Director): onderzoeksrapporten, wetenschappelijke publicaties, marktanalyse, strategie
+1. Geef een beknopte samenvatting van het document (2-3 zinnen) in de taal: ${langLabel}
+2. Bepaal welk teamlid dit document het beste kan verwerken en analyseren. Kies uit de volledige lijst hierboven.
 3. Formuleer een concrete taakopdracht voor dat teamlid (1-2 zinnen)
+4. Geef een confidence score (0.0-1.0) aan: hoe zeker ben je dat dit de juiste agent is?
+   - 0.9+: heel duidelijk (bijv. juridisch contract → Justitia)
+   - 0.7-0.9: redelijk zeker maar meerdere kandidaten mogelijk
+   - <0.7: onzeker, meerdere afdelingen zouden passen
 
 Antwoord ALLEEN in dit JSON formaat:
 {
-  "summary": "[samenvatting in ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}]",
-  "assignedAgent": "[naam van het teamlid]",
+  "summary": "[samenvatting in ${langLabel}]",
+  "assignedAgent": "[exacte naam uit de teamlijst]",
   "agentRole": "[rol/titel]",
   "taskDescription": "[concrete taakopdracht voor het teamlid, in het Engels voor de Manus API]",
-  "higginsMessage": "[persoonlijk bericht van Higgins aan ${userName} over wat er gaat gebeuren, in ${lang === "nl" ? "Nederlands" : lang === "de" ? "Duits" : "Engels"}]"
+  "higginsMessage": "[persoonlijk bericht van Higgins aan ${userName} over wat er gaat gebeuren, in ${langLabel}]",
+  "confidence": 0.85,
+  "alternativeAgent": "[optioneel: tweede kandidaat als confidence < 0.85]"
 }`;
 
         let higginsResponse: string;
@@ -831,16 +844,48 @@ Antwoord ALLEEN in dit JSON formaat:
             agentRole: string;
             taskDescription: string;
             higginsMessage: string;
+            confidence?: number;
+            alternativeAgent?: string;
           };
 
           assignedAgent = routing.assignedAgent;
+          const docConfidence = routing.confidence ?? 0.9;
 
-          // ── Stap 4: Activeer het teamlid via Manus API ──────────────────────
+          // ── D3: Low confidence → return confirmation request instead of auto-delegating ──
+          if (docConfidence < 0.85) {
+            higginsResponse = routing.higginsMessage;
+            return {
+              url,
+              fileName: input.fileName,
+              sizeBytes: buffer.length,
+              higginsResponse,
+              pageCount,
+              assignedAgent,
+              uploadedAt: new Date().toISOString(),
+              // Signal to app: needs confirmation before delegation
+              pendingDocDelegation: {
+                targetAgent: routing.assignedAgent,
+                targetDepartment: routing.agentRole,
+                taskDescription: routing.taskDescription,
+                confidence: docConfidence,
+                alternativeAgent: routing.alternativeAgent,
+                summary: routing.summary,
+                pdfUrl: url,
+                fileName: input.fileName,
+                pageCount,
+                pdfText: pdfText ?? undefined,
+              },
+            };
+          }
+
+          // ── Stap 4: Activeer het teamlid via Manus API (high confidence) ──────────────────────
           const fullTaskDescription = `${routing.taskDescription}\n\nDocument: ${input.fileName} (${pageCount} pagina's)\n\n${pdfText ? `Documentinhoud:\n${pdfText}` : "(Documenttekst niet beschikbaar — analyseer op basis van de bestandsnaam en context)"}`;
 
           try {
             const agentResult = await activateAgent(routing.assignedAgent, fullTaskDescription, "en");
             delegationTaskId = agentResult.taskId;
+            // Register with task watcher for push notification on completion
+            watchTask({ taskId: agentResult.taskId, agentName: routing.assignedAgent, language: lang });
           } catch (agentErr) {
             console.error(`[uploadPdf] Agent activatie mislukt voor ${routing.assignedAgent}:`, agentErr);
           }

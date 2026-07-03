@@ -96,29 +96,39 @@ Respond ONLY in this exact JSON format (no markdown, no explanation):
   "additionalTargets": [{"agent": "<name>", "department": "<dept>", "task": "<task in English>"}] or []
 }`;
 
-  try {
-    const result = await invokeLLM({
-      messages: [{ role: "user", content: routerPrompt }],
-    });
+  // ── Retry logic: up to 3 attempts with exponential backoff ──────────────────
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-    const rawContent = result.choices?.[0]?.message?.content ?? "";
-    const responseText = typeof rawContent === "string"
-      ? rawContent
-      : Array.isArray(rawContent)
-        ? rawContent.map((c: any) => c.text ?? "").join("")
-        : "";
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await invokeLLM({
+        messages: [{ role: "user", content: routerPrompt }],
+      });
 
-    // Clean markdown fences if present
-    const cleaned = responseText.replace(/```json\n?|```/g, "").trim();
-    const parsed = JSON.parse(cleaned) as {
-      intent: string;
-      confidence: number;
-      targetAgent: string | null;
-      targetDepartment: string | null;
-      taskDescription: string | null;
-      explanation: string;
-      additionalTargets?: Array<{ agent: string; department: string; task: string }>;
-    };
+      const rawContent = result.choices?.[0]?.message?.content ?? "";
+      const responseText = typeof rawContent === "string"
+        ? rawContent
+        : Array.isArray(rawContent)
+          ? rawContent.map((c: any) => c.text ?? "").join("")
+          : "";
+
+      // Clean markdown fences if present
+      const cleaned = responseText.replace(/```json\n?|```/g, "").trim();
+
+      if (!cleaned) {
+        throw new Error("LLM returned empty response");
+      }
+
+      const parsed = JSON.parse(cleaned) as {
+        intent: string;
+        confidence: number;
+        targetAgent: string | null;
+        targetDepartment: string | null;
+        taskDescription: string | null;
+        explanation: string;
+        additionalTargets?: Array<{ agent: string; department: string; task: string }>;
+      };
 
     // Validate the target agent exists in our roster
     let validatedAgent = parsed.targetAgent;
@@ -150,28 +160,42 @@ Respond ONLY in this exact JSON format (no markdown, no explanation):
 
     const confidence = Math.max(0, Math.min(1, parsed.confidence ?? 0));
 
-    return {
-      intent,
-      confidence,
-      shouldDelegateDirect: intent !== "question" && confidence >= CONFIDENCE_THRESHOLD,
-      targetAgent: validatedAgent,
-      targetDepartment: validatedDept,
-      taskDescription: parsed.taskDescription ?? null,
-      explanation: parsed.explanation ?? "",
-      additionalTargets: parsed.additionalTargets ?? [],
-    };
-  } catch (err) {
-    console.error("[command-router] LLM routing failed:", err);
-    // Fallback: treat as question (safe default — never delegate without confidence)
-    return {
-      intent: "question",
-      confidence: 0,
-      shouldDelegateDirect: false,
-      targetAgent: null,
-      targetDepartment: null,
-      taskDescription: null,
-      explanation: "",
-      additionalTargets: [],
-    };
+      return {
+        intent,
+        confidence,
+        shouldDelegateDirect: intent !== "question" && confidence >= CONFIDENCE_THRESHOLD,
+        targetAgent: validatedAgent,
+        targetDepartment: validatedDept,
+        taskDescription: parsed.taskDescription ?? null,
+        explanation: parsed.explanation ?? "",
+        additionalTargets: parsed.additionalTargets ?? [],
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`[command-router] Poging ${attempt}/${MAX_RETRIES} mislukt: ${lastError.message}`);
+
+      if (attempt < MAX_RETRIES) {
+        // Exponential backoff: 500ms, 1500ms
+        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+      }
+    }
   }
+
+  // All retries exhausted — return a clear error message to the user
+  console.error("[command-router] Alle pogingen mislukt:", lastError);
+  const errorMessages: Record<string, string> = {
+    nl: "Mijn excuses, ik kon uw opdracht niet verwerken door een tijdelijk technisch probleem. Probeert u het nogmaals.",
+    de: "Entschuldigung, ich konnte Ihren Befehl aufgrund eines vorübergehenden technischen Problems nicht verarbeiten. Bitte versuchen Sie es erneut.",
+    en: "My apologies, I could not process your command due to a temporary technical issue. Please try again.",
+  };
+  return {
+    intent: "question" as CommandIntent,
+    confidence: 0,
+    shouldDelegateDirect: false,
+    targetAgent: null,
+    targetDepartment: null,
+    taskDescription: null,
+    explanation: errorMessages[language] ?? errorMessages.nl,
+    additionalTargets: [],
+  };
 }

@@ -11,14 +11,16 @@
  * Gebruik: aanroepen in app/_layout.tsx (root level)
  */
 
-import { useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Platform, AppState, type AppStateStatus } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useLanguage } from "@/lib/language-provider";
+import { getApiBaseUrl } from "@/constants/oauth";
+
 const PUSH_TOKEN_KEY = "higgins_push_token";
 
 // Stel de foreground handler in (globaal, buiten component)
@@ -62,25 +64,26 @@ export function usePushNotifications() {
       });
     }
 
-    // Token registratie
+    // Token registratie met retry
     registerForPushNotifications().then(async (token) => {
       if (!token) return;
       setPushToken(token);
-
-      // Sla op lokaal
       await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-
-      // Registreer op server via fetch (vermijdt tRPC type-afhankelijkheid)
-      try {
-        await fetch("/api/trpc/higgins.registerPushToken", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ json: { token, platform: Platform.OS, language } }),
-        });
-      } catch (_) {
-        // Stil falen — token is lokaal opgeslagen, volgende keer opnieuw proberen
-      }
+      await registerTokenOnServer(token, language);
     });
+
+    // Reconcile: als de app terugkomt uit de achtergrond, controleer of het token
+    // nog geregistreerd is (netwerk was misschien weg bij eerste poging)
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        AsyncStorage.getItem(PUSH_TOKEN_KEY).then((storedToken) => {
+          if (storedToken) {
+            registerTokenOnServer(storedToken, language);
+          }
+        });
+      }
+    };
+    const appStateSub = AppState.addEventListener("change", handleAppState);
 
     // Luister naar notificaties terwijl app open is
     notificationListener.current = Notifications.addNotificationReceivedListener(
@@ -110,6 +113,7 @@ export function usePushNotifications() {
     return () => {
       notificationListener.current?.remove();
       responseListener.current?.remove();
+      appStateSub.remove();
     };
   }, []);
 
@@ -135,6 +139,40 @@ export function usePushNotifications() {
   }
 
   return { pushToken, permissionStatus };
+}
+
+// ─── Helper: token registreren op server met retry (3 pogingen) ────────────────
+const TOKEN_REGISTERED_KEY = "higgins_push_token_registered";
+
+async function registerTokenOnServer(token: string, language: string) {
+  // Skip if already registered this session (avoid redundant calls)
+  const alreadyRegistered = await AsyncStorage.getItem(TOKEN_REGISTERED_KEY);
+  if (alreadyRegistered === token) return;
+
+  const MAX_RETRIES = 3;
+  const baseUrl = getApiBaseUrl();
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const resp = await fetch(`${baseUrl}/api/trpc/higgins.registerPushToken`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { token, platform: Platform.OS, language } }),
+      });
+      if (resp.ok) {
+        await AsyncStorage.setItem(TOKEN_REGISTERED_KEY, token);
+        console.log("[push] Token succesvol geregistreerd op server");
+        return;
+      }
+      throw new Error(`HTTP ${resp.status}`);
+    } catch (err) {
+      console.warn(`[push] Registratie poging ${attempt}/${MAX_RETRIES} mislukt:`, err);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  console.warn("[push] Token registratie mislukt na 3 pogingen — wordt opnieuw geprobeerd bij app-resume");
 }
 
 // ─── Helper: token ophalen ────────────────────────────────────────────────────

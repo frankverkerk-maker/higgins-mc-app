@@ -8,7 +8,11 @@
  * In productie: vervang door database opslag (drizzle/schema.ts uitbreiden).
  */
 
-// ─── Token store (in-memory) ──────────────────────────────────────────────────
+import { getDb } from "./db";
+import { pushTokens } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+// ─── Token store (database-backed, survives restarts) ────────────────────────
 interface PushTokenRecord {
   token: string;
   platform: string;
@@ -22,24 +26,32 @@ const PUSH_STRINGS: Record<string, {
   morningBriefTitle: string;
   chatTitle: string;
   breakingNewsTitle: string;
+  agentCompleteTitle: (agent: string) => string;
+  agentErrorTitle: (agent: string) => string;
 }> = {
   nl: {
     approvalTitle: (agent) => `✅ Goedkeuring vereist — ${agent}`,
     morningBriefTitle: "🌅 Goedemorgen — Higgins Briefing",
     chatTitle: "💬 Higgins heeft gereageerd",
     breakingNewsTitle: "⚡ Baanbrekend nieuws — AI & Blockchain",
+    agentCompleteTitle: (agent) => `✅ ${agent} — Opdracht voltooid`,
+    agentErrorTitle: (agent) => `⚠️ ${agent} — Fout gemeld`,
   },
   de: {
     approvalTitle: (agent) => `✅ Genehmigung erforderlich — ${agent}`,
     morningBriefTitle: "🌅 Guten Morgen — Higgins Briefing",
     chatTitle: "💬 Higgins hat geantwortet",
     breakingNewsTitle: "⚡ Bahnbrechende Neuigkeiten — KI & Blockchain",
+    agentCompleteTitle: (agent) => `✅ ${agent} — Aufgabe abgeschlossen`,
+    agentErrorTitle: (agent) => `⚠️ ${agent} — Fehler gemeldet`,
   },
   en: {
     approvalTitle: (agent) => `✅ Approval required — ${agent}`,
     morningBriefTitle: "🌅 Good morning — Higgins Briefing",
     chatTitle: "💬 Higgins has responded",
     breakingNewsTitle: "⚡ Breaking news — AI & Blockchain",
+    agentCompleteTitle: (agent) => `✅ ${agent} — Task completed`,
+    agentErrorTitle: (agent) => `⚠️ ${agent} — Error reported`,
   },
 };
 
@@ -47,7 +59,58 @@ function getStrings(lang?: string) {
   return PUSH_STRINGS[lang ?? "nl"] ?? PUSH_STRINGS.nl;
 }
 
+// Memory cache (populated from DB at startup, updated on register/remove)
 export const pushTokenStore = new Map<string, PushTokenRecord>();
+
+/** Register or update a push token in the database + memory cache */
+export async function registerPushToken(token: string, platform: string, language?: string) {
+  const lang = language ?? "nl";
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.insert(pushTokens).values({
+        token,
+        platform,
+        language: lang,
+      }).onDuplicateKeyUpdate({
+        set: { platform, language: lang },
+      });
+    }
+  } catch (err) {
+    console.error("[push] DB upsert mislukt, valt terug op memory:", err);
+  }
+  pushTokenStore.set(token, { token, platform, registeredAt: new Date().toISOString(), language: lang });
+  console.log(`[push] Token geregistreerd (${platform}, ${lang})`);
+}
+
+/** Load all tokens from DB into memory cache (call at startup) */
+export async function loadPushTokensFromDb() {
+  try {
+    const db = await getDb();
+    if (!db) { console.warn("[push] Geen DB beschikbaar, tokens alleen in memory"); return; }
+    const rows = await db.select().from(pushTokens);
+    for (const row of rows) {
+      pushTokenStore.set(row.token, {
+        token: row.token,
+        platform: row.platform,
+        registeredAt: row.createdAt.toISOString(),
+        language: row.language ?? "nl",
+      });
+    }
+    console.log(`[push] ${rows.length} token(s) geladen uit database`);
+  } catch (err) {
+    console.error("[push] Kon tokens niet uit DB laden:", err);
+  }
+}
+
+/** Remove a token from DB + cache (e.g. on Expo "DeviceNotRegistered" error) */
+export async function removePushToken(token: string) {
+  pushTokenStore.delete(token);
+  try {
+    const db = await getDb();
+    if (db) await db.delete(pushTokens).where(eq(pushTokens.token, token));
+  } catch (_) {}
+}
 
 // ─── Expo Push Message type ───────────────────────────────────────────────────
 interface ExpoPushMessage {
@@ -199,6 +262,43 @@ export async function sendBreakingNewsNotification(headline: string, language?: 
       body: headline.substring(0, 150) + (headline.length > 150 ? "..." : ""),
       data: { type: "breaking_news" },
       sound: "default",
+      priority: "high",
+    });
+  }
+}
+
+/** Stuur een notificatie wanneer een gedelegeerde agent-taak is voltooid of mislukt */
+export async function sendTaskCompletionNotification(opts: {
+  agentName: string;
+  taskId: string;
+  status: "stopped" | "error";
+  resultPreview?: string;
+  language?: string;
+}) {
+  const records = Array.from(pushTokenStore.values());
+  if (records.length === 0) return;
+
+  const byLang = new Map<string, string[]>();
+  for (const r of records) {
+    const lang = r.language ?? opts.language ?? "nl";
+    if (!byLang.has(lang)) byLang.set(lang, []);
+    byLang.get(lang)!.push(r.token);
+  }
+
+  for (const [lang, tokens] of byLang) {
+    const str = getStrings(lang);
+    const title = opts.status === "stopped"
+      ? str.agentCompleteTitle(opts.agentName)
+      : str.agentErrorTitle(opts.agentName);
+    const body = opts.resultPreview
+      ? opts.resultPreview.substring(0, 120) + (opts.resultPreview.length > 120 ? "..." : "")
+      : (opts.status === "stopped" ? "Open de app voor het volledige resultaat." : "Open de app voor details.");
+
+    await sendExpoPushNotifications(tokens, {
+      title,
+      body,
+      data: { type: "agent_update", taskId: opts.taskId, agentName: opts.agentName, status: opts.status },
+      badge: 1,
       priority: "high",
     });
   }

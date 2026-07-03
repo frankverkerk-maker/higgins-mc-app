@@ -25,4 +25,15 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// ─── Push notification tokens ────────────────────────────────────────────────
+export const pushTokens = mysqlTable("push_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 512 }).notNull().unique(),
+  platform: varchar("platform", { length: 20 }).notNull(), // "ios" | "android"
+  language: varchar("language", { length: 5 }).default("nl").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PushToken = typeof pushTokens.$inferSelect;
+export type InsertPushToken = typeof pushTokens.$inferInsert;

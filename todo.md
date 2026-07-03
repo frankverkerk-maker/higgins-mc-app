@@ -182,3 +182,18 @@
 - [x] Add inline confirmation UX in Chat for ambiguous commands (one-tap Akkoord/Nee)
 - [x] Update PDF routing prompt to use v2.0 roster from shared source
 - [x] Verify full chain with tests (32 passed, 0 errors)
+
+## Fase 20: Audit Reparaties — Communicatieketen
+
+- [x] R1: Delegation result tracker voor ALLE delegaties (tekst + PDF) — polling + terugkoppeling in chat
+- [x] D1: PDF-router vervangen door shared v2.0 roster (geen hardcoded 6-agenten lijst meer)
+- [x] P2: Push token registratie fixen — absolute URL via getApiBaseUrl() op native
+- [x] R3: Server-side taak-completion polling + push notificatie bij afronding
+- [x] P1: Push tokens persistent opslaan in database i.p.v. in-memory Map
+- [x] T2: Retry-logica in command router bij LLM-fout + duidelijke foutmelding
+- [x] P3: Retry/reconcile mechanisme bij push token registratie
+- [x] R2: Bij app-herstart actieve delegaties hervatten (polling resumeren)
+- [x] D2: Docs-tab sync key fixen (higgins_chat_messages → higgins_chat_history_v2)
+- [x] T1: Agent-context verplaatsen uit user-bericht naar apart veld
+- [x] D3: Confidence-based bevestiging toevoegen aan document-routing
+- [x] S3: Vergadering-samenvatting door command router sturen als user-bericht

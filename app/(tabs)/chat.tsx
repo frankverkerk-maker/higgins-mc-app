@@ -37,6 +37,7 @@ import { useChatUnread } from "@/lib/chat-unread-provider";
 import { useFocusEffect } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
+import { DelegationTracker } from "@/components/delegation-tracker";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -642,19 +643,72 @@ export default function ChatScreen() {
   const sendSummaryToChat = useCallback(async () => {
     if (!meetingResult) return;
     setShowMeetingModal(false);
-    const summaryMessage = `📋 Vergadering samenvatting:\n\n${meetingResult.summary}`;
-    const assistantMsg: Message = {
+
+    // S3 fix: Route the meeting summary through the command router as a user message
+    // so Higgins can intelligently determine if action items need delegation
+    const commandMessage = `Hier is de samenvatting van mijn vergadering. Analyseer de actiepunten en bepaal of er taken gedelegeerd moeten worden aan het team:\n\n${meetingResult.summary}`;
+
+    // Add the summary as a user message first
+    const userMsg: Message = {
       id: Date.now().toString(),
-      role: "assistant",
-      content: summaryMessage,
+      role: "user",
+      content: `📋 Vergadering samenvatting:\n\n${meetingResult.summary}`,
       timestamp: new Date(),
       type: "text",
     };
-    const updatedMessages = [...messages, assistantMsg];
-    setMessages(updatedMessages);
-    await saveMessages(updatedMessages);
+    const withUser = [...messages, userMsg];
+    setMessages(withUser);
+    setIsLoading(true);
+
+    try {
+      // Send through the command router — Higgins will analyze and potentially delegate
+      const result = await chatMutation.mutateAsync({
+        message: commandMessage,
+        userName: userName ?? undefined,
+        language,
+        history: withUser.slice(-10).map(m => ({ role: m.role, content: m.content })),
+      });
+
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: result.reply,
+        timestamp: new Date(),
+        type: "text",
+        delegationTaskId: (result as any).delegation?.taskId,
+        assignedAgent: (result as any).delegation?.agent,
+      };
+      const updatedMessages = [...withUser, assistantMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
+
+      // Handle pending delegation (low confidence) from meeting summary
+      if ((result as any).pendingDelegation) {
+        const pd = (result as any).pendingDelegation;
+        setPendingDelegation({
+          targetAgent: pd.targetAgent,
+          targetDepartment: pd.targetDepartment,
+          taskDescription: pd.taskDescription,
+          confidence: pd.confidence,
+          msgId: assistantMsg.id,
+        });
+      }
+    } catch (_) {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Mijn excuses, ik kon de vergaderingsamenvatting niet verwerken. De samenvatting is wel opgeslagen in de chat.",
+        timestamp: new Date(),
+        type: "text",
+      };
+      const updatedMessages = [...withUser, errorMsg];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
+    }
+
+    setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [meetingResult, messages, saveMessages]);
+  }, [meetingResult, messages, saveMessages, chatMutation, userName, language]);
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
@@ -799,6 +853,33 @@ export default function ChatScreen() {
           <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>
             {item.content}
           </Text>
+          {/* Delegation result tracker — polls and shows agent result inline */}
+          {!isUser && !!item.delegationTaskId && !!item.assignedAgent && (
+            <DelegationTracker
+              taskId={item.delegationTaskId}
+              agentName={item.assignedAgent}
+              language={language}
+              userName={userName ?? undefined}
+              onComplete={(status, resultText) => {
+                // Persist the result into the message for history
+                setMessages(prev => {
+                  const updated = prev.map(m =>
+                    m.id === item.id
+                      ? {
+                          ...m,
+                          content: m.content + (resultText ? `\n\n📋 Resultaat:\n${resultText}` : ""),
+                          // Clear delegationTaskId so tracker won't re-poll on next load
+                          delegationTaskId: undefined,
+                        }
+                      : m
+                  );
+                  // Persist immediately so result survives app restart
+                  saveMessages(updated);
+                  return updated;
+                });
+              }}
+            />
+          )}
           {/* Inline delegatie-bevestiging knoppen */}
           {!isUser && pendingDelegation && pendingDelegation.msgId === item.id && (
             <View style={styles.delegationConfirmRow}>

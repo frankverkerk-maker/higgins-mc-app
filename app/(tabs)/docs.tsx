@@ -103,7 +103,8 @@ export default function DocsScreen() {
   useEffect(() => {
     const syncFromChat = async () => {
       try {
-        const raw = await AsyncStorage.getItem("higgins_chat_messages");
+        // Use the same key as chat.tsx (CHAT_STORAGE_KEY = "higgins_chat_history_v2")
+        const raw = await AsyncStorage.getItem("higgins_chat_history_v2");
         if (!raw) return;
         const messages: Array<{
           type?: string;

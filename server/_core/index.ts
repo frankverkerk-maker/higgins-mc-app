@@ -10,6 +10,9 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { morningBriefScheduledHandler } from "../morning-brief-handler";
+import { initTaskWatcher } from "../task-watcher";
+import { getTaskStatus as manusGetTaskStatus } from "../manus-agent-service";
+import { loadPushTokensFromDb } from "../push-service";
 
 // REMOVED: findAvailablePort caused port mismatch bugs
 // Server MUST always bind to port 3000 so client can reliably connect
@@ -197,6 +200,12 @@ async function startServer() {
   } else {
     console.warn("[web] no exported web app found (dist/web/index.html missing) — root will 404 until `pnpm build:web` runs");
   }
+
+  // ── Initialize push token cache from database ─────────────────────────────────
+  loadPushTokensFromDb().catch(console.error);
+
+  // ── Initialize background task watcher for delegation push notifications ──
+  initTaskWatcher(manusGetTaskStatus);
 
   const port = parseInt(process.env.PORT || "3000");
 
