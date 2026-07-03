@@ -131,6 +131,7 @@ export const appRouter = router({
           confirmDelegation: z.object({
             targetAgent: z.string(),
             taskDescription: z.string(),
+            additionalTargets: z.array(z.object({ agent: z.string(), task: z.string() })).optional(),
           }).optional(),
         })
       )
@@ -140,20 +141,51 @@ export const appRouter = router({
 
         // ── Handle confirmed delegation (user tapped "Akkoord") ──────────────
         if (input.confirmDelegation) {
-          const { targetAgent, taskDescription } = input.confirmDelegation;
+          const { targetAgent, taskDescription, additionalTargets } = input.confirmDelegation;
           try {
+            // Activate primary target
             const result = await activateAgent(targetAgent, taskDescription, "en");
-            const confirmMsgs: Record<string, string> = {
-              nl: `Uitstekend, ${userName}. Ik heb **${targetAgent}** geactiveerd. Taak-ID: \`${result.taskId}\`. U ontvangt bericht zodra de taak is afgerond.`,
-              de: `Ausgezeichnet, ${userName}. Ich habe **${targetAgent}** aktiviert. Aufgaben-ID: \`${result.taskId}\`. Sie erhalten Nachricht sobald die Aufgabe abgeschlossen ist.`,
-              en: `Excellent, ${userName}. I have activated **${targetAgent}**. Task ID: \`${result.taskId}\`. You will be notified once the task is complete.`,
-            };
-            // Register with task watcher for push notification on completion
             watchTask({ taskId: result.taskId, agentName: targetAgent, language: lang });
+
+            // Multi-delegation: activate additional targets in parallel
+            const allActivated: Array<{ agent: string; taskId: string }> = [
+              { agent: targetAgent, taskId: result.taskId },
+            ];
+            if (additionalTargets && additionalTargets.length > 0) {
+              const settled = await Promise.all(
+                additionalTargets.map(async (t) => {
+                  try {
+                    const r = await activateAgent(t.agent, t.task, "en");
+                    watchTask({ taskId: r.taskId, agentName: t.agent, language: lang });
+                    return { agent: t.agent, taskId: r.taskId };
+                  } catch (e) {
+                    console.error(`[confirm] Multi-delegation failed for ${t.agent}:`, e);
+                    return null;
+                  }
+                })
+              );
+              settled.forEach(r => { if (r) allActivated.push(r); });
+            }
+
+            // Build confirmation message
+            const agentList = allActivated.map(a => `**${a.agent}** (\`${a.taskId}\`)`).join(", ");
+            const confirmMsgs: Record<string, string> = {
+              nl: allActivated.length > 1
+                ? `Uitstekend, ${userName}. Ik heb ${allActivated.length} agenten parallel geactiveerd: ${agentList}. U ontvangt bericht zodra zij klaar zijn.`
+                : `Uitstekend, ${userName}. Ik heb ${agentList} geactiveerd. U ontvangt bericht zodra de taak is afgerond.`,
+              de: allActivated.length > 1
+                ? `Ausgezeichnet, ${userName}. Ich habe ${allActivated.length} Agenten parallel aktiviert: ${agentList}.`
+                : `Ausgezeichnet, ${userName}. Ich habe ${agentList} aktiviert.`,
+              en: allActivated.length > 1
+                ? `Excellent, ${userName}. I have activated ${allActivated.length} agents in parallel: ${agentList}.`
+                : `Excellent, ${userName}. I have activated ${agentList}. You will be notified once the task is complete.`,
+            };
+
             return {
               reply: confirmMsgs[lang] ?? confirmMsgs.nl,
               timestamp: new Date().toISOString(),
               delegation: { taskId: result.taskId, agent: targetAgent, status: "activated" as const },
+              multiDelegation: allActivated.length > 1 ? allActivated : undefined,
             };
           } catch (err) {
             return {
@@ -169,11 +201,35 @@ export const appRouter = router({
         // ── Step 2a: Direct delegation (high confidence) ─────────────────────
         if (routing.shouldDelegateDirect && routing.targetAgent && routing.taskDescription) {
           try {
+            // Activate primary target
             const result = await activateAgent(routing.targetAgent, routing.taskDescription, "en");
-            // Also generate a Higgins reply that acknowledges the delegation
+            watchTask({ taskId: result.taskId, agentName: routing.targetAgent, language: lang });
+
+            // Multi-delegation: activate additional targets in parallel
+            const additionalResults: Array<{ agent: string; taskId: string }> = [];
+            if (routing.intent === "multi_delegation" && routing.additionalTargets && routing.additionalTargets.length > 0) {
+              const settled = await Promise.all(
+                routing.additionalTargets.map(async (t) => {
+                  try {
+                    const r = await activateAgent(t.agent, t.task, "en");
+                    watchTask({ taskId: r.taskId, agentName: t.agent, language: lang });
+                    return { agent: t.agent, taskId: r.taskId };
+                  } catch (e) {
+                    console.error(`[chat] Multi-delegation failed for ${t.agent}:`, e);
+                    return null;
+                  }
+                })
+              );
+              settled.forEach(r => { if (r) additionalResults.push(r); });
+            }
+
+            // Build confirmation message
+            const allActivated = [{ agent: routing.targetAgent, taskId: result.taskId }, ...additionalResults];
+            const agentSummary = allActivated.map(a => `${a.agent} (taak-ID: ${a.taskId})`).join(", ");
             const systemPrompt = buildSystemPrompt(lang, userName, input.agentStatuses);
-            // T1 fix: delegation context as system instruction, NOT as fake user message
-            const delegationInstruction = `[ACTIE VOLTOOID] Je hebt zojuist ${routing.targetAgent} (${routing.targetDepartment}) geactiveerd via de Manus API met taak-ID ${result.taskId}. De oorspronkelijke opdracht van de gebruiker was: "${input.message}". Bevestig dit kort en professioneel aan de gebruiker. Noem de agent, de afdeling, en de taak-ID.`;
+            const delegationInstruction = allActivated.length > 1
+              ? `[MULTI-DELEGATIE VOLTOOID] Je hebt ${allActivated.length} agenten parallel geactiveerd: ${agentSummary}. Opdracht: "${input.message}". Bevestig kort en professioneel, noem alle agenten en taak-IDs.`
+              : `[ACTIE VOLTOOID] Je hebt zojuist ${routing.targetAgent} (${routing.targetDepartment}) geactiveerd met taak-ID ${result.taskId}. Opdracht: "${input.message}". Bevestig kort en professioneel.`;
             const response = await invokeLLM({
               messages: [
                 { role: "system", content: systemPrompt },
@@ -187,16 +243,14 @@ export const appRouter = router({
               : Array.isArray(rawContent) ? rawContent.map((c: any) => c.text ?? "").join("")
               : routing.explanation;
 
-            // Register with task watcher for push notification on completion
-            watchTask({ taskId: result.taskId, agentName: routing.targetAgent, language: lang });
             return {
               reply,
               timestamp: new Date().toISOString(),
               delegation: { taskId: result.taskId, agent: routing.targetAgent, status: "activated" as const },
+              multiDelegation: additionalResults.length > 0 ? allActivated : undefined,
             };
           } catch (err) {
             console.error("[chat] Direct delegation failed:", err);
-            // Fall through to normal chat if delegation fails
           }
         }
 

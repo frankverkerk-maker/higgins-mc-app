@@ -197,3 +197,11 @@
 - [x] T1: Agent-context verplaatsen uit user-bericht naar apart veld
 - [x] D3: Confidence-based bevestiging toevoegen aan document-routing
 - [x] S3: Vergadering-samenvatting door command router sturen als user-bericht
+
+## Fase 21: Multi-Delegatie
+
+- [x] Command router detecteert multi_delegation intent en retourneert additionalTargets
+- [x] Server chat mutation activeert alle targets parallel bij hoge confidence
+- [x] Server confirmDelegation handler activeert alle targets bij bevestiging
+- [x] App toont alle voorgestelde agents in de bevestigingsrij
+- [x] Eén "Alle X activeren" knop bevestigt alles in één tik

@@ -372,6 +372,7 @@ export default function ChatScreen() {
     taskDescription: string;
     confidence: number;
     msgId: string;
+    additionalTargets?: Array<{ agent: string; department: string; task: string }>;
   } | null>(null);
 
   // ─── Bevestig een pending delegatie ("Akkoord" knop) ─────────────────────
@@ -389,6 +390,7 @@ export default function ChatScreen() {
         confirmDelegation: {
           targetAgent: pendingDelegation.targetAgent,
           taskDescription: pendingDelegation.taskDescription,
+          additionalTargets: pendingDelegation.additionalTargets?.map(t => ({ agent: t.agent, task: t.task })),
         },
       });
 
@@ -501,6 +503,7 @@ export default function ChatScreen() {
           taskDescription: pd.taskDescription,
           confidence: pd.confidence,
           msgId: assistantMsg.id,
+          additionalTargets: pd.additionalTargets ?? [],
         });
         if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } else {
@@ -691,6 +694,7 @@ export default function ChatScreen() {
           taskDescription: pd.taskDescription,
           confidence: pd.confidence,
           msgId: assistantMsg.id,
+          additionalTargets: pd.additionalTargets ?? [],
         });
       }
     } catch (_) {
@@ -887,13 +891,24 @@ export default function ChatScreen() {
                 <Text style={styles.delegationInfoText}>
                   → {pendingDelegation.targetAgent}{pendingDelegation.targetDepartment ? ` (${pendingDelegation.targetDepartment})` : ""}
                 </Text>
+                {pendingDelegation.additionalTargets && pendingDelegation.additionalTargets.length > 0 && (
+                  pendingDelegation.additionalTargets.map((t, idx) => (
+                    <Text key={idx} style={styles.delegationInfoText}>
+                      → {t.agent}{t.department ? ` (${t.department})` : ""}
+                    </Text>
+                  ))
+                )}
               </View>
               <View style={styles.delegationBtnRow}>
                 <Pressable
                   style={({ pressed }) => [styles.delegationBtnConfirm, pressed && { opacity: 0.7 }]}
                   onPress={confirmDelegation}
                 >
-                  <Text style={styles.delegationBtnConfirmText}>Akkoord ✓</Text>
+                  <Text style={styles.delegationBtnConfirmText}>
+                    {pendingDelegation.additionalTargets && pendingDelegation.additionalTargets.length > 0
+                      ? `Alle ${1 + pendingDelegation.additionalTargets.length} activeren ✓`
+                      : "Akkoord ✓"}
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [styles.delegationBtnReject, pressed && { opacity: 0.7 }]}
