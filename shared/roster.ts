@@ -17,7 +17,7 @@ export { TEAM, DEPARTMENTS };
 
 // ─── Routing metadata ─────────────────────────────────────────────────────────
 
-/** Agent name list (all 66), used for fast matching in the app. */
+/** Agent name list (all 88), used for fast matching in the app. */
 export const AGENT_NAMES: string[] = TEAM.map(a => a.name);
 
 /** Map: agent name → Agent record (for O(1) lookup). */
@@ -36,16 +36,17 @@ export const DEPT_MAP: Record<string, DepartmentMeta> = Object.fromEntries(
  * Keys are department IDs; values are keyword arrays (NL + DE + EN mixed).
  */
 export const DEPT_KEYWORDS: Record<string, string[]> = {
-  executive:   ["management", "strategie", "strategy", "directie", "board", "leiderschap", "leadership", "Führung"],
-  technology:  ["technologie", "technology", "IT", "software", "code", "backend", "frontend", "security", "API", "integratie", "integration", "Technik"],
-  marketing:   ["marketing", "content", "social media", "SEO", "branding", "campagne", "campaign", "Kampagne", "design", "visual"],
-  fmc:         ["medisch", "medical", "longevity", "gezondheid", "health", "Gesundheit", "protocol", "kliniek", "clinic", "Klinik", "peptide", "NAD", "telomeer", "telomere"],
-  jlc:         ["juridisch", "legal", "recht", "contract", "compliance", "GDPR", "privacy", "IP", "patent", "Recht", "Vertrag"],
-  sales:       ["sales", "verkoop", "Verkauf", "revenue", "offerte", "proposal", "pricing", "deal", "prospect"],
-  enterprise:  ["operatie", "operations", "HR", "facility", "supply chain", "kwaliteit", "quality", "Qualität", "communicatie", "communications", "training", "analytics", "data"],
-  specialists: ["research", "onderzoek", "Forschung", "vertaling", "translation", "Übersetzung", "klant", "customer", "Kunde", "medisch advies"],
-  wtd:         ["trading", "handel", "Polymarket", "crypto", "portfolio", "investering", "investment", "Investition", "beurs", "market", "Markt", "financieel", "financial", "finanziell"],
-  uta:         ["trust", "estate", "vermogen", "wealth", "Vermögen", "stichting", "foundation", "Stiftung", "holding", "belasting", "tax", "Steuer", "successie", "succession", "Nachfolge", "family office", "philanthropy"],
+  executive:          ["management", "strategie", "strategy", "directie", "board", "leiderschap", "leadership", "Führung", "executive", "chief"],
+  "einstein-lab":     ["research", "onderzoek", "Forschung", "innovatie", "innovation", "quantum", "experiment", "lab", "wetenschap", "science", "Wissenschaft"],
+  finance:            ["financieel", "financial", "finanziell", "boekhouding", "accounting", "Buchhaltung", "revenue", "budget", "forecast", "cashflow", "P&L", "balans"],
+  technology:         ["technologie", "technology", "IT", "software", "code", "backend", "frontend", "security", "API", "integratie", "integration", "Technik", "DevOps", "CI/CD"],
+  marketing:          ["marketing", "content", "social media", "SEO", "branding", "campagne", "campaign", "Kampagne", "design", "visual", "copywriting", "PR"],
+  enterprise:         ["operatie", "operations", "HR", "facility", "supply chain", "kwaliteit", "quality", "Qualität", "communicatie", "communications", "training", "analytics", "data", "project management"],
+  fmc:                ["medisch", "medical", "longevity", "gezondheid", "health", "Gesundheit", "protocol", "kliniek", "clinic", "Klinik", "peptide", "NAD", "telomeer", "telomere", "diagnose", "therapie"],
+  jlc:                ["juridisch", "legal", "recht", "contract", "compliance", "GDPR", "privacy", "IP", "patent", "Recht", "Vertrag", "litigation", "regulatory"],
+  mtd:                ["trading", "handel", "Polymarket", "crypto", "portfolio", "investering", "investment", "Investition", "beurs", "market", "Markt", "arbitrage", "hedge", "quant"],
+  uta:                ["trust", "estate", "vermogen", "wealth", "Vermögen", "stichting", "foundation", "Stiftung", "holding", "belasting", "tax", "Steuer", "successie", "succession", "Nachfolge", "family office", "philanthropy"],
+  "task-force-ghost": ["covert", "intelligence", "geheim", "secret", "shadow", "black ops", "classified", "SCIF", "counter-intelligence"],
 };
 
 /**

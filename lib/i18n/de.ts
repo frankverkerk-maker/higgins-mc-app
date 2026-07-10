@@ -25,6 +25,7 @@ export const de: Translations = {
     command: "Kommando",
     chat: "Chat",
     teamPulse: "Team Pulse",
+    tower: "Tower",
     docs: "Dokumente",
     settings: "Einstellungen",
   },

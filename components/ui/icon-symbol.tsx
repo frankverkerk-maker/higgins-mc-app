@@ -23,6 +23,7 @@ const MAPPING = {
   "gearshape.fill": "settings",
   "doc.fill": "description",
   "doc.on.doc.fill": "file-copy",
+  "building.2.fill": "business",
 } as IconMapping;
 
 /**

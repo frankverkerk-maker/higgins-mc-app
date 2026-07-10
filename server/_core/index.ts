@@ -105,6 +105,21 @@ async function startServer() {
     );
   });
 
+  // ── Downloadable install script for disaster recovery ──────────────────
+  app.get("/api/mc/install-script", (_req, res) => {
+    const scriptPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../../mc-implementation/install_agent_edition_cloud.sh"
+    );
+    if (fs.existsSync(scriptPath)) {
+      res.set("Content-Type", "text/plain; charset=utf-8");
+      res.set("Content-Disposition", 'attachment; filename="install_agent_edition_cloud_v2.sh"');
+      res.send(fs.readFileSync(scriptPath, "utf-8"));
+    } else {
+      res.status(404).json({ error: "Install script not found" });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({

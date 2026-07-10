@@ -98,6 +98,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="tower"
+        options={{
+          title: t.tabs.tower,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="building.2.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="docs"
         options={{
           title: t.tabs.docs,

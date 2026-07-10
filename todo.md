@@ -205,3 +205,11 @@
 - [x] Server confirmDelegation handler activeert alle targets bij bevestiging
 - [x] App toont alle voorgestelde agents in de bevestigingsrij
 - [x] Eén "Alle X activeren" knop bevestigt alles in één tik
+
+## Fase 22: Roster Sync + Tower + Script Publicatie
+
+- [x] shared/roster.ts bijgewerkt naar v2.1 (88 agenten, 11 afdelingen, correcte routing-keywords)
+- [x] Higgins Tower visualisatie-scherm gebouwd (11 verdiepingen, tap-to-expand, classified indicators)
+- [x] Tower tab toegevoegd aan tab bar + iPad sidebar
+- [x] Installatiescript gepubliceerd als downloadbaar endpoint: GET /api/mc/install-script
+- [x] Alle tests groen (34 passed), TypeScript 0 fouten
