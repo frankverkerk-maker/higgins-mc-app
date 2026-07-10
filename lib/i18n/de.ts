@@ -190,7 +190,21 @@ export const de: Translations = {
     mcFeedEmpty: "Nicht konfiguriert · integrierte Liste",
   },
 
-  // ─── Push notificaties ───────────────────────────────────────────────────────
+  // ─── Tower ──────────────────────────────────────────────────────────────────
+  tower: {
+    title: "Higgins Tower",
+    subtitle: "Etagen",
+    agents: "Agenten",
+    departments: "Abteilungen",
+    sourceLive: "Live aus Datenbank",
+    sourceBuiltin: "Integrierte Liste",
+    legendPublic: "Oberirdisch (öffentlich)",
+    legendClassified: "Untergeschoss (klassifiziert)",
+    longPressHint: "Gedrückt halten, um Higgins einen Auftrag für diese Abteilung zu geben",
+    commandPrefix: "Higgins, ich habe einen Auftrag für die Abteilung",
+  },
+
+  // ─── Push-Benachrichtigungen ───────────────────────────────────────────────
   push: {
     approvalTitle: "Genehmigung erforderlich",
     morningBriefTitle: "Guten Morgen — Higgins Briefing",

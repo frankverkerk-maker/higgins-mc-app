@@ -190,6 +190,20 @@ export const en: Translations = {
     mcFeedEmpty: "Not configured · built-in list",
   },
 
+  // ─── Tower ──────────────────────────────────────────────────────────────────
+  tower: {
+    title: "Higgins Tower",
+    subtitle: "floors",
+    agents: "agents",
+    departments: "departments",
+    sourceLive: "Live from database",
+    sourceBuiltin: "Built-in list",
+    legendPublic: "Above ground (public)",
+    legendClassified: "Basement (classified)",
+    longPressHint: "Long press to give Higgins a command about this department",
+    commandPrefix: "Higgins, I have a task for the department",
+  },
+
   // ─── Push notifications ──────────────────────────────────────────────────────
   push: {
     approvalTitle: "Approval required",

@@ -189,6 +189,20 @@ export const nl = {
     mcFeedEmpty: "Niet ingesteld · ingebouwde lijst",
   },
 
+  // ─── Tower ──────────────────────────────────────────────────────────────────
+  tower: {
+    title: "Higgins Tower",
+    subtitle: "verdiepingen",
+    agents: "agenten",
+    departments: "afdelingen",
+    sourceLive: "Live via database",
+    sourceBuiltin: "Ingebouwde lijst",
+    legendPublic: "Bovengronds (publiek)",
+    legendClassified: "Basement (classified)",
+    longPressHint: "Houd ingedrukt om Higgins een opdracht te geven over deze afdeling",
+    commandPrefix: "Higgins, ik heb een opdracht voor de afdeling",
+  },
+
   // ─── Push notificaties ───────────────────────────────────────────────────────
   push: {
     approvalTitle: "Goedkeuring vereist",
@@ -208,6 +222,7 @@ export type Translations = {
   dashboard: Record<string, string>;
   chat: Record<string, string>;
   agents: Record<string, string>;
+  tower: Record<string, string>;
   settings: Record<string, string>;
   push: Record<string, string>;
   higginsLanguage: string;

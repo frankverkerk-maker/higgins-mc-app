@@ -34,7 +34,7 @@ import { AppBackground } from "@/components/app-background";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 import { useChatUnread } from "@/lib/chat-unread-provider";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
 import { DelegationTracker } from "@/components/delegation-tracker";
@@ -106,6 +106,7 @@ const getInitialMessage = (name: string | null, lang: string): Message => {
 export default function ChatScreen() {
   const { t, language } = useLanguage();
   const { setChatActive, notifyReply } = useChatUnread();
+  const params = useLocalSearchParams<{ prefill?: string }>();
 
   // Flag the chat as focused so incoming replies don't count as unread while reading.
   useFocusEffect(
@@ -146,6 +147,13 @@ export default function ChatScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const meetingPulseAnim = useRef(new Animated.Value(1)).current;
   const historyRef = useRef<Array<{ role: "user" | "assistant"; content: string }>>([]);
+
+  // Pre-fill input from Tower long-press (Higgins command about a department)
+  useEffect(() => {
+    if (params.prefill && typeof params.prefill === "string") {
+      setInput(params.prefill);
+    }
+  }, [params.prefill]);
 
   // Vergadering opname state
   const [isMeetingRecording, setIsMeetingRecording] = useState(false);

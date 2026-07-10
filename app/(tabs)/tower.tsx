@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Text, View, ScrollView, StyleSheet, Platform, Pressable, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/language-provider";
@@ -54,12 +55,19 @@ export default function TowerScreen() {
   const colors = useColors();
   const { t } = useLanguage();
   const { isInternal } = useEdition();
+  const router = useRouter();
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null);
 
   // Fetch live building data from DB via tRPC
   const buildingQuery = trpc.higgins.getBuilding.useQuery(
     {},
     { staleTime: 60 * 1000, refetchInterval: 60 * 1000 }
+  );
+
+  // Fetch live agent statuses
+  const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
+    {},
+    { staleTime: 15 * 1000, refetchInterval: 15 * 1000 }
   );
 
   // Determine floor list: live DB data → fallback
@@ -85,9 +93,27 @@ export default function TowerScreen() {
     setExpandedFloor(prev => prev === floorNum ? null : floorNum);
   }, []);
 
+  // Long-press: navigate to Chat with pre-filled Higgins command about this department
+  const handleLongPress = useCallback((floor: Floor) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    const prefix = t.tower?.commandPrefix || "Higgins, ik heb een opdracht voor de afdeling";
+    const prefill = `${prefix} ${floor.floor_name}: `;
+    router.push({ pathname: "/(tabs)/chat", params: { prefill } });
+  }, [t, router]);
+
   const getAgentsForDept = useCallback((deptId: string) => {
     return TEAM.filter(a => a.department === deptId);
   }, []);
+
+  // Count active agents per department using live status data
+  const getActiveCountForDept = useCallback((deptId: string) => {
+    const agents = TEAM.filter(a => a.department === deptId);
+    if (!agentStatusQuery.data) return 0;
+    const statuses = agentStatusQuery.data as Record<string, { status: string; task: string }>;
+    return agents.filter(a => statuses[a.name]?.status === "active").length;
+  }, [agentStatusQuery.data]);
 
   const totalAgents = visibleFloors.reduce((sum, f) => sum + getAgentsForDept(f.department_id).length, 0);
 
@@ -97,15 +123,15 @@ export default function TowerScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.towerIcon}>🏢</Text>
-          <Text style={styles.title}>Higgins Tower</Text>
+          <Text style={styles.title}>{t.tower?.title || "Higgins Tower"}</Text>
           <Text style={styles.subtitle}>
-            {visibleFloors.length} verdiepingen · {totalAgents} agenten · {visibleFloors.length} afdelingen
+            {visibleFloors.length} {t.tower?.subtitle || "verdiepingen"} · {totalAgents} {t.tower?.agents || "agenten"} · {visibleFloors.length} {t.tower?.departments || "afdelingen"}
           </Text>
           {/* Source indicator */}
           <View style={styles.sourceRow}>
             <View style={[styles.sourceDot, { backgroundColor: isLive ? "#22C55E" : "#9BA1A6" }]} />
             <Text style={styles.sourceText}>
-              {isLive ? "Live via database" : "Built-in lijst"}
+              {isLive ? (t.tower?.sourceLive || "Live via database") : (t.tower?.sourceBuiltin || "Ingebouwde lijst")}
             </Text>
             {buildingQuery.isLoading && (
               <ActivityIndicator size="small" color="#00D4D4" style={{ marginLeft: 8 }} />
@@ -119,12 +145,15 @@ export default function TowerScreen() {
             const isExpanded = expandedFloor === floor.floor_number;
             const floorColor = FLOOR_COLORS[floor.department_id] || "#5A6472";
             const agents = getAgentsForDept(floor.department_id);
+            const activeCount = getActiveCountForDept(floor.department_id);
             const dept = DEPARTMENTS.find(d => d.name === floor.department_id);
 
             return (
               <Pressable
                 key={floor.floor_number}
                 onPress={() => toggleFloor(floor.floor_number)}
+                onLongPress={() => handleLongPress(floor)}
+                delayLongPress={500}
                 style={({ pressed }) => [
                   styles.floorCard,
                   floor.is_restricted && styles.floorRestricted,
@@ -152,27 +181,47 @@ export default function TowerScreen() {
                         <Text style={styles.restrictedText}>🔒</Text>
                       </View>
                     )}
-                    <Text style={[styles.agentCount, { color: floorColor }]}>
-                      {agents.length}
-                    </Text>
+                    {/* Agent status: active count dot */}
+                    <View style={styles.statusColumn}>
+                      {activeCount > 0 && (
+                        <View style={styles.activeRow}>
+                          <View style={[styles.activeDot, { backgroundColor: "#22C55E" }]} />
+                          <Text style={styles.activeCountText}>{activeCount}</Text>
+                        </View>
+                      )}
+                      <Text style={[styles.agentCount, { color: floorColor }]}>
+                        {agents.length}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Expanded agent list */}
                   {isExpanded && (
                     <View style={styles.agentList}>
                       <View style={[styles.divider, { backgroundColor: floorColor + "40" }]} />
-                      {agents.map((agent) => (
-                        <View key={agent.name} style={styles.agentRow}>
-                          <View style={[styles.agentDot, { backgroundColor: floorColor }]} />
-                          <Text style={styles.agentName}>{agent.name}</Text>
-                          <Text style={styles.agentRole}>{agent.role}</Text>
-                          {agent.name === dept?.head && (
-                            <View style={[styles.headBadge, { borderColor: floorColor }]}>
-                              <Text style={[styles.headText, { color: floorColor }]}>HEAD</Text>
-                            </View>
-                          )}
-                        </View>
-                      ))}
+                      {agents.map((agent) => {
+                        const statuses = (agentStatusQuery.data ?? {}) as Record<string, { status: string; task: string }>;
+                        const agentStatus = statuses[agent.name];
+                        const isActive = agentStatus?.status === "active";
+                        return (
+                          <View key={agent.name} style={styles.agentRow}>
+                            <View style={[styles.agentDot, { backgroundColor: isActive ? "#22C55E" : "#4A5568" }]} />
+                            <Text style={styles.agentName}>{agent.name}</Text>
+                            <Text style={styles.agentRole} numberOfLines={1}>
+                              {isActive && agentStatus?.task ? agentStatus.task : agent.role}
+                            </Text>
+                            {agent.name === dept?.head && (
+                              <View style={[styles.headBadge, { borderColor: floorColor }]}>
+                                <Text style={[styles.headText, { color: floorColor }]}>HEAD</Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                      {/* Long-press hint */}
+                      <Text style={styles.longPressHint}>
+                        {t.tower?.longPressHint || "Houd ingedrukt om Higgins een opdracht te geven over deze afdeling"}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -185,14 +234,18 @@ export default function TowerScreen() {
         <View style={styles.legend}>
           <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: "#22C55E" }]} />
-            <Text style={styles.legendText}>Bovengronds (publiek)</Text>
+            <Text style={styles.legendText}>{t.tower?.legendPublic || "Bovengronds (publiek)"}</Text>
           </View>
           {isInternal && (
             <View style={styles.legendRow}>
               <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
-              <Text style={styles.legendText}>Basement (classified)</Text>
+              <Text style={styles.legendText}>{t.tower?.legendClassified || "Basement (classified)"}</Text>
             </View>
           )}
+          <View style={styles.legendRow}>
+            <View style={[styles.activeDot, { backgroundColor: "#22C55E" }]} />
+            <Text style={styles.legendText}>= actieve agent(en)</Text>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -301,6 +354,27 @@ const styles = StyleSheet.create({
   restrictedText: {
     fontSize: 14,
   },
+  statusColumn: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    minWidth: 36,
+  },
+  activeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  activeCountText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#22C55E",
+  },
   agentCount: {
     fontSize: 18,
     fontWeight: "700",
@@ -343,6 +417,13 @@ const styles = StyleSheet.create({
   headText: {
     fontSize: 9,
     fontWeight: "700",
+  },
+  longPressHint: {
+    fontSize: 11,
+    color: "#687076",
+    fontStyle: "italic",
+    marginTop: 10,
+    textAlign: "center",
   },
   legend: {
     paddingHorizontal: 20,

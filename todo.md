@@ -222,3 +222,11 @@
 - [x] Source indicator in Tower header (groen = live via database, grijs = built-in lijst)
 - [x] Legend past zich aan aan editie (classified-legenda alleen zichtbaar in internal mode)
 - [x] Alle tests groen (34 passed), TypeScript 0 fouten
+
+## Fase 24: Tower UX Verbeteringen
+
+- [x] Tower i18n: verdiepingsnamen, legenda, source-indicator vertaald naar NL/DE/EN
+- [x] Tower agent-status dots per verdieping (actief/idle indicator via getAgentStatus)
+- [x] Tower long-press → Chat: lang indrukken op verdieping opent Chat met pre-filled Higgins-opdracht over die afdeling
+- [x] Chat.tsx: useLocalSearchParams + prefill effect voor Tower-navigatie
+- [x] Alle tests groen (34 passed), TypeScript 0 fouten
