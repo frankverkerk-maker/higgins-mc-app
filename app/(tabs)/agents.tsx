@@ -35,17 +35,18 @@ const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 
 // Departement kleur mapping (display naam → kleur)
 const DEPT_COLORS: Record<string, { bg: string; text: string }> = {
-  "Executive Office":             { bg: C.cyanDim,               text: C.cyan },
-  "Technology Division":          { bg: C.purpleDim,             text: C.purple },
-  "Marketing & Creative":         { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
-  "Functional Medicine Center":   { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
-  "Justitia Legal Council":       { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
-  "Sales & Revenue":              { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
-  "Enterprise Operations":        { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
-  "Cross-Functional Specialists": { bg: "rgba(236,72,153,0.12)", text: "#F472B6" },
+  "Executive Office":           { bg: C.cyanDim,               text: C.cyan },
+  "Einstein Lab":               { bg: "rgba(236,72,153,0.12)", text: "#F472B6" },
+  "Finance":                    { bg: "rgba(239,68,68,0.12)",  text: "#F87171" },
+  "Technology Division":        { bg: C.purpleDim,             text: C.purple },
+  "Marketing & Creative":       { bg: "rgba(251,191,36,0.12)", text: "#FBBF24" },
+  "Enterprise Operations":      { bg: "rgba(56,189,248,0.12)", text: "#38BDF8" },
+  "Functional Medicine Center": { bg: "rgba(52,211,153,0.12)", text: "#34D399" },
+  "Justitia Legal Council":     { bg: "rgba(99,102,241,0.12)", text: "#818CF8" },
   // Classified — rood/donker accent
-  "Warren Trading Desk":          { bg: C.redDim, text: C.red },
-  "Ultra Trust Agency":           { bg: C.redDim, text: C.red },
+  "Morgan Trading Desk":        { bg: C.redDim, text: C.red },
+  "Ultra Trust Agency":         { bg: C.redDim, text: C.red },
+  "Task Force Ghost":           { bg: C.redDim, text: C.red },
 };
 
 // Initiaal voor agent avatar

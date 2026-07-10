@@ -39,7 +39,7 @@ const SAMPLE_FEED = {
   count: 3,
   agents: [
     { name: "Higgins", role: "Chief Operating Officer", department: "Executive Office", departmentId: "executive", isClassified: 0, isActive: 1, status: "standby", currentTask: null },
-    { name: "Warren", role: "Head of Trading", department: "Warren Trading Desk", departmentId: "wtd", isClassified: 1, isActive: 1, status: "busy", currentTask: null },
+    { name: "Morgan", role: "Head of Trading", department: "Morgan Trading Desk", departmentId: "mtd", isClassified: 1, isActive: 1, status: "busy", currentTask: null },
     { name: "BrandNewAgent", role: "Special Ops", department: "Executive Office", departmentId: "executive", isClassified: 0, isActive: 1, status: "active", currentTask: null },
   ],
 };
@@ -59,8 +59,8 @@ describe("Higgins MC — team feed mapping", () => {
   });
 
   it("maps numeric isClassified flag to a boolean", () => {
-    const warren = mergeFeedAgent(SAMPLE_FEED.agents[1], builtinByName.get("Warren"));
-    expect(warren.isClassified).toBe(true);
+    const morgan = mergeFeedAgent(SAMPLE_FEED.agents[1], builtinByName.get("Morgan"));
+    expect(morgan.isClassified).toBe(true);
   });
 
   it("accepts unknown agents from the feed without crashing", () => {

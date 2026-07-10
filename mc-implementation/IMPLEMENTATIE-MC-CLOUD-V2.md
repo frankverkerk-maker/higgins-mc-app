@@ -190,9 +190,39 @@ ON DUPLICATE KEY UPDATE
   `is_classified`=VALUES(`is_classified`);
 -- BELANGRIJK: is_active wordt NIET overschreven. Jouw keuzes blijven behouden.
 
+-- ─── Higgins Tower (8 floors + 3 basement) ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS building_floors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  floor_number INT NOT NULL UNIQUE,
+  floor_name VARCHAR(100) NOT NULL,
+  department_id VARCHAR(50) DEFAULT NULL,
+  description TEXT,
+  is_restricted BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO building_floors (floor_number, floor_name, department_id, description, is_restricted) VALUES
+(8,  'Penthouse — Executive Suite',      'executive',        'Higgins, Elena, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.', false),
+(7,  'Einstein Lab',                      'einstein-lab',     'Einstein, Curie, Tesla. Onderzoekslaboratoria, quantum computing cluster, innovatie-hub.', false),
+(6,  'Finance & Strategy',                'finance',          'Warren, Abacus, Closer, Carson, Strategos. Financiële analyse, trading dashboards, revenue operations.', false),
+(5,  'Technology Division',               'technology',       'Elon, Da Vinci, Forge, Jenkins, Nexus, Sid. Server rooms, development labs, security operations center.', false),
+(4,  'Marketing & Creative',              'marketing',        'Gary, Anna, Bard, Brando, Echo, Larry, Picasso. Creative studio, content lab, media center.', false),
+(3,  'Enterprise Operations',             'enterprise',       'Atlas + 13 specialisten. Operations center, HR, facilities, quality assurance, analytics.', false),
+(2,  'Functional Medicine Center',        'fmc',              'David + 8 specialisten. Klinische labs, diagnostiek, patiëntenzorg, longevity research.', false),
+(1,  'Justitia Legal Council',            'jlc',              'Justitia, Adrian, Elena Vasquez, Isabelle, Matteo, Nadia. Juridische bibliotheek, contract review, compliance.', false),
+(-1, 'Basement 1 — Morgan Trading Desk',  'mtd',              'Morgan, Atlas MTD, Cipher, Nexus MTD, Pulse, Sentinel, Viper. High-frequency trading floor, quantum-secured comms.', true),
+(-2, 'Basement 2 — Ultra Trust Agency',   'uta',              'Victoria + 22 specialisten. Kluis, vertrouwelijke dossiers, client meeting rooms, secure archives.', true),
+(-3, 'Basement 3 — Task Force Ghost',     'task-force-ghost', 'Zero, Spectre. SCIF, covert operations, intelligence hub. Toegang alleen met tier-0 clearance.', true)
+ON DUPLICATE KEY UPDATE
+  floor_name = VALUES(floor_name),
+  department_id = VALUES(department_id),
+  description = VALUES(description),
+  is_restricted = VALUES(is_restricted);
+
 SQL
 
-echo "[1/2] SQL voorbereid (88 agenten, 11 afdelingen)."
+echo "[1/2] SQL voorbereid (88 agenten, 11 afdelingen, 11 verdiepingen)."
 
 # ─── SQL uitvoeren ────────────────────────────────────────────────────────────
 echo "[2/2] Database bijwerken..."
@@ -206,7 +236,9 @@ await conn.query(sql);
 // Verificatie
 const [rows] = await conn.query("SELECT COUNT(*) as total, SUM(is_classified) as classified FROM agent_registry");
 const [depts] = await conn.query("SELECT department_id, COUNT(*) as cnt FROM agent_registry GROUP BY department_id ORDER BY department_id");
+const [floors] = await conn.query("SELECT COUNT(*) as cnt FROM building_floors");
 console.log(`\n  Totaal: ${rows[0].total} agenten (${rows[0].classified} classified)`);
+console.log(`  Higgins Tower: ${floors[0].cnt} verdiepingen`);
 console.log("  Per afdeling:");
 depts.forEach(d => console.log(`    ${d.department_id}: ${d.cnt}`));
 await conn.end();
