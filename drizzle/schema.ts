@@ -37,3 +37,18 @@ export const pushTokens = mysqlTable("push_tokens", {
 
 export type PushToken = typeof pushTokens.$inferSelect;
 export type InsertPushToken = typeof pushTokens.$inferInsert;
+
+// ─── Higgins Tower building floors ──────────────────────────────────────────
+export const buildingFloors = mysqlTable("building_floors", {
+  id: int("id").autoincrement().primaryKey(),
+  floorNumber: int("floor_number").notNull().unique(),
+  floorName: varchar("floor_name", { length: 100 }).notNull(),
+  departmentId: varchar("department_id", { length: 50 }),
+  description: text("description"),
+  isRestricted: int("is_restricted").default(0).notNull(), // 0=false, 1=true (MySQL boolean)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BuildingFloor = typeof buildingFloors.$inferSelect;
+export type InsertBuildingFloor = typeof buildingFloors.$inferInsert;

@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { Text, View, ScrollView, StyleSheet, Platform, Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import { Text, View, ScrollView, StyleSheet, Platform, Pressable, ActivityIndicator } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/language-provider";
+import { useEdition } from "@/lib/edition-provider";
 import { TEAM, DEPARTMENTS } from "@/constants/team";
+import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -16,20 +18,20 @@ interface Floor {
   is_restricted: boolean;
 }
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// ─── Hardcoded fallback (used when DB is unavailable) ───────────────────────
 
-const HIGGINS_TOWER: Floor[] = [
-  { floor_number: 8, floor_name: "Penthouse", department_id: "executive", description: "Executive Office · Higgins, Elena, Barbara, Catharina, Rosi, Susi", is_restricted: false },
-  { floor_number: 7, floor_name: "Einstein Lab", department_id: "einstein-lab", description: "Research & Innovation · Einstein, Curie, Tesla", is_restricted: false },
-  { floor_number: 6, floor_name: "Finance Floor", department_id: "finance", description: "Financial Operations · Warren, Abacus, Closer, Carson, Strategos", is_restricted: false },
-  { floor_number: 5, floor_name: "Tech Hub", department_id: "technology", description: "Engineering & Infrastructure · Elon + team", is_restricted: false },
-  { floor_number: 4, floor_name: "Marketing Suite", department_id: "marketing", description: "Creative & Communications · Gary + team", is_restricted: false },
-  { floor_number: 3, floor_name: "Enterprise Floor", department_id: "enterprise", description: "Operations & Client Services · Atlas + 13 agents", is_restricted: false },
-  { floor_number: 2, floor_name: "Medical Center", department_id: "fmc", description: "Functional Medicine · David + 8 specialists", is_restricted: false },
-  { floor_number: 1, floor_name: "Legal Wing", department_id: "jlc", description: "Juridisch & Compliance · Justitia + team", is_restricted: false },
-  { floor_number: -1, floor_name: "Basement B1", department_id: "mtd", description: "Morgan Trading Desk · 7 agents", is_restricted: true },
-  { floor_number: -2, floor_name: "Basement B2", department_id: "uta", description: "Ultra Trust Agency · 23 agents", is_restricted: true },
-  { floor_number: -3, floor_name: "Basement B3", department_id: "task-force-ghost", description: "Task Force Ghost · Zero, Spectre", is_restricted: true },
+const HIGGINS_TOWER_FALLBACK: Floor[] = [
+  { floor_number: 8, floor_name: "Penthouse — Executive Suite", department_id: "executive", description: "Higgins, Elena, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.", is_restricted: false },
+  { floor_number: 7, floor_name: "Einstein Lab", department_id: "einstein-lab", description: "Einstein, Curie, Tesla. Onderzoekslaboratoria, quantum computing cluster, innovatie-hub.", is_restricted: false },
+  { floor_number: 6, floor_name: "Finance & Strategy", department_id: "finance", description: "Warren, Abacus, Closer, Carson, Strategos. Financiële analyse, trading dashboards, revenue operations.", is_restricted: false },
+  { floor_number: 5, floor_name: "Technology Division", department_id: "technology", description: "Elon, Da Vinci, Forge, Jenkins, Nexus, Sid. Server rooms, development labs, security operations center.", is_restricted: false },
+  { floor_number: 4, floor_name: "Marketing & Creative", department_id: "marketing", description: "Gary, Anna, Bard, Brando, Echo, Larry, Picasso. Creative studio, content lab, media center.", is_restricted: false },
+  { floor_number: 3, floor_name: "Enterprise Operations", department_id: "enterprise", description: "Atlas + 13 specialisten. Operations center, HR, facilities, quality assurance, analytics.", is_restricted: false },
+  { floor_number: 2, floor_name: "Functional Medicine Center", department_id: "fmc", description: "David + 8 specialisten. Klinische labs, diagnostiek, patiëntenzorg, longevity research.", is_restricted: false },
+  { floor_number: 1, floor_name: "Justitia Legal Council", department_id: "jlc", description: "Justitia, Adrian, Elena Vasquez, Isabelle, Matteo, Nadia. Juridische bibliotheek, contract review, compliance.", is_restricted: false },
+  { floor_number: -1, floor_name: "Basement 1 — Morgan Trading Desk", department_id: "mtd", description: "Morgan, Atlas MTD, Cipher, Nexus MTD, Pulse, Sentinel, Viper. High-frequency trading floor, quantum-secured comms.", is_restricted: true },
+  { floor_number: -2, floor_name: "Basement 2 — Ultra Trust Agency", department_id: "uta", description: "Victoria + 22 specialisten. Kluis, vertrouwelijke dossiers, client meeting rooms, secure archives.", is_restricted: true },
+  { floor_number: -3, floor_name: "Basement 3 — Task Force Ghost", department_id: "task-force-ghost", description: "Zero, Spectre. SCIF, covert operations, intelligence hub. Toegang alleen met tier-0 clearance.", is_restricted: true },
 ];
 
 const FLOOR_COLORS: Record<string, string> = {
@@ -51,7 +53,30 @@ const FLOOR_COLORS: Record<string, string> = {
 export default function TowerScreen() {
   const colors = useColors();
   const { t } = useLanguage();
+  const { isInternal } = useEdition();
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null);
+
+  // Fetch live building data from DB via tRPC
+  const buildingQuery = trpc.higgins.getBuilding.useQuery(
+    {},
+    { staleTime: 60 * 1000, refetchInterval: 60 * 1000 }
+  );
+
+  // Determine floor list: live DB data → fallback
+  const rawFloors: Floor[] =
+    buildingQuery.data?.floors && buildingQuery.data.floors.length > 0
+      ? buildingQuery.data.floors
+      : HIGGINS_TOWER_FALLBACK;
+
+  // Sort descending by floor_number (top floors first)
+  const sortedFloors = [...rawFloors].sort((a, b) => b.floor_number - a.floor_number);
+
+  // Edition filtering: in whitelabel mode, hide restricted floors (B1–B3)
+  const visibleFloors = isInternal
+    ? sortedFloors
+    : sortedFloors.filter((f) => !f.is_restricted);
+
+  const isLive = buildingQuery.data?.source === "database";
 
   const toggleFloor = useCallback((floorNum: number) => {
     if (Platform.OS !== "web") {
@@ -64,6 +89,8 @@ export default function TowerScreen() {
     return TEAM.filter(a => a.department === deptId);
   }, []);
 
+  const totalAgents = visibleFloors.reduce((sum, f) => sum + getAgentsForDept(f.department_id).length, 0);
+
   return (
     <ScreenContainer className="p-0">
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
@@ -72,13 +99,23 @@ export default function TowerScreen() {
           <Text style={styles.towerIcon}>🏢</Text>
           <Text style={styles.title}>Higgins Tower</Text>
           <Text style={styles.subtitle}>
-            11 verdiepingen · 88 agenten · 11 afdelingen
+            {visibleFloors.length} verdiepingen · {totalAgents} agenten · {visibleFloors.length} afdelingen
           </Text>
+          {/* Source indicator */}
+          <View style={styles.sourceRow}>
+            <View style={[styles.sourceDot, { backgroundColor: isLive ? "#22C55E" : "#9BA1A6" }]} />
+            <Text style={styles.sourceText}>
+              {isLive ? "Live via database" : "Built-in lijst"}
+            </Text>
+            {buildingQuery.isLoading && (
+              <ActivityIndicator size="small" color="#00D4D4" style={{ marginLeft: 8 }} />
+            )}
+          </View>
         </View>
 
         {/* Tower visualization */}
         <View style={styles.towerContainer}>
-          {HIGGINS_TOWER.map((floor) => {
+          {visibleFloors.map((floor) => {
             const isExpanded = expandedFloor === floor.floor_number;
             const floorColor = FLOOR_COLORS[floor.department_id] || "#5A6472";
             const agents = getAgentsForDept(floor.department_id);
@@ -150,10 +187,12 @@ export default function TowerScreen() {
             <View style={[styles.legendDot, { backgroundColor: "#22C55E" }]} />
             <Text style={styles.legendText}>Bovengronds (publiek)</Text>
           </View>
-          <View style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
-            <Text style={styles.legendText}>Basement (classified)</Text>
-          </View>
+          {isInternal && (
+            <View style={styles.legendRow}>
+              <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+              <Text style={styles.legendText}>Basement (classified)</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -183,6 +222,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#9BA1A6",
     marginTop: 4,
+  },
+  sourceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  sourceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  sourceText: {
+    fontSize: 11,
+    color: "#9BA1A6",
   },
   towerContainer: {
     paddingHorizontal: 16,

@@ -213,3 +213,12 @@
 - [x] Tower tab toegevoegd aan tab bar + iPad sidebar
 - [x] Installatiescript gepubliceerd als downloadbaar endpoint: GET /api/mc/install-script
 - [x] Alle tests groen (34 passed), TypeScript 0 fouten
+
+## Fase 23: Tower Refinements + doc-detail Tab Fix
+
+- [x] doc-detail tab verborgen uit tab bar (href: null, screen-only navigeerbaar)
+- [x] Tower gekoppeld aan live building API via tRPC (higgins.getBuilding query, building_floors DB tabel)
+- [x] Edition-filtering in Tower: restricted basements (B1–B3) verborgen in whitelabel-modus
+- [x] Source indicator in Tower header (groen = live via database, grijs = built-in lijst)
+- [x] Legend past zich aan aan editie (classified-legenda alleen zichtbaar in internal mode)
+- [x] Alle tests groen (34 passed), TypeScript 0 fouten

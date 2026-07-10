@@ -124,6 +124,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Hidden screen — navigable via router.push but no tab icon */}
+      <Tabs.Screen
+        name="doc-detail"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 

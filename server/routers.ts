@@ -33,6 +33,8 @@ async function pdfParse(buffer: Buffer): Promise<{ text: string; numpages: numbe
   }
 }
 import { activateAgent, getTaskStatus } from "./manus-agent-service";
+import { buildingFloors } from "../drizzle/schema";
+import { asc } from "drizzle-orm";
 import { getDailyBriefing } from "./daily-briefing-service";
 import { buildRosterPromptBlock, buildRoutingTable, AGENT_MAP, DEPT_KEYWORDS, DEPARTMENTS } from "../shared/roster";
 import { routeCommand, type RoutingResult } from "./command-router";
@@ -980,6 +982,35 @@ Antwoord ALLEEN in dit JSON formaat:
           pageCount,
           uploadedAt: new Date().toISOString(),
         };
+      }),
+
+    // ── Building: haal Higgins Tower verdiepingen op uit de database ──────────
+    getBuilding: publicProcedure
+      .input(z.object({}))
+      .query(async () => {
+        try {
+          const { getDb } = await import("./db");
+          const db = await getDb();
+          if (!db) {
+            return { floors: [], source: "fallback" as const };
+          }
+          const rows = await db
+            .select()
+            .from(buildingFloors)
+            .orderBy(asc(buildingFloors.floorNumber));
+          // Map DB rows to the Floor interface expected by the app
+          const floors = rows.map((r) => ({
+            floor_number: r.floorNumber,
+            floor_name: r.floorName,
+            department_id: r.departmentId ?? "",
+            description: r.description ?? "",
+            is_restricted: r.isRestricted === 1,
+          }));
+          return { floors, source: "database" as const };
+        } catch (err) {
+          console.error("[getBuilding] DB query failed:", err);
+          return { floors: [], source: "fallback" as const };
+        }
       }),
 
     checkBreakingNews: publicProcedure
