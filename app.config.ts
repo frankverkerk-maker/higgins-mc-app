@@ -141,6 +141,14 @@ const config: ExpoConfig = {
         defaultChannel: "default",
       },
     ],
+    [
+      "@config-plugins/react-native-siri-shortcut",
+      [
+        "com.higgins.mc.SendCommand",
+        "com.higgins.mc.MorningBriefing",
+        "com.higgins.mc.StartMeeting",
+      ],
+    ],
   ],
   experiments: {
     typedRoutes: true,

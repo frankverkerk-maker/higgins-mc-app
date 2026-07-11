@@ -239,3 +239,12 @@
 - [x] Bug fix: blurOnSubmit voor mobiel (toetsenbord sluit na verzenden)
 - [x] Technisch ontwerp multi-manager architectuur geschreven (docs/CHAT-AUDIT-AND-MULTI-MANAGER-DESIGN.md)
 - [x] TypeScript 0 fouten
+
+## Fase 26: Siri Shortcut Integratie + App Store Publicatie Guide
+
+- [x] Siri Shortcut config-plugin geïnstalleerd en geconfigureerd (react-native-siri-shortcut + @config-plugins)
+- [x] App Intent handler: "Zeg tegen Higgins" → deep link naar Chat met pre-filled tekst
+- [x] Deep link routing in app: siri-intent → Chat tab met voice/text prefill + startMeeting
+- [x] Siri Shortcuts settings sectie in Instellingen ("+ Siri" knoppen)
+- [x] App Store publicatie stap-voor-stap handleiding geschreven (docs/APP-STORE-PUBLICATIE-HANDLEIDING.md)
+- [x] TypeScript 0 fouten

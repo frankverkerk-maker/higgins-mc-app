@@ -7,6 +7,7 @@ import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 import { MC_TEAM_FEED_URL_KEY } from "@/lib/team-feed";
+import { SiriShortcutsSettings } from "@/components/siri-shortcuts-settings";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -446,6 +447,9 @@ export default function SettingsScreen() {
             <Text style={s.logoutText}>{t.settings.logout}</Text>
           </Pressable>
         </View>
+        {/* ── Siri Shortcuts ── */}
+        <SiriShortcutsSettings />
+
       </ScrollView>
       </AppBackground>
     </ScreenContainer>

@@ -106,7 +106,7 @@ const getInitialMessage = (name: string | null, lang: string): Message => {
 export default function ChatScreen() {
   const { t, language } = useLanguage();
   const { setChatActive, notifyReply } = useChatUnread();
-  const params = useLocalSearchParams<{ prefill?: string }>();
+  const params = useLocalSearchParams<{ prefill?: string; startMeeting?: string }>();
 
   // Flag the chat as focused so incoming replies don't count as unread while reading.
   useFocusEffect(
@@ -154,6 +154,15 @@ export default function ChatScreen() {
       setInput(params.prefill);
     }
   }, [params.prefill]);
+
+  // Siri Shortcut: auto-start meeting recording when launched via "Start Vergadering"
+  useEffect(() => {
+    if (params.startMeeting === "true" && Platform.OS !== "web" && !isMeetingRecording) {
+      // Small delay to ensure audio permissions are ready
+      setTimeout(() => handleMeetingPress(), 500);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.startMeeting]);
 
   // Vergadering opname state
   const [isMeetingRecording, setIsMeetingRecording] = useState(false);

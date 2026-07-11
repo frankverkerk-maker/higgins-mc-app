@@ -22,6 +22,7 @@ import { SplashAnimation } from "@/components/splash-animation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { USER_NAME_KEY } from "@/app/onboarding";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { useSiriShortcuts } from "@/hooks/use-siri-shortcuts";
 import { LanguageProvider } from "@/lib/language-provider";
 import { EditionProvider } from "@/lib/edition-provider";
 import { ChatUnreadProvider } from "@/lib/chat-unread-provider";
@@ -36,6 +37,7 @@ export const unstable_settings = {
 // Inner component — inside tRPC provider zodat usePushNotifications de tRPC client kan gebruiken
 function AppWithPush() {
   usePushNotifications();
+  useSiriShortcuts();
   return null;
 }
 
