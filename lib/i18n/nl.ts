@@ -119,6 +119,7 @@ export const nl = {
     uploadPickerTitle: "Document kiezen",
     uploadUploading: "Document uploaden...",
     uploadError: "Upload mislukt. Probeer opnieuw.",
+    errorGeneric: "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
     uploadOpenBtn: "Openen",
   },
 

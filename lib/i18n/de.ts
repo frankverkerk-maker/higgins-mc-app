@@ -120,6 +120,7 @@ export const de: Translations = {
     uploadPickerTitle: "Dokument auswählen",
     uploadUploading: "Dokument wird hochgeladen...",
     uploadError: "Upload fehlgeschlagen. Bitte erneut versuchen.",
+    errorGeneric: "Entschuldigung, ich konnte Ihre Nachricht nicht verarbeiten. Bitte versuchen Sie es erneut.",
     uploadOpenBtn: "Öffnen",
   },
 

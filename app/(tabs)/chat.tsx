@@ -423,8 +423,11 @@ export default function ChatScreen() {
       }
 
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setMessages(prev => [...prev, assistantMsg]);
-      await saveMessages([...messages, assistantMsg]);
+      setMessages(prev => {
+        const updated = [...prev, assistantMsg];
+        saveMessages(updated);
+        return updated;
+      });
       notifyHigginsReply(result.reply);
     } catch (_) {
       // silently fail — user can retry
@@ -433,7 +436,7 @@ export default function ChatScreen() {
     setPendingDelegation(null);
     setIsLoading(false);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [pendingDelegation, chatMutation, userName, language, messages, saveMessages, notifyHigginsReply]);
+  }, [pendingDelegation, chatMutation, userName, language, saveMessages, notifyHigginsReply]);
 
   // ─── Wijs een pending delegatie af ──────────────────────────────────────
   const rejectDelegation = useCallback(() => {
@@ -526,7 +529,7 @@ export default function ChatScreen() {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
+        content: t.chat.errorGeneric || "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
         timestamp: new Date(),
         type: "text",
       };
@@ -1050,7 +1053,7 @@ export default function ChatScreen() {
             multiline
             returnKeyType="send"
             onSubmitEditing={() => sendMessage()}
-            blurOnSubmit={false}
+            blurOnSubmit={Platform.OS !== "web"}
           />
 
           {/* PDF genereer knop — zichtbaar als er een recent assistant bericht is */}

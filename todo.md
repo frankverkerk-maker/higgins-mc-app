@@ -230,3 +230,12 @@
 - [x] Tower long-press → Chat: lang indrukken op verdieping opent Chat met pre-filled Higgins-opdracht over die afdeling
 - [x] Chat.tsx: useLocalSearchParams + prefill effect voor Tower-navigatie
 - [x] Alle tests groen (34 passed), TypeScript 0 fouten
+
+## Fase 25: Chat Audit + Multi-Manager Technisch Ontwerp
+
+- [x] Chat.tsx volledig geaudit (1260 regels)
+- [x] Bug fix: stale messages in confirmDelegation (closure → functional setState)
+- [x] Bug fix: hardcoded foutmelding → i18n (errorGeneric key NL/DE/EN)
+- [x] Bug fix: blurOnSubmit voor mobiel (toetsenbord sluit na verzenden)
+- [x] Technisch ontwerp multi-manager architectuur geschreven (docs/CHAT-AUDIT-AND-MULTI-MANAGER-DESIGN.md)
+- [x] TypeScript 0 fouten

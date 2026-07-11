@@ -120,6 +120,7 @@ export const en: Translations = {
     uploadPickerTitle: "Choose document",
     uploadUploading: "Uploading document...",
     uploadError: "Upload failed. Please try again.",
+    errorGeneric: "My apologies, I could not process your message. Please try again.",
     uploadOpenBtn: "Open",
   },
 
