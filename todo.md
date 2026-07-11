@@ -248,3 +248,17 @@
 - [x] Siri Shortcuts settings sectie in Instellingen ("+ Siri" knoppen)
 - [x] App Store publicatie stap-voor-stap handleiding geschreven (docs/APP-STORE-PUBLICATIE-HANDLEIDING.md)
 - [x] TypeScript 0 fouten
+
+## Fase 27: Volledige App Audit + Bug Fixes
+
+- [x] Volledige code-audit uitgevoerd (12 schermen + server)
+- [x] BUG-1 FIXED: Logout-knop werkt nu (wist data + navigeert naar onboarding)
+- [x] BUG-2 FIXED: doc-detail.tsx dead client-side API call verwijderd
+- [x] BUG-3 FIXED: Settings toggles worden nu gepersisteerd in AsyncStorage
+- [x] BUG-4 FIXED: docs.tsx gebruikt nu USER_NAME_KEY constant i.p.v. hardcoded string
+- [x] MED-1 FIXED: Onboarding flash voorkomen (Stack pas renderen na check)
+- [x] LOW-1 FIXED: Siri Shortcuts sectie boven logout geplaatst
+- [x] LOW-3 FIXED: Ongebruikte SIDEBAR_WIDTH import verwijderd
+- [x] Siri config-plugin error gefixt (broken build path gecommentarieerd)
+- [x] Audit rapport geschreven (docs/AUDIT-FINDINGS.md)
+- [x] 34 tests groen, TypeScript 0 fouten

@@ -4,7 +4,7 @@ import { Platform, View, useWindowDimensions } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SidebarNav, SIDEBAR_WIDTH } from "@/components/sidebar-nav";
+import { SidebarNav } from "@/components/sidebar-nav";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/language-provider";
 import { useChatUnread } from "@/lib/chat-unread-provider";

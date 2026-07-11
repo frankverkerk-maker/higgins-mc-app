@@ -141,14 +141,9 @@ const config: ExpoConfig = {
         defaultChannel: "default",
       },
     ],
-    [
-      "@config-plugins/react-native-siri-shortcut",
-      [
-        "com.higgins.mc.SendCommand",
-        "com.higgins.mc.MorningBriefing",
-        "com.higgins.mc.StartMeeting",
-      ],
-    ],
+    // Siri Shortcuts: config plugin disabled until native build (EAS Build)
+    // The react-native-siri-shortcut package works at runtime but the config
+    // plugin has a broken build path. Re-enable after verifying the plugin build.
   ],
   experiments: {
     typedRoutes: true,

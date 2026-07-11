@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch, TextInput, ActivityIndicator, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 import { MC_TEAM_FEED_URL_KEY } from "@/lib/team-feed";
 import { SiriShortcutsSettings } from "@/components/siri-shortcuts-settings";
+import { USER_NAME_KEY } from "@/app/onboarding";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -43,8 +45,14 @@ function hapticNotification(type: Haptics.NotificationFeedbackType) {
 
 const LOCATION_KEY = "@higgins_weather_location";
 
+// AsyncStorage keys for persisted settings
+const SETTINGS_NOTIFICATIONS_KEY = "@higgins_settings_notifications";
+const SETTINGS_BRIEFING_KEY = "@higgins_settings_briefing";
+const SETTINGS_HAPTIC_KEY = "@higgins_settings_haptic";
+
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
+  const router = useRouter();
   const [notifications, setNotifications] = useState(true);
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -63,6 +71,16 @@ export default function SettingsScreen() {
     });
     AsyncStorage.getItem(MC_TEAM_FEED_URL_KEY).then((val) => {
       if (val) { setFeedInput(val); setFeedStatus("unknown"); }
+    });
+    // Load persisted toggle settings
+    AsyncStorage.getItem(SETTINGS_NOTIFICATIONS_KEY).then((val) => {
+      if (val !== null) setNotifications(val === "true");
+    });
+    AsyncStorage.getItem(SETTINGS_BRIEFING_KEY).then((val) => {
+      if (val !== null) setBriefingEnabled(val === "true");
+    });
+    AsyncStorage.getItem(SETTINGS_HAPTIC_KEY).then((val) => {
+      if (val !== null) setHapticEnabled(val === "true");
     });
   }, []);
 
@@ -120,13 +138,51 @@ export default function SettingsScreen() {
     setLocationSaving(false);
   };
 
-  const handleToggle = (setter: (v: boolean) => void, value: boolean) => {
+  const handleToggle = (setter: (v: boolean) => void, value: boolean, storageKey: string) => {
     haptic(Haptics.ImpactFeedbackStyle.Medium);
-    setter(!value);
+    const newValue = !value;
+    setter(newValue);
+    AsyncStorage.setItem(storageKey, String(newValue)).catch(() => {});
   };
 
   const handleLogout = () => {
-    hapticNotification(Haptics.NotificationFeedbackType.Warning);
+    const title = language === "de" ? "Abmelden" : language === "en" ? "Log out" : "Uitloggen";
+    const message = language === "de"
+      ? "Möchten Sie sich wirklich abmelden? Alle lokalen Daten werden gelöscht."
+      : language === "en"
+      ? "Are you sure you want to log out? All local data will be cleared."
+      : "Weet je zeker dat je wilt uitloggen? Alle lokale gegevens worden gewist.";
+    const cancel = language === "de" ? "Abbrechen" : language === "en" ? "Cancel" : "Annuleren";
+    const confirm = language === "de" ? "Abmelden" : language === "en" ? "Log out" : "Uitloggen";
+
+    Alert.alert(title, message, [
+      { text: cancel, style: "cancel" },
+      {
+        text: confirm,
+        style: "destructive",
+        onPress: async () => {
+          hapticNotification(Haptics.NotificationFeedbackType.Warning);
+          try {
+            // Clear all user data
+            await AsyncStorage.multiRemove([
+              USER_NAME_KEY,
+              "higgins_chat_history_v2",
+              "@higgins_docs_library",
+              LOCATION_KEY,
+              "@higgins_weather_coords",
+              MC_TEAM_FEED_URL_KEY,
+              SETTINGS_NOTIFICATIONS_KEY,
+              SETTINGS_BRIEFING_KEY,
+              SETTINGS_HAPTIC_KEY,
+            ]);
+            // Navigate to onboarding
+            router.replace("/onboarding");
+          } catch (_) {
+            Alert.alert("Fout", "Uitloggen mislukt. Probeer opnieuw.");
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -366,7 +422,7 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={notifications}
-                onValueChange={(v) => handleToggle(setNotifications, notifications)}
+                onValueChange={() => handleToggle(setNotifications, notifications, SETTINGS_NOTIFICATIONS_KEY)}
                 trackColor={{ true: C.cyan, false: C.border }}
                 thumbColor={notifications ? "#0A0C0E" : "#E8EDF2"}
               />
@@ -385,7 +441,7 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={briefingEnabled}
-                onValueChange={(v) => handleToggle(setBriefingEnabled, briefingEnabled)}
+                onValueChange={() => handleToggle(setBriefingEnabled, briefingEnabled, SETTINGS_BRIEFING_KEY)}
                 trackColor={{ true: C.cyan, false: C.border }}
                 thumbColor={briefingEnabled ? "#0A0C0E" : "#E8EDF2"}
               />
@@ -404,7 +460,7 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={hapticEnabled}
-                onValueChange={(v) => handleToggle(setHapticEnabled, hapticEnabled)}
+                onValueChange={() => handleToggle(setHapticEnabled, hapticEnabled, SETTINGS_HAPTIC_KEY)}
                 trackColor={{ true: C.cyan, false: C.border }}
                 thumbColor={hapticEnabled ? "#0A0C0E" : "#E8EDF2"}
               />
@@ -438,6 +494,9 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ── Siri Shortcuts ── */}
+        <SiriShortcutsSettings />
+
         {/* ── Uitloggen ── */}
         <View style={[s.section, { marginBottom: 8 }]}>
           <Pressable
@@ -447,8 +506,6 @@ export default function SettingsScreen() {
             <Text style={s.logoutText}>{t.settings.logout}</Text>
           </Pressable>
         </View>
-        {/* ── Siri Shortcuts ── */}
-        <SiriShortcutsSettings />
 
       </ScrollView>
       </AppBackground>

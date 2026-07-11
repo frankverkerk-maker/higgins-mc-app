@@ -5,16 +5,13 @@ import {
   StyleSheet,
   Platform,
   Pressable,
-  ActivityIndicator,
   Alert,
   Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
-import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 
 const C = {
@@ -40,56 +37,8 @@ export default function DocDetailScreen() {
     taskId: string;
   }>();
 
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Fetch full analysis from Manus API if taskId is available
-  useEffect(() => {
-    if (taskId) {
-      fetchAnalysis();
-    }
-  }, [taskId]);
-
-  const fetchAnalysis = async () => {
-    if (!taskId) return;
-    setIsLoading(true);
-    try {
-      const apiKey = process.env.MANUS_API_KEY;
-      if (!apiKey) {
-        setAnalysis(higginsResponse || "Analyse niet beschikbaar");
-        return;
-      }
-
-      const response = await fetch(
-        `https://api.manus.ai/v2/task.listMessages?task_id=${encodeURIComponent(taskId)}&limit=10`,
-        {
-          headers: {
-            "x-manus-api-key": apiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        setAnalysis(higginsResponse || "Analyse niet beschikbaar");
-        return;
-      }
-
-      const data = await response.json() as {
-        messages?: Array<{ type: string; content?: string; text?: string }>;
-      };
-
-      const messages = data.messages || [];
-      const assistantMsg = messages.find((m) => m.type === "assistant_message");
-      const fullAnalysis = assistantMsg?.content || assistantMsg?.text || higginsResponse;
-
-      setAnalysis(fullAnalysis || "Analyse niet beschikbaar");
-    } catch (error) {
-      console.error("Error fetching analysis:", error);
-      setAnalysis(higginsResponse || "Analyse niet beschikbaar");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Analysis content comes from the higginsResponse param (server-side generated)
+  const analysis = higginsResponse || null;
 
   const handleOpenInManus = async () => {
     if (!taskId) {
@@ -145,30 +94,10 @@ export default function DocDetailScreen() {
           <View style={s.section}>
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Analyse</Text>
-              {taskId && (
-                <Pressable
-                  style={({ pressed }) => [s.refreshBtn, pressed && { opacity: 0.6 }]}
-                  onPress={fetchAnalysis}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={C.cyan} />
-                  ) : (
-                    <Text style={s.refreshBtnText}>↻</Text>
-                  )}
-                </Pressable>
-              )}
             </View>
 
             <View style={s.analysisCard}>
-              {isLoading ? (
-                <View style={s.loadingContainer}>
-                  <ActivityIndicator size="large" color={C.cyan} />
-                  <Text style={s.loadingText}>Analyse wordt geladen...</Text>
-                </View>
-              ) : (
-                <Text style={s.analysisText}>{analysis || higginsResponse || "Geen analyse beschikbaar"}</Text>
-              )}
+              <Text style={s.analysisText}>{analysis || "Geen analyse beschikbaar"}</Text>
             </View>
           </View>
 

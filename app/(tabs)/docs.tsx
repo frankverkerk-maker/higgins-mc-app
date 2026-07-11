@@ -21,6 +21,7 @@ import { AppBackground } from "@/components/app-background";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
 import { getApiBaseUrl } from "@/constants/oauth";
+import { USER_NAME_KEY } from "@/app/onboarding";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -96,7 +97,7 @@ export default function DocsScreen() {
 
   useEffect(() => {
     loadDocs();
-    AsyncStorage.getItem("higgins_user_name").then(n => setUserName(n));
+    AsyncStorage.getItem(USER_NAME_KEY).then(n => setUserName(n));
   }, [loadDocs]);
 
   // ─── Synchroniseer met chat history ─────────────────────────────────────
