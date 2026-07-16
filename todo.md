@@ -271,3 +271,10 @@
 - [x] Offline message queue: lib/offline-queue.ts + hooks/use-offline-queue.ts gebouwd
 - [x] Haptic voice feedback: al aanwezig in chat.tsx (Success notification bij elk Higgins-antwoord)
 - [x] Audit rapport als Engelse PDF opgeleverd (Higgins-MC-Full-Audit-Report.pdf)
+
+## Fase 29: Offline Queue Integratie + Push Notifications + EAS Build
+
+- [x] Offline queue geïntegreerd in chat.tsx (isOnline check, enqueue, flush-on-focus, ⏳/⚠️ indicator)
+- [x] Push notifications server-side geactiveerd: sendChatNotification bij elk Higgins-antwoord, sendApprovalNotification bij pending delegatie
+- [x] EAS Build configuratie compleet + stap-voor-stap handleiding (docs/EAS-BUILD-TESTFLIGHT-GUIDE.md)
+- [x] TypeScript 0 fouten, 34 tests groen

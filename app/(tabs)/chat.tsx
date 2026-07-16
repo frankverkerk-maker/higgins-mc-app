@@ -38,6 +38,7 @@ import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
 import { DelegationTracker } from "@/components/delegation-tracker";
+import { isOnline, enqueueMessage, getQueue, dequeueMessage } from "@/lib/offline-queue";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -76,6 +77,8 @@ type Message = {
   content: string;
   timestamp: Date;
   type?: MessageType;
+  // Offline queue status
+  status?: "sent" | "queued" | "failed";
   // PDF bijlage velden
   pdfUrl?: string;
   pdfFileName?: string;
@@ -163,6 +166,39 @@ export default function ChatScreen() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.startMeeting]);
+
+  // ── Offline queue: flush queued messages when chat is focused ──────────
+  useFocusEffect(
+    useCallback(() => {
+      const flushOfflineQueue = async () => {
+        const queue = await getQueue();
+        if (queue.length === 0) return;
+        const online = await isOnline();
+        if (!online) return;
+
+        for (const qMsg of queue) {
+          try {
+            await chatMutation.mutateAsync({
+              message: qMsg.text,
+              history: [],
+              userName: userName ?? undefined,
+              language,
+            });
+            await dequeueMessage(qMsg.id);
+            // Update the queued message status to sent
+            setMessages(prev => prev.map(m =>
+              m.status === "queued" && m.content === qMsg.text
+                ? { ...m, status: "sent" as const }
+                : m
+            ));
+          } catch {
+            break; // Stop flushing on first failure
+          }
+        }
+      };
+      flushOfflineQueue();
+    }, [userName, language])
+  );
 
   // Vergadering opname state
   const [isMeetingRecording, setIsMeetingRecording] = useState(false);
@@ -477,7 +513,21 @@ export default function ChatScreen() {
     const history: Array<{ role: "user" | "assistant"; content: string }> = historyRef.current.slice(-10);
 
     try {
-      // ── Alle routing gebeurt nu server-side via de command router ────────
+      // ── Offline check: queue if no connectivity ──────────────────────────
+      const online = await isOnline();
+      if (!online) {
+        // Mark message as queued and save
+        const queuedMsg: Message = { ...userMsg, status: "queued" };
+        const queuedMessages = [...messages, queuedMsg];
+        setMessages(queuedMessages);
+        await saveMessages(queuedMessages);
+        await enqueueMessage(text);
+        setIsLoading(false);
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+
+      // ── Alle routing gebeurt nu server-side via de command router ────────────
       const agentContext = buildAgentContext();
       const messageWithContext = agentContext ? text + agentContext : text;
 
@@ -939,9 +989,17 @@ export default function ChatScreen() {
               </View>
             </View>
           )}
-          <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser]}>
-            {formatTime(item.timestamp)}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            {isUser && item.status === "queued" && (
+              <Text style={{ fontSize: 10, color: "#F59E0B" }}>⏳</Text>
+            )}
+            {isUser && item.status === "failed" && (
+              <Text style={{ fontSize: 10, color: "#EF4444" }}>⚠️</Text>
+            )}
+            <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser]}>
+              {formatTime(item.timestamp)}
+            </Text>
+          </View>
         </View>
       </View>
     );

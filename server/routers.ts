@@ -6,7 +6,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut, storagePut as storageUpload } from "./storage";
-import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification, registerPushToken } from "./push-service";
+import { pushTokenStore, sendExpoPushNotifications, sendBreakingNewsNotification, sendChatNotification, sendApprovalNotification, registerPushToken } from "./push-service";
 import { generateResponsePdf } from "./pdf-generator";
 // Dynamic import for pdf-parse (ESM compatible)
 let pdfParseModule: any = null;
@@ -258,6 +258,13 @@ export const appRouter = router({
 
         // ── Step 2b: Confirmation needed (low confidence delegation) ──────────
         if (routing.intent !== "question" && !routing.shouldDelegateDirect && routing.targetAgent && routing.taskDescription) {
+          // Push notification: approval required
+          sendApprovalNotification({
+            agentName: routing.targetAgent,
+            action: routing.taskDescription.substring(0, 100),
+            language: lang,
+          }).catch(() => {});
+
           return {
             reply: routing.explanation,
             timestamp: new Date().toISOString(),
@@ -289,6 +296,9 @@ export const appRouter = router({
           : Array.isArray(rawContent)
             ? rawContent.map((c) => (typeof c === "string" ? c : (c as any).text ?? "")).join("")
             : "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.";
+
+        // Push notification: Higgins replied (fire-and-forget, don't block response)
+        sendChatNotification(reply, lang).catch(() => {});
 
         return { reply, timestamp: new Date().toISOString() };
       }),
