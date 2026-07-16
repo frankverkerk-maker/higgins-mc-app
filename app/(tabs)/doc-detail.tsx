@@ -42,7 +42,7 @@ export default function DocDetailScreen() {
 
   const handleOpenInManus = async () => {
     if (!taskId) {
-      Alert.alert("Geen taak ID", "Dit document heeft geen Manus taak ID");
+      Alert.alert(t.docDetail.noTaskId, t.docDetail.noTaskIdDesc);
       return;
     }
     if (Platform.OS !== "web") {
@@ -55,12 +55,12 @@ export default function DocDetailScreen() {
         await Linking.openURL(url);
       } else {
         Alert.alert(
-          "Analyse bekijken",
-          `Taak ID: ${taskId}\n\nOpen manus.im om de volledige analyse te bekijken.`
+          t.docDetail.viewAnalysis,
+          `Taak ID: ${taskId}\n\n${t.docDetail.viewAnalysisDesc}`
         );
       }
     } catch (error) {
-      Alert.alert("Fout", "Kan de analyse pagina niet openen");
+      Alert.alert(t.docDetail.errorOpen, t.docDetail.errorOpenDesc);
     }
   };
 
@@ -78,26 +78,26 @@ export default function DocDetailScreen() {
               style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
               onPress={() => router.back()}
             >
-              <Text style={s.backBtnText}>← Terug</Text>
+              <Text style={s.backBtnText}>{t.docDetail.back}</Text>
             </Pressable>
-            <Text style={s.headerTitle}>Document Analyse</Text>
+            <Text style={s.headerTitle}>{t.docDetail.title}</Text>
             <View style={{ width: 40 }} />
           </View>
 
           {/* Document Info */}
           <View style={s.card}>
             <Text style={s.fileName}>{fileName}</Text>
-            <Text style={s.meta}>Higgins Analyse</Text>
+            <Text style={s.meta}>{t.docDetail.higginsAnalysis}</Text>
           </View>
 
           {/* Analysis Section */}
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>Analyse</Text>
+              <Text style={s.sectionTitle}>{t.docDetail.analysis}</Text>
             </View>
 
             <View style={s.analysisCard}>
-              <Text style={s.analysisText}>{analysis || "Geen analyse beschikbaar"}</Text>
+              <Text style={s.analysisText}>{analysis || t.docDetail.noAnalysis}</Text>
             </View>
           </View>
 
@@ -108,7 +108,7 @@ export default function DocDetailScreen() {
                 style={({ pressed }) => [s.manusBtn, pressed && { opacity: 0.7 }]}
                 onPress={handleOpenInManus}
               >
-                <Text style={s.manusBtnText}>Bekijk in Manus →</Text>
+                <Text style={s.manusBtnText}>{t.docDetail.viewInManus}</Text>
               </Pressable>
             </View>
           )}

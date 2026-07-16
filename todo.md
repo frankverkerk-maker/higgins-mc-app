@@ -262,3 +262,12 @@
 - [x] Siri config-plugin error gefixt (broken build path gecommentarieerd)
 - [x] Audit rapport geschreven (docs/AUDIT-FINDINGS.md)
 - [x] 34 tests groen, TypeScript 0 fouten
+
+## Fase 28: i18n Fixes + Offline Queue + Haptic Voice Feedback
+
+- [x] MED-3: doc-detail.tsx hardcoded Dutch strings → i18n (NL/DE/EN)
+- [x] MED-4: settings.tsx Alert messages → i18n (NL/DE/EN) — logout alerts localized
+- [ ] MED-5: index.tsx weather/news inline ternaries → i18n keys (deferred)
+- [x] Offline message queue: lib/offline-queue.ts + hooks/use-offline-queue.ts gebouwd
+- [x] Haptic voice feedback: al aanwezig in chat.tsx (Success notification bij elk Higgins-antwoord)
+- [x] Audit rapport als Engelse PDF opgeleverd (Higgins-MC-Full-Audit-Report.pdf)

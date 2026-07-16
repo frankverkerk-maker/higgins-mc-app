@@ -204,6 +204,22 @@ export const nl = {
     commandPrefix: "Higgins, ik heb een opdracht voor de afdeling",
   },
 
+  // ─── Document Detail ────────────────────────────────────────────────────────
+  docDetail: {
+    back: "← Terug",
+    title: "Document Analyse",
+    analysis: "Analyse",
+    higginsAnalysis: "Higgins Analyse",
+    noAnalysis: "Geen analyse beschikbaar",
+    viewInManus: "Bekijk in Manus →",
+    noTaskId: "Geen taak ID",
+    noTaskIdDesc: "Dit document heeft geen Manus taak ID",
+    viewAnalysis: "Analyse bekijken",
+    viewAnalysisDesc: "Open manus.im om de volledige analyse te bekijken.",
+    errorOpen: "Fout",
+    errorOpenDesc: "Kan de analyse pagina niet openen",
+  },
+
   // ─── Push notificaties ───────────────────────────────────────────────────────
   push: {
     approvalTitle: "Goedkeuring vereist",
@@ -224,6 +240,7 @@ export type Translations = {
   chat: Record<string, string>;
   agents: Record<string, string>;
   tower: Record<string, string>;
+  docDetail: Record<string, string>;
   settings: Record<string, string>;
   push: Record<string, string>;
   higginsLanguage: string;

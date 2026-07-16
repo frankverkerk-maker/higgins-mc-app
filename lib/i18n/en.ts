@@ -205,6 +205,22 @@ export const en: Translations = {
     commandPrefix: "Higgins, I have a task for the department",
   },
 
+  // ─── Document Detail ────────────────────────────────────────────────────────
+  docDetail: {
+    back: "← Back",
+    title: "Document Analysis",
+    analysis: "Analysis",
+    higginsAnalysis: "Higgins Analysis",
+    noAnalysis: "No analysis available",
+    viewInManus: "View in Manus →",
+    noTaskId: "No task ID",
+    noTaskIdDesc: "This document has no Manus task ID",
+    viewAnalysis: "View analysis",
+    viewAnalysisDesc: "Open manus.im to view the full analysis.",
+    errorOpen: "Error",
+    errorOpenDesc: "Cannot open the analysis page",
+  },
+
   // ─── Push notifications ──────────────────────────────────────────────────────
   push: {
     approvalTitle: "Approval required",
