@@ -83,7 +83,7 @@ export const en: Translations = {
     taskProcessEmails: "Processing emails",
     taskAwaitingOrder: "Awaiting orders",
     // Mock approvals (fallback)
-    approvalElenaAction: "Send email to 3 partner clinics about Q3 planning",
+    approvalNathalieAction: "Send email to 3 partner clinics about Q3 planning",
     approvalWarrenAction: "Execute portfolio rebalancing (€12,400)",
     timeMinAgo: "min ago",
     timeHourAgo: "hr ago",

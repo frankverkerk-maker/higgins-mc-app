@@ -59,7 +59,7 @@ type ActivityMap = Record<string, { status: "active" | "idle" | "busy"; task: st
 function buildMockActivity(t: any): ActivityMap {
   return {
     "Higgins":  { status: "active", task: t.dashboard.taskPrepBriefing },
-    "Elena":    { status: "active", task: t.dashboard.taskProcessEmails },
+    "Nathalie": { status: "active", task: t.dashboard.taskProcessEmails },
     "Gary":     { status: "busy",   task: t.dashboard.qcSendReport },
     "Elon":     { status: "idle",   task: t.dashboard.taskAwaitingOrder },
     "Warren":   { status: "busy",   task: t.dashboard.prio1 },
@@ -140,7 +140,7 @@ export default function TeamPulseScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
-            {["Higgins", "Elena", "Gary", "Warren"].map((name, i) => {
+            {["Higgins", "Nathalie", "Gary", "Warren"].map((name, i) => {
               const act = activity[name] ?? { status: "idle", task: t.dashboard.taskAwaitingOrder };
               const agent = TEAM.find(a => a.name === name)!;
               const isHiggins = name === "Higgins";

@@ -79,7 +79,7 @@ INSERT INTO `agent_registry`
 VALUES
 -- EXECUTIVE (6)
 ('Higgins','Chief Operating Officer','Executive Office','executive','Claude Opus','Anthropic','tier-0','Frank',1,0,0,1),
-('Elena','Executive Assistant','Executive Office','executive','Claude Sonnet','Anthropic','tier-0','Higgins',1,0,0,1),
+('Nathalie','Executive Assistant','Executive Office','executive','Claude Sonnet','Anthropic','tier-0','Higgins',1,0,0,1),
 ('Barbara','International Relations','Executive Office','executive','Claude Sonnet','Anthropic','tier-1','Higgins',0,0,0,1),
 ('Catharina','Research Director','Executive Office','executive','Claude Sonnet','Anthropic','tier-1','Higgins',0,0,0,1),
 ('Rosi','Community Manager','Executive Office','executive','Claude Sonnet','Anthropic','tier-1','Higgins',0,0,0,1),
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS building_floors (
 );
 
 INSERT INTO building_floors (floor_number, floor_name, department_id, description, is_restricted) VALUES
-(8,  'Penthouse — Executive Suite',      'executive',        'Higgins, Elena, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.', false),
+(8,  'Penthouse — Executive Suite',      'executive',        'Higgins, Nathalie, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.', false),
 (7,  'Einstein Lab',                      'einstein-lab',     'Einstein, Curie, Tesla. Onderzoekslaboratoria, quantum computing cluster, innovatie-hub.', false),
 (6,  'Finance & Strategy',                'finance',          'Warren, Abacus, Closer, Carson, Strategos. Financiële analyse, trading dashboards, revenue operations.', false),
 (5,  'Technology Division',               'technology',       'Elon, Da Vinci, Forge, Jenkins, Nexus, Sid. Server rooms, development labs, security operations center.', false),

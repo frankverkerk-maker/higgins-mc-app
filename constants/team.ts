@@ -81,7 +81,7 @@ export const DEPARTMENT_ORDER: string[] = DEPARTMENTS.map(d => d.name);
 export const TEAM: Agent[] = [
   // ── 1. Executive Office (6) ─────────────────────────────────────────────────
   { name: "Higgins",   role: "Chief Operating Officer", department: "Executive Office", isOrchestrator: true, team: "tier-0", reportsTo: "Frank", model: "Claude Opus", provider: "Anthropic" },
-  { name: "Elena",     role: "Executive Assistant",     department: "Executive Office", isOrchestrator: true, team: "tier-0", reportsTo: "Higgins", model: "Claude Sonnet", provider: "Anthropic" },
+  { name: "Nathalie",  role: "Executive Assistant",     department: "Executive Office", isOrchestrator: true, team: "tier-0", reportsTo: "Higgins", model: "Claude Sonnet", provider: "Anthropic" },
   { name: "Barbara",   role: "International Relations", department: "Executive Office", team: "tier-1", reportsTo: "Higgins", model: "Claude Sonnet", provider: "Anthropic" },
   { name: "Catharina", role: "Research Director",       department: "Executive Office", team: "tier-1", reportsTo: "Higgins", model: "Claude Sonnet", provider: "Anthropic" },
   { name: "Rosi",      role: "Community Manager",       department: "Executive Office", team: "tier-1", reportsTo: "Higgins", model: "Claude Sonnet", provider: "Anthropic" },
@@ -209,7 +209,7 @@ export function getDepartments(edition: Edition = "internal"): DepartmentMeta[] 
 // Kernteam voor de "Live activiteit" sectie bovenaan Team Pulse
 export const PULSE_TEAM: Agent[] = [
   TEAM.find(a => a.name === "Higgins")!,
-  TEAM.find(a => a.name === "Elena")!,
+  TEAM.find(a => a.name === "Nathalie")!,
   TEAM.find(a => a.name === "Gary")!,
   TEAM.find(a => a.name === "Elon")!,
 ];

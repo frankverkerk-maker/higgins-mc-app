@@ -29,7 +29,7 @@ describe("i18n locale consistency", () => {
       "prio1", "prio2", "prio3",
       "qcDailyBrief", "qcPlanMeeting", "qcSendReport", "qcDelegateEmail", "qcSearchInfo", "qcQuickAction",
       "taskPrepBriefing", "taskProcessEmails", "taskAwaitingOrder",
-      "approvalElenaAction", "approvalWarrenAction", "timeMinAgo", "timeHourAgo",
+      "approvalNathalieAction", "approvalWarrenAction", "timeMinAgo", "timeHourAgo",
     ];
     for (const key of required) {
       expect((nl.dashboard as any)[key], `nl.${key}`).toBeTruthy();

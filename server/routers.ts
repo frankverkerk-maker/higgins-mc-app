@@ -322,7 +322,7 @@ export const appRouter = router({
           audioUrl,
           language: "nl",
           // Vocabulary hints: Whisper gebruikt de prompt als context om eigennamen correct te herkennen
-          prompt: "Higgins, Mission Control, Carpe Diem, Frank, Elena, Warren, Gary, Elon, Justitia, Swiss Vitality, goedkeuren, afwijzen, briefing, vergadering",
+          prompt: "Higgins, Mission Control, Carpe Diem, Frank, Nathalie, Warren, Gary, Elon, Justitia, Swiss Vitality, goedkeuren, afwijzen, briefing, vergadering",
         });
 
         // Check for transcription errors
@@ -348,7 +348,7 @@ export const appRouter = router({
             // Fallback: return mock data
             return {
               "Higgins": { status: "active", task: "Briefing voorbereiden" },
-              "Elena": { status: "active", task: "E-mails verwerken" },
+              "Nathalie": { status: "active", task: "E-mails verwerken" },
               "Gary": { status: "busy", task: "Campagne analyse" },
               "Elon": { status: "idle", task: "Wacht op opdracht" },
               "Warren": { status: "busy", task: "Q2 rapport opstellen" },
@@ -370,7 +370,7 @@ export const appRouter = router({
             // Fallback op error
             return {
               "Higgins": { status: "active", task: "Briefing voorbereiden" },
-              "Elena": { status: "active", task: "E-mails verwerken" },
+              "Nathalie": { status: "active", task: "E-mails verwerken" },
               "Gary": { status: "busy", task: "Campagne analyse" },
               "Elon": { status: "idle", task: "Wacht op opdracht" },
               "Warren": { status: "busy", task: "Q2 rapport opstellen" },
@@ -397,7 +397,7 @@ export const appRouter = router({
           // Fallback op error
           return {
             "Higgins": { status: "active", task: "Briefing voorbereiden" },
-            "Elena": { status: "active", task: "E-mails verwerken" },
+            "Nathalie": { status: "active", task: "E-mails verwerken" },
             "Gary": { status: "busy", task: "Campagne analyse" },
             "Elon": { status: "idle", task: "Wacht op opdracht" },
             "Warren": { status: "busy", task: "Q2 rapport opstellen" },
@@ -421,7 +421,7 @@ export const appRouter = router({
           if (!apiKey) {
             // Fallback: return mock data als API key niet beschikbaar is
             return [
-              { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+              { id: "a1", agent: "Nathalie", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
               { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
             ];
           }
@@ -439,7 +439,7 @@ export const appRouter = router({
           if (!response.ok) {
             // Fallback op error
             return [
-              { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+              { id: "a1", agent: "Nathalie", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
               { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
             ];
           }
@@ -461,7 +461,7 @@ export const appRouter = router({
           console.error("Error fetching pending approvals:", error);
           // Fallback op error
           return [
-            { id: "a1", agent: "Elena", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
+            { id: "a1", agent: "Nathalie", action: "E-mail versturen naar 3 partner clinics over Q3-planning", time: "14 min geleden" },
             { id: "a2", agent: "Warren", action: "Portfolio herbalancering uitvoeren (€12.400)", time: "1 uur geleden" },
           ];
         }
@@ -532,7 +532,7 @@ export const appRouter = router({
           audioUrl,
           language: "nl",
           // Vocabulary hints voor vergadering transcriptie
-          prompt: "Higgins, Mission Control, Carpe Diem, Frank Verkerk, Elena, Warren, Gary, Elon, Justitia, Swiss Vitality Clinics, zakelijke vergadering, besluiten, actiepunten, follow-up",
+          prompt: "Higgins, Mission Control, Carpe Diem, Frank Verkerk, Nathalie, Warren, Gary, Elon, Justitia, Swiss Vitality Clinics, zakelijke vergadering, besluiten, actiepunten, follow-up",
         });
 
         if ("error" in result) {

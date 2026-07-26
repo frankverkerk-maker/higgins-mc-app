@@ -83,7 +83,7 @@ export const de: Translations = {
     taskProcessEmails: "E-Mails bearbeiten",
     taskAwaitingOrder: "Wartet auf Auftrag",
     // Mock-Genehmigungen (Fallback)
-    approvalElenaAction: "E-Mail an 3 Partnerkliniken zur Q3-Planung senden",
+    approvalNathalieAction: "E-Mail an 3 Partnerkliniken zur Q3-Planung senden",
     approvalWarrenAction: "Portfolio-Neugewichtung durchführen (€12.400)",
     timeMinAgo: "Min. zuvor",
     timeHourAgo: "Std. zuvor",

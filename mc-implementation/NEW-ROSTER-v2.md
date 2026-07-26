@@ -27,7 +27,7 @@ Swift-test verwacht 65 → discrepantie in bronbestand. WE gebruiken de FEITELIJ
 lijst hieronder als bron van waarheid en zetten counts daarop af.)
 
 ## Agents (feitelijke lijst uit Models.swift)
-Executive (3): Higgins(COO,opus), Elena(Exec Assistant), Rosi(Community Manager)
+Executive (3): Higgins(COO,opus), Nathalie(Exec Assistant), Rosi(Community Manager)
 Technology (6): Elon(CTO,opus), Jenkins(Backend), Sid(Security), Forge(Creative Eng), Nexus(Integration Architect), Da Vinci(Digital Architect DVDA)
 Marketing (6): Gary(CMO,opus), Bard(Content), Picasso(Visual), Echo(Social), Anna(Market Analyst), Larry(SEO)
 WTD (2) CLASSIFIED: Warren(Head of Trading,opus), Abacus(Financial Analyst)

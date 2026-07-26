@@ -81,7 +81,7 @@ export const nl = {
     taskProcessEmails: "E-mails verwerken",
     taskAwaitingOrder: "Wacht op opdracht",
     // Mock goedkeuringen (fallback)
-    approvalElenaAction: "E-mail versturen naar 3 partner clinics over Q3-planning",
+    approvalNathalieAction: "E-mail versturen naar 3 partner clinics over Q3-planning",
     approvalWarrenAction: "Portfolio herbalancering uitvoeren (€12.400)",
     timeMinAgo: "min geleden",
     timeHourAgo: "uur geleden",

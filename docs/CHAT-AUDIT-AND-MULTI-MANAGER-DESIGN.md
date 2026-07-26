@@ -56,7 +56,7 @@ De Higgins MC app evolueert van een **single-user command interface** (CEO → H
     │   DIRECTE LIJN      │  │   VIA ELENA        │
     │   (CEO / Eigenaar)  │  │   (Office Manager) │
     │                     │  │                     │
-    │   Frank → Higgins   │  │  Manager → Elena   │
+    │   Frank → Higgins   │  │  Manager → Nathalie   │
     │   Volledige toegang │  │  → Higgins keurt   │
     │   Alle afdelingen   │  │    goed/onthoudt   │
     └─────────────────────┘  └─────────────────────┘
@@ -67,28 +67,28 @@ De Higgins MC app evolueert van een **single-user command interface** (CEO → H
 | Rol | Ingang | Zichtbaarheid | Delegatie-rechten |
 |-----|--------|---------------|-------------------|
 | **owner** (CEO) | Higgins direct | Alles: alle gesprekken, alle delegaties, alle afdelingen | Onbeperkt — kan elke agent activeren |
-| **manager** | Elena (Office Manager) | Eigen gesprekken + door Elena gedeelde updates | Beperkt — Elena filtert en Higgins keurt goed |
+| **manager** | Nathalie (Office Manager) | Eigen gesprekken + door Nathalie gedeelde updates | Beperkt — Nathalie filtert en Higgins keurt goed |
 | **viewer** (toekomstig) | Alleen lezen | Dashboard/Tower read-only | Geen |
 
-### Hoe Elena Functioneert
+### Hoe Nathalie Functioneert
 
-Elena is geen "chatbot" maar een **intelligent gateway**:
+Nathalie is geen "chatbot" maar een **intelligent gateway**:
 
 1. **Ontvangt** de opdracht van een manager
 2. **Classificeert** de urgentie en het type (vraag, taak, escalatie)
 3. **Deelt** de opdracht met Higgins (altijd, zonder uitzondering)
 4. **Higgins keurt goed** — automatisch bij low-risk, handmatig bij high-risk
-5. **Elena voert uit** of delegeert naar de juiste agent
+5. **Nathalie voert uit** of delegeert naar de juiste agent
 6. **Rapporteert** terug aan de manager
 
-> Het verschil met de CEO-flow: de CEO spreekt Higgins direct aan en kan agents direct activeren. Managers gaan via Elena, die als filter en organisator fungeert. Higgins ziet en onthoudt alles van beide kanalen.
+> Het verschil met de CEO-flow: de CEO spreekt Higgins direct aan en kan agents direct activeren. Managers gaan via Nathalie, die als filter en organisator fungeert. Higgins ziet en onthoudt alles van beide kanalen.
 
 ### Goedkeuringsmodel
 
 | Scenario | Goedkeuring | Voorbeeld |
 |----------|-------------|-----------|
-| **Informatie-vraag** | Automatisch (Elena beantwoordt zelf) | "Wanneer is de volgende boardmeeting?" |
-| **Low-risk taak** | Trust-but-verify (Elena voert uit, Higgins krijgt log) | "Stuur het Q3-rapport naar het team" |
+| **Informatie-vraag** | Automatisch (Nathalie beantwoordt zelf) | "Wanneer is de volgende boardmeeting?" |
+| **Low-risk taak** | Trust-but-verify (Nathalie voert uit, Higgins krijgt log) | "Stuur het Q3-rapport naar het team" |
 | **High-risk taak** | Expliciete goedkeuring door Higgins/CEO | "Maak €50.000 over naar leverancier X" |
 | **Cross-department** | Altijd via Higgins | "Coördineer marketing + finance voor de lancering" |
 
@@ -102,7 +102,7 @@ CREATE TABLE org_members (
   role ENUM('owner', 'manager', 'viewer') NOT NULL DEFAULT 'manager',
   display_name VARCHAR(100) NOT NULL,
   department VARCHAR(50),           -- optioneel: beperkt zichtbaarheid
-  gateway_agent VARCHAR(50) DEFAULT 'Elena',  -- wie is hun ingang
+  gateway_agent VARCHAR(50) DEFAULT 'Nathalie',  -- wie is hun ingang
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW()
 );
@@ -111,7 +111,7 @@ CREATE TABLE org_members (
 CREATE TABLE conversations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   member_id INT NOT NULL REFERENCES org_members(id),
-  gateway_agent VARCHAR(50) NOT NULL,  -- 'Higgins' voor owner, 'Elena' voor managers
+  gateway_agent VARCHAR(50) NOT NULL,  -- 'Higgins' voor owner, 'Nathalie' voor managers
   title VARCHAR(200),
   status ENUM('active', 'archived') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT NOW(),
@@ -153,18 +153,18 @@ CREATE TABLE approval_log (
 │  1. Identificeer gebruiker (auth token → org_members)    │
 │  2. Bepaal gateway_agent op basis van rol                │
 │     - owner → routeCommand() (bestaande flow, Higgins)  │
-│     - manager → routeViaElena() (nieuwe flow)           │
+│     - manager → routeViaNathalie() (nieuwe flow)           │
 │  3. Sla bericht op in messages tabel                     │
 │  4. Return reply + eventuele delegatie-status            │
 └─────────────────────────────────────────────────────────┘
 ```
 
-De **routeViaElena()** functie:
+De **routeViaNathalie()** functie:
 
-1. Bouwt een Elena-specifiek system prompt (professioneel, behulpzaam, maar altijd rapporterend aan Higgins)
+1. Bouwt een Nathalie-specifiek system prompt (professioneel, behulpzaam, maar altijd rapporterend aan Higgins)
 2. Classificeert het risico-niveau van de opdracht
 3. Bij low-risk: voert direct uit en logt naar `approval_log` met status `auto_approved`
-4. Bij high-risk: stuurt een push-notificatie naar de CEO ("Elena vraagt goedkeuring voor: ...")
+4. Bij high-risk: stuurt een push-notificatie naar de CEO ("Nathalie vraagt goedkeuring voor: ...")
 5. Higgins onthoudt alles via de `approval_log` — hij kan altijd terugvinden wie wat heeft gevraagd
 
 ### App-side Wijzigingen
@@ -172,10 +172,10 @@ De **routeViaElena()** functie:
 De app zelf verandert **minimaal** voor managers:
 
 - Zelfde chat-interface (het is immers een communicatie-app)
-- Header toont "Elena — Office Manager" in plaats van "Higgins — Chief of Staff"
+- Header toont "Nathalie — Office Manager" in plaats van "Higgins — Chief of Staff"
 - Geen Tower-toegang (of read-only, afhankelijk van rol)
-- Geen directe agent-activering (dat doet Elena/Higgins op de achtergrond)
-- Push-notificaties wanneer Elena terugrapporteert
+- Geen directe agent-activering (dat doet Nathalie/Higgins op de achtergrond)
+- Push-notificaties wanneer Nathalie terugrapporteert
 
 Voor de CEO verandert er **niets** — dezelfde directe lijn naar Higgins.
 
@@ -184,31 +184,31 @@ Voor de CEO verandert er **niets** — dezelfde directe lijn naar Higgins.
 | Fase | Wat | Wanneer |
 |------|-----|---------|
 | **Fase 1** (nu) | Single-user CEO-app zoals nu. Audit-fixes doorgevoerd. | Gereed |
-| **Fase 2** | Auth + org_members tabel + rol-detectie. Chat backend switcht gateway op basis van rol. Elena system prompt. | Wanneer eerste manager wordt toegevoegd |
+| **Fase 2** | Auth + org_members tabel + rol-detectie. Chat backend switcht gateway op basis van rol. Nathalie system prompt. | Wanneer eerste manager wordt toegevoegd |
 | **Fase 3** | Server-side message persistence (conversations + messages tabellen). CEO kan alle gesprekken inzien. | Direct na Fase 2 |
 | **Fase 4** | Goedkeuringsflow: high-risk taken vereisen CEO/Higgins approval via push. | Na Fase 3 |
-| **Fase 5** (optioneel) | Manager-onderling berichten via Elena als tussenpersoon. Alleen als er een concrete use-case is. | Op verzoek |
+| **Fase 5** (optioneel) | Manager-onderling berichten via Nathalie als tussenpersoon. Alleen als er een concrete use-case is. | Op verzoek |
 
 ### Siri / Voice Integratie
 
 De architectuur is **Siri-ready**:
 
 - Siri Shortcut: "Hey Siri, zeg tegen Higgins [opdracht]" → opent de app met pre-filled tekst (zoals Tower long-press nu al werkt)
-- Voor managers: "Hey Siri, zeg tegen Elena [opdracht]" → zelfde flow maar via Elena-gateway
+- Voor managers: "Hey Siri, zeg tegen Nathalie [opdracht]" → zelfde flow maar via Nathalie-gateway
 - Geen extra backend-wijzigingen nodig — de voice-to-text pipeline bestaat al
 
 ### Risico-mitigatie
 
 | Risico | Mitigatie |
 |--------|-----------|
-| Elena als bottleneck | Async model: Elena voert direct uit bij low-risk, logt alles. Higgins reviewt achteraf. |
+| Nathalie als bottleneck | Async model: Nathalie voert direct uit bij low-risk, logt alles. Higgins reviewt achteraf. |
 | Privacy tussen managers | Strikte channel-isolatie in DB. Geen shared conversations. CEO ziet alles, managers alleen eigen kanaal. |
 | Higgins mist context | Alle messages worden server-side opgeslagen. Higgins heeft via approval_log + messages altijd het volledige beeld. |
 | Complexiteit voor managers | De UX is identiek aan WhatsApp: open app → typ/spreek → krijg antwoord. Geen extra stappen. |
-| Schaalbaarheid | Elena is een LLM-persona, geen bottleneck. Meerdere managers kunnen tegelijk communiceren. |
+| Schaalbaarheid | Nathalie is een LLM-persona, geen bottleneck. Meerdere managers kunnen tegelijk communiceren. |
 
 ---
 
 ## Conclusie
 
-De chat is na audit solide en productie-klaar voor single-user. Het multi-manager ontwerp respecteert het kernprincipe: **Higgins is de enige orchestrator, hij ziet en onthoudt alles**. Managers communiceren via Elena als professionele gateway, de CEO behoudt zijn directe lijn. De app blijft een simpele communicatie-interface — geen dashboard, geen complexiteit.
+De chat is na audit solide en productie-klaar voor single-user. Het multi-manager ontwerp respecteert het kernprincipe: **Higgins is de enige orchestrator, hij ziet en onthoudt alles**. Managers communiceren via Nathalie als professionele gateway, de CEO behoudt zijn directe lijn. De app blijft een simpele communicatie-interface — geen dashboard, geen complexiteit.

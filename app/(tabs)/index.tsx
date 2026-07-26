@@ -48,7 +48,7 @@ function buildPriorities(t: any) {
   return [
     { id: "p1", label: t.dashboard.prio1, agent: "Warren", urgent: true },
     { id: "p2", label: t.dashboard.prio2, agent: "Justitia", urgent: false },
-    { id: "p3", label: t.dashboard.prio3, agent: "Elena", urgent: false },
+    { id: "p3", label: t.dashboard.prio3, agent: "Nathalie", urgent: false },
   ];
 }
 
@@ -65,7 +65,7 @@ function buildQuickCommands(t: any) {
 
 function buildApprovals(t: any): Approval[] {
   return [
-    { id: "a1", agent: "Elena",  action: t.dashboard.approvalElenaAction,  time: `14 ${t.dashboard.timeMinAgo}` },
+    { id: "a1", agent: "Nathalie",  action: t.dashboard.approvalNathalieAction,  time: `14 ${t.dashboard.timeMinAgo}` },
     { id: "a2", agent: "Warren", action: t.dashboard.approvalWarrenAction, time: `1 ${t.dashboard.timeHourAgo}` },
   ];
 }
@@ -73,7 +73,7 @@ function buildApprovals(t: any): Approval[] {
 function buildAgentPulse(t: any) {
   return [
     { id: "ag1", name: "Higgins", status: "active", task: t.dashboard.taskPrepBriefing },
-    { id: "ag2", name: "Elena",   status: "active", task: t.dashboard.taskProcessEmails },
+    { id: "ag2", name: "Nathalie",   status: "active", task: t.dashboard.taskProcessEmails },
     { id: "ag3", name: "Warren",  status: "idle",   task: t.dashboard.taskAwaitingOrder },
     { id: "ag4", name: "Justitia",status: "idle",   task: t.dashboard.taskAwaitingOrder },
   ];

@@ -174,7 +174,7 @@ Kontext:
 - KI-Nachrichten: ${aiNews}
 - Krypto: ${cryptoUpdate}
 - Prioritäten: ${priorities.join(", ")}
-- Team: Elena (E-Mails), Warren (Portfolio), Gary (Kampagnen), Justitia (Recht) sind verfügbar.
+- Team: Nathalie (E-Mails), Warren (Portfolio), Gary (Kampagnen), Justitia (Recht) sind verfügbar.
 
 Schreiben Sie max 3 Sätze als persönliche Briefing. Professionell, direkt, motivierend.`
             : finalLang === "en"
@@ -184,7 +184,7 @@ Context:
 - AI news: ${aiNews}
 - Crypto: ${cryptoUpdate}
 - Priorities: ${priorities.join(", ")}
-- Team: Elena (emails), Warren (portfolio), Gary (campaigns), Justitia (legal) are available.
+- Team: Nathalie (emails), Warren (portfolio), Gary (campaigns), Justitia (legal) are available.
 
 Write max 3 sentences as a personal briefing. Professional, direct, motivating.`
             : `Schrijf een beknopte ochtend briefing voor Frank voor ${date}.
@@ -193,7 +193,7 @@ Context:
 - AI nieuws: ${aiNews}
 - Crypto: ${cryptoUpdate}
 - Prioriteiten: ${priorities.join(", ")}
-- Team: Elena (e-mails), Warren (portfolio), Gary (campagnes), Justitia (juridisch) zijn beschikbaar.
+- Team: Nathalie (e-mails), Warren (portfolio), Gary (campagnes), Justitia (juridisch) zijn beschikbaar.
 
 Schrijf max 3 zinnen als persoonlijke briefing. Professioneel, direct, motiverend.`,
         },
@@ -218,10 +218,10 @@ Schrijf max 3 zinnen als persoonlijke briefing. Professioneel, direct, motiveren
         crypto: cryptoUpdate,
         priorities,
         teamStatus: finalLang === "de" 
-          ? "Elena, Warren, Gary und Justitia sind verfügbar."
+          ? "Nathalie, Warren, Gary und Justitia sind verfügbar."
           : finalLang === "en"
-          ? "Elena, Warren, Gary and Justitia are available."
-          : "Elena, Warren, Gary en Justitia zijn beschikbaar.",
+          ? "Nathalie, Warren, Gary and Justitia are available."
+          : "Nathalie, Warren, Gary en Justitia zijn beschikbaar.",
       },
     };
 

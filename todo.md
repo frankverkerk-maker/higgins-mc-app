@@ -278,3 +278,15 @@
 - [x] Push notifications server-side geactiveerd: sendChatNotification bij elk Higgins-antwoord, sendApprovalNotification bij pending delegatie
 - [x] EAS Build configuratie compleet + stap-voor-stap handleiding (docs/EAS-BUILD-TESTFLIGHT-GUIDE.md)
 - [x] TypeScript 0 fouten, 34 tests groen
+
+## Fase 30: Rename Elena (Executive Assistant) → Nathalie
+
+- [x] Replace Elena → Nathalie in constants/team.ts (source of truth)
+- [x] Replace Elena → Nathalie in server/routers.ts (agent status, approvals, whisper prompts)
+- [x] Replace Elena → Nathalie in server/morning-brief-handler.ts (all 3 languages)
+- [x] Replace Elena → Nathalie in lib/i18n/*.ts (approvalElenaAction → approvalNathalieAction)
+- [x] Replace Elena → Nathalie in app/(tabs)/index.tsx, agents.tsx, tower.tsx
+- [x] Replace Elena → Nathalie in tests (team.structure, i18n.consistency)
+- [x] Replace Elena → Nathalie in docs (multi-manager design, audit, implementation scripts)
+- [x] Preserve Elena Vasquez (JLC) unchanged ✓
+- [x] TypeScript 0 fouten, 34 tests groen

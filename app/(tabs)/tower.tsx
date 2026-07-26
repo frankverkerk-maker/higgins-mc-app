@@ -22,7 +22,7 @@ interface Floor {
 // ─── Hardcoded fallback (used when DB is unavailable) ───────────────────────
 
 const HIGGINS_TOWER_FALLBACK: Floor[] = [
-  { floor_number: 8, floor_name: "Penthouse — Executive Suite", department_id: "executive", description: "Higgins, Elena, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.", is_restricted: false },
+  { floor_number: 8, floor_name: "Penthouse — Executive Suite", department_id: "executive", description: "Higgins, Nathalie, Barbara, Catharina, Rosi, Susi. Panoramisch uitzicht, directe lijn naar alle afdelingen.", is_restricted: false },
   { floor_number: 7, floor_name: "Einstein Lab", department_id: "einstein-lab", description: "Einstein, Curie, Tesla. Onderzoekslaboratoria, quantum computing cluster, innovatie-hub.", is_restricted: false },
   { floor_number: 6, floor_name: "Finance & Strategy", department_id: "finance", description: "Warren, Abacus, Closer, Carson, Strategos. Financiële analyse, trading dashboards, revenue operations.", is_restricted: false },
   { floor_number: 5, floor_name: "Technology Division", department_id: "technology", description: "Elon, Da Vinci, Forge, Jenkins, Nexus, Sid. Server rooms, development labs, security operations center.", is_restricted: false },

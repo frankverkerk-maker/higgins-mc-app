@@ -68,7 +68,7 @@ describe("Higgins MC — HCC team structure (v2.1)", () => {
 
   it("includes the key leadership agents", () => {
     const names = new Set(TEAM.map((a) => a.name));
-    for (const n of ["Higgins", "Elena", "Elon", "Gary", "Justitia", "Warren", "Victoria", "Morgan", "Einstein", "David", "Zero"]) {
+    for (const n of ["Higgins", "Nathalie", "Elon", "Gary", "Justitia", "Warren", "Victoria", "Morgan", "Einstein", "David", "Zero"]) {
       expect(names.has(n)).toBe(true);
     }
   });
@@ -135,7 +135,7 @@ describe("Higgins MC — HCC team structure (v2.1)", () => {
 
   it("PULSE_TEAM surfaces the core leadership", () => {
     const pulseNames = PULSE_TEAM.map((a: Agent) => a.name);
-    for (const n of ["Higgins", "Elena", "Gary", "Elon"]) {
+    for (const n of ["Higgins", "Nathalie", "Gary", "Elon"]) {
       expect(pulseNames).toContain(n);
     }
   });

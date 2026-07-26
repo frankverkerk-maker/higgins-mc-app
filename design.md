@@ -21,7 +21,7 @@ Het visuele karakter is donker, minimalistisch en professioneel — vergelijkbaa
 | 2 | **Login** | Gebruiker logt in met e-mail + wachtwoord |
 | 3 | **Dashboard (Home)** | Overzicht: agent status, recente activiteit, snelkoppelingen |
 | 4 | **Chat (Higgins)** | Directe chat met Higgins (Manus API) |
-| 5 | **Agents** | Overzicht van alle actieve agenten (Higgins, Elena, etc.) |
+| 5 | **Agents** | Overzicht van alle actieve agenten (Higgins, Nathalie, etc.) |
 | 6 | **Agent Detail** | Status, rol, recente acties van één agent |
 | 7 | **Taken** | Lijst van lopende en voltooide taken |
 | 8 | **Instellingen** | Profiel, notificaties, verbindingsstatus |

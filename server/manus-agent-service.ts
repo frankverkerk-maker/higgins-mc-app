@@ -31,7 +31,7 @@ function getApiKey(): string {
 
 /**
  * Activeer een Manus agent door een nieuwe taak aan te maken
- * @param agentName - Naam van de agent (bijv. "Justitia", "Elena", "Warren")
+ * @param agentName - Naam van de agent (bijv. "Justitia", "Nathalie", "Warren")
  * @param taskDescription - Beschrijving van de taak die de agent moet uitvoeren
  * @param language - Taal voor de taakbeschrijving (nl/de/en)
  * @returns ManusTaskResult met taskId en status
