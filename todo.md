@@ -290,3 +290,11 @@
 - [x] Replace Elena → Nathalie in docs (multi-manager design, audit, implementation scripts)
 - [x] Preserve Elena Vasquez (JLC) unchanged ✓
 - [x] TypeScript 0 fouten, 34 tests groen
+
+## Fase 31: Nathalie Persona + Roster Sync + Voice Profile
+
+- [x] Nathalie Office Manager persona document geschreven (docs/NATHALIE-PERSONA.md)
+- [x] MC Cloud implementatiescripts geüpdatet (Elena → Nathalie in install_agent_edition_cloud.sh, install_agent_edition_mc.sh, server.mjs)
+- [x] SQL migratiescript aangemaakt (mc-implementation/migrate-elena-to-nathalie.sql)
+- [x] Eleven Labs voice profielen geconfigureerd voor 8 agents (server/voice-profiles.ts)
+- [x] TypeScript 0 fouten, 33 tests groen (1 timeout door server restart, geen code-fout)

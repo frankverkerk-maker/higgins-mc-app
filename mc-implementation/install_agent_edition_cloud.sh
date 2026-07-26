@@ -107,7 +107,7 @@ INSERT INTO `agent_registry`
 VALUES
 -- Executive Office
 ('Higgins','Chief Operating Officer','Executive Office','executive','Claude Opus','Anthropic','tier-0','Frank',1,0,0,1),
-('Elena','Executive Assistant','Executive Office','executive','Claude Sonnet','Anthropic','tier-0','Higgins',1,0,0,1),
+('Nathalie','Executive Assistant','Executive Office','executive','Claude Sonnet','Anthropic','tier-0','Higgins',1,0,0,1),
 ('Rosi','Community Manager','Executive Office','executive','Claude Sonnet','Anthropic','tier-1','Higgins',0,0,0,1),
 -- Technology Division
 ('Elon','Chief Technology Officer','Technology Division','technology','Claude Opus','Anthropic','tier-0','Higgins',0,0,0,1),

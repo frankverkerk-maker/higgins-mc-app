@@ -22,7 +22,7 @@ function SEED() {
   return [
     // Executive Office
     A("Higgins","Chief Operating Officer","Executive Office","executive"),
-    A("Elena","Executive Assistant","Executive Office","executive"),
+    A("Nathalie","Executive Assistant","Executive Office","executive"),
     A("Rosi","Community Manager","Executive Office","executive"),
     // Technology Division
     A("Elon","Chief Technology Officer","Technology Division","technology"),
