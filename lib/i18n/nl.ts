@@ -124,6 +124,9 @@ export const nl = {
     speakerPlay: "Voorlezen",
     speakerStop: "Stop",
     speakerLoading: "Stem laden...",
+    voiceMemo: "Spraakbericht",
+    voiceMemoDuration: "Duur",
+    voiceMemoTranscript: "Transcriptie",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -193,6 +196,15 @@ export const nl = {
     mcFeedConnected: "Verbonden · live data",
     mcFeedFallback: "Niet bereikbaar · ingebouwde lijst",
     mcFeedEmpty: "Niet ingesteld · ingebouwde lijst",
+    voiceClone: "Kloon Mijn Stem",
+    voiceCloneDesc: "Upload een stemfragment om uw persoonlijke AI-stem te creëren",
+    voiceCloneUpload: "Upload Audiofragment",
+    voiceCloneUploading: "Stem wordt gekloond...",
+    voiceCloneSuccess: "Stem succesvol gekloond!",
+    voiceCloneError: "Stem klonen mislukt. Probeer opnieuw.",
+    voiceCloneHint: "Neem 30+ seconden duidelijke spraak op voor het beste resultaat",
+    voiceCloneName: "Stemnaam",
+    voiceCloneNamePlaceholder: "Mijn Stem",
   },
 
   // ─── Tower ──────────────────────────────────────────────────────────────────

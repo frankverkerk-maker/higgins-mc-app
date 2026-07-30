@@ -125,6 +125,9 @@ export const de: Translations = {
     speakerPlay: "Vorlesen",
     speakerStop: "Stopp",
     speakerLoading: "Stimme wird geladen...",
+    voiceMemo: "Sprachnachricht",
+    voiceMemoDuration: "Dauer",
+    voiceMemoTranscript: "Transkription",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -194,6 +197,15 @@ export const de: Translations = {
     mcFeedConnected: "Verbunden · Live-Daten",
     mcFeedFallback: "Nicht erreichbar · integrierte Liste",
     mcFeedEmpty: "Nicht konfiguriert · integrierte Liste",
+    voiceClone: "Meine Stimme klonen",
+    voiceCloneDesc: "Laden Sie eine Stimmprobe hoch, um Ihre persönliche KI-Stimme zu erstellen",
+    voiceCloneUpload: "Audiodatei hochladen",
+    voiceCloneUploading: "Stimme wird geklont...",
+    voiceCloneSuccess: "Stimme erfolgreich geklont!",
+    voiceCloneError: "Stimme klonen fehlgeschlagen. Erneut versuchen.",
+    voiceCloneHint: "Nehmen Sie 30+ Sekunden deutliche Sprache auf für beste Ergebnisse",
+    voiceCloneName: "Stimmname",
+    voiceCloneNamePlaceholder: "Meine Stimme",
   },
 
   // ─── Tower ──────────────────────────────────────────────────────────────────

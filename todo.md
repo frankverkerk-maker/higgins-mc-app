@@ -332,3 +332,14 @@
 - [x] Integratie in Chat renderMessage — waveform zichtbaar wanneer playingMsgId === item.id
 - [x] Stem preview sectie in Settings — per-agent "Test stem" knoppen (Higgins, Nathalie, Warren, Gary, Elon, Victoria, Morgan)
 - [x] TypeScript 0 fouten
+
+## Fase 36: Voice Memo Audio Bubbels + Custom Voice Cloning
+
+- [x] Voice memo audio bubbel type in Chat — opname wordt getoond als audio-kaart met waveform + play/pause
+- [x] Audio bubbel component met duur, waveform animatie en inline afspeelknop (VoiceMemoCard)
+- [x] Opname bewaren als lokaal bestand + weergeven in chat naast transcriptie
+- [x] Custom voice cloning sectie in Settings — upload voice sample naar Eleven Labs (DocumentPicker)
+- [x] Server endpoint voor voice clone (POST audio naar Eleven Labs /v1/voices/add)
+- [x] UI: naam-invoer + upload-knop + status indicator + voice ID badge in Settings
+- [x] i18n keys NL/DE/EN voor voice cloning
+- [x] TypeScript 0 fouten

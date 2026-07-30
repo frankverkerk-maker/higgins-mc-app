@@ -40,6 +40,7 @@ import { buildRosterPromptBlock, buildRoutingTable, AGENT_MAP, DEPT_KEYWORDS, DE
 import { routeCommand, type RoutingResult } from "./command-router";
 import { watchTask } from "./task-watcher";
 import { generateSpeech, isTTSAvailable } from "./tts-service";
+import { ENV } from "./_core/env";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -1054,6 +1055,53 @@ Antwoord ALLEEN in dit JSON formaat:
           audioBase64,
           contentType: result.contentType ?? "audio/mpeg",
         };
+      }),
+
+    voiceClone: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(1).max(100),
+          description: z.string().max(500).optional(),
+          audioBase64: z.string(), // base64-encoded audio file
+          mimeType: z.string().default("audio/m4a"),
+          removeBackgroundNoise: z.boolean().default(true),
+        })
+      )
+      .mutation(async ({ input }) => {
+        if (!ENV.elevenLabsApiKey) {
+          return { success: false, error: "ELEVENLABS_API_KEY not configured", voiceId: null };
+        }
+
+        try {
+          const audioBuffer = Buffer.from(input.audioBase64, "base64");
+          const ext = input.mimeType.includes("wav") ? "wav" : input.mimeType.includes("mp3") ? "mp3" : "m4a";
+          const blob = new Blob([audioBuffer], { type: input.mimeType });
+
+          const formData = new FormData();
+          formData.append("name", input.name);
+          formData.append("files", blob, `sample.${ext}`);
+          if (input.description) formData.append("description", input.description);
+          formData.append("remove_background_noise", String(input.removeBackgroundNoise));
+          formData.append("labels", JSON.stringify({ language: "multilingual" }));
+
+          const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+            method: "POST",
+            headers: {
+              "xi-api-key": ENV.elevenLabsApiKey,
+            },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            return { success: false, error: `ElevenLabs ${response.status}: ${errText}`, voiceId: null };
+          }
+
+          const result = await response.json() as { voice_id: string };
+          return { success: true, error: null, voiceId: result.voice_id };
+        } catch (err) {
+          return { success: false, error: `Clone failed: ${err instanceof Error ? err.message : "Unknown"}`, voiceId: null };
+        }
       }),
 
     checkBreakingNews: publicProcedure

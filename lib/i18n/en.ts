@@ -125,6 +125,9 @@ export const en: Translations = {
     speakerPlay: "Read aloud",
     speakerStop: "Stop",
     speakerLoading: "Loading voice...",
+    voiceMemo: "Voice memo",
+    voiceMemoDuration: "Duration",
+    voiceMemoTranscript: "Transcript",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -194,6 +197,15 @@ export const en: Translations = {
     mcFeedConnected: "Connected · live data",
     mcFeedFallback: "Unreachable · built-in list",
     mcFeedEmpty: "Not configured · built-in list",
+    voiceClone: "Clone My Voice",
+    voiceCloneDesc: "Upload a voice sample to create your personal AI voice",
+    voiceCloneUpload: "Upload Audio Sample",
+    voiceCloneUploading: "Cloning voice...",
+    voiceCloneSuccess: "Voice cloned successfully!",
+    voiceCloneError: "Voice cloning failed. Try again.",
+    voiceCloneHint: "Record 30+ seconds of clear speech for best results",
+    voiceCloneName: "Voice name",
+    voiceCloneNamePlaceholder: "My Voice",
   },
 
   // ─── Tower ──────────────────────────────────────────────────────────────────

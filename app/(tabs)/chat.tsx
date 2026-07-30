@@ -40,6 +40,7 @@ import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
 import { VoiceWaveform } from "@/components/voice-waveform";
+import { VoiceMemoCard } from "@/components/voice-memo-card";
 import { DelegationTracker } from "@/components/delegation-tracker";
 import { isOnline, enqueueMessage, getQueue, dequeueMessage } from "@/lib/offline-queue";
 
@@ -72,7 +73,7 @@ const FONT_BOLD = Platform.OS === "ios" ? "Avenir-Heavy" : undefined;
 type AgentStatus = { status: "active" | "idle" | "busy"; task: string; taskId?: string };
 
 // ─── Berichttypen ─────────────────────────────────────────────────────────────
-type MessageType = "text" | "pdf";
+type MessageType = "text" | "pdf" | "voiceMemo";
 
 type Message = {
   id: string;
@@ -86,6 +87,9 @@ type Message = {
   pdfUrl?: string;
   pdfFileName?: string;
   pdfSizeBytes?: number;
+  // Voice memo velden
+  audioUri?: string;
+  audioDuration?: number; // seconds
   // Delegatie velden
   delegationTaskId?: string;
   assignedAgent?: string;
@@ -780,6 +784,7 @@ export default function ChatScreen() {
   }, [messages, generatePdfMutation, userName, language, saveMessages]);
 
   // ─── Chat mic: Voice-to-Higgins ───────────────────────────────────────────
+  const recordStartRef = useRef<number>(0);
   const handleVoicePress = useCallback(async () => {
     if (Platform.OS === "web") return;
 
@@ -787,7 +792,26 @@ export default function ChatScreen() {
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch (_) {}
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
+      const durationSec = Math.round((Date.now() - recordStartRef.current) / 1000);
       if (uri) {
+        // Add voice memo bubble immediately
+        const memoMsg: Message = {
+          id: `vm_${Date.now()}`,
+          role: "user",
+          content: "",
+          timestamp: new Date(),
+          type: "voiceMemo",
+          audioUri: uri,
+          audioDuration: durationSec > 0 ? durationSec : 1,
+        };
+        setMessages(prev => {
+          const updated = [...prev, memoMsg];
+          saveMessages(updated);
+          return updated;
+        });
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+        // Transcribe and send to Higgins
         setIsTranscribing(true);
         try {
           const base64 = await FileSystem.readAsStringAsync(uri, {
@@ -797,19 +821,31 @@ export default function ChatScreen() {
             audioBase64: base64,
             mimeType: "audio/m4a",
           });
+          // Update memo with transcript
+          setMessages(prev => {
+            const updated = prev.map(m => m.id === memoMsg.id ? { ...m, content: result.text } : m);
+            saveMessages(updated);
+            return updated;
+          });
+          // Auto-send the transcribed text to Higgins
           setInput(result.text);
         } catch (err) {
-          setInput("(Transcriptie mislukt — probeer opnieuw)");
+          setMessages(prev => {
+            const updated = prev.map(m => m.id === memoMsg.id ? { ...m, content: "(Transcriptie mislukt)" } : m);
+            saveMessages(updated);
+            return updated;
+          });
         } finally {
           setIsTranscribing(false);
         }
       }
     } else {
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (_) {}
+      recordStartRef.current = Date.now();
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
     }
-  }, [isRecording, audioRecorder, transcribeMutation]);
+  }, [isRecording, audioRecorder, transcribeMutation, saveMessages]);
 
   // ─── Vergadering opname starten / stoppen ─────────────────────────────────
   const handleMeetingPress = useCallback(async () => {
@@ -1053,6 +1089,24 @@ export default function ChatScreen() {
         <View style={[styles.messageRow]}>
           <HigginsAvatar size={32} />
           <PdfCard msg={item} />
+        </View>
+      );
+    }
+
+    if (item.type === "voiceMemo" && item.audioUri) {
+      return (
+        <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
+          {!isUser && <HigginsAvatar size={32} />}
+          <VoiceMemoCard
+            audioUri={item.audioUri}
+            duration={item.audioDuration ?? 0}
+            transcript={item.content || undefined}
+            labels={{
+              voiceMemo: t.chat.voiceMemo ?? "Voice memo",
+              voiceMemoDuration: t.chat.voiceMemoDuration ?? "Duration",
+              voiceMemoTranscript: t.chat.voiceMemoTranscript ?? "Transcript",
+            }}
+          />
         </View>
       );
     }

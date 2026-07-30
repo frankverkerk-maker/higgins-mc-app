@@ -15,6 +15,7 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
 import { VoiceWaveform } from "@/components/voice-waveform";
+import * as DocumentPicker from "expo-document-picker";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -639,6 +640,9 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ── Stem Klonen ── */}
+        <VoiceCloneSection t={t} language={language} />
+
         {/* ── Over ── */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>{t.settings.about.toUpperCase()}</Text>
@@ -764,3 +768,158 @@ const s = StyleSheet.create({
   },
   locationSaveBtnText: { fontSize: 13, fontWeight: "700", color: C.bg, fontFamily: FONT_BOLD },
 });
+
+// ─── Voice Clone Section Component ─────────────────────────────────────────
+const VOICE_CLONE_KEY = "@higgins_settings_voice_clone_id";
+
+function VoiceCloneSection({ t, language }: { t: any; language: string }) {
+  const [cloneName, setCloneName] = useState("");
+  const [isCloning, setIsCloning] = useState(false);
+  const [cloneResult, setCloneResult] = useState<"success" | "error" | null>(null);
+  const [savedVoiceId, setSavedVoiceId] = useState<string | null>(null);
+
+  const cloneMutation = trpc.higgins.voiceClone.useMutation();
+
+  useEffect(() => {
+    AsyncStorage.getItem(VOICE_CLONE_KEY).then(id => {
+      if (id) setSavedVoiceId(id);
+    });
+  }, []);
+
+  const handlePickAndClone = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["audio/*"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      const name = cloneName.trim() || (t.settings.voiceCloneNamePlaceholder ?? "My Voice");
+
+      setIsCloning(true);
+      setCloneResult(null);
+
+      // Read file as base64
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const mimeType = asset.mimeType || "audio/m4a";
+
+      const res = await cloneMutation.mutateAsync({
+        name,
+        audioBase64: base64,
+        mimeType,
+        removeBackgroundNoise: true,
+      });
+
+      if (res.success && res.voiceId) {
+        await AsyncStorage.setItem(VOICE_CLONE_KEY, res.voiceId);
+        setSavedVoiceId(res.voiceId);
+        setCloneResult("success");
+        hapticNotification(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setCloneResult("error");
+        hapticNotification(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (err) {
+      setCloneResult("error");
+      hapticNotification(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsCloning(false);
+    }
+  }, [cloneName, cloneMutation, t]);
+
+  const sectionTitle = language === "de" ? "STIMME KLONEN" : language === "en" ? "VOICE CLONING" : "STEM KLONEN";
+
+  return (
+    <View style={s.section}>
+      <Text style={s.sectionTitle}>{sectionTitle}</Text>
+      <View style={s.card}>
+        {/* Description */}
+        <View style={[s.row, { flexDirection: "column", alignItems: "flex-start", gap: 8 }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={[s.rowIcon, { backgroundColor: "rgba(168,85,247,0.12)" }]}>
+              <Text style={{ fontSize: 14 }}>🎙️</Text>
+            </View>
+            <View>
+              <Text style={s.rowLabel}>{t.settings.voiceClone ?? "Clone My Voice"}</Text>
+              <Text style={s.rowSub}>{t.settings.voiceCloneDesc ?? "Upload a voice sample"}</Text>
+            </View>
+          </View>
+
+          {/* Hint */}
+          <Text style={{ fontSize: 11, color: C.muted, fontFamily: FONT, paddingLeft: 4 }}>
+            💡 {t.settings.voiceCloneHint ?? "Record 30+ seconds of clear speech for best results"}
+          </Text>
+
+          {/* Name input */}
+          <TextInput
+            style={[s.locationInput, { width: "100%" }]}
+            placeholder={t.settings.voiceCloneNamePlaceholder ?? "My Voice"}
+            placeholderTextColor={C.muted}
+            value={cloneName}
+            onChangeText={setCloneName}
+          />
+
+          {/* Upload button */}
+          <Pressable
+            onPress={handlePickAndClone}
+            disabled={isCloning}
+            style={({ pressed }) => [{
+              backgroundColor: isCloning ? C.surface2 : "rgba(168,85,247,0.15)",
+              borderWidth: 1,
+              borderColor: "rgba(168,85,247,0.4)",
+              borderRadius: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              alignItems: "center",
+              width: "100%",
+              opacity: pressed ? 0.7 : 1,
+            }]}
+          >
+            {isCloning ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <ActivityIndicator size="small" color="#A855F7" />
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#A855F7", fontFamily: FONT_BOLD }}>
+                  {t.settings.voiceCloneUploading ?? "Cloning voice..."}
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#A855F7", fontFamily: FONT_BOLD }}>
+                🎤 {t.settings.voiceCloneUpload ?? "Upload Audio Sample"}
+              </Text>
+            )}
+          </Pressable>
+
+          {/* Result feedback */}
+          {cloneResult === "success" && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 4 }}>
+              <Text style={{ fontSize: 12, color: C.green, fontFamily: FONT }}>✓ {t.settings.voiceCloneSuccess ?? "Voice cloned successfully!"}</Text>
+            </View>
+          )}
+          {cloneResult === "error" && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 4 }}>
+              <Text style={{ fontSize: 12, color: C.red, fontFamily: FONT }}>✗ {t.settings.voiceCloneError ?? "Voice cloning failed."}</Text>
+            </View>
+          )}
+
+          {/* Saved voice ID */}
+          {savedVoiceId && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 4 }}>
+              <View style={[s.connectedBadge, { backgroundColor: C.greenDim }]}>
+                <View style={[s.statusDot, { backgroundColor: C.green }]} />
+                <Text style={[s.statusText, { color: C.green }]}>Actief</Text>
+              </View>
+              <Text style={{ fontSize: 10, color: C.muted, fontFamily: FONT }}>
+                ID: {savedVoiceId.slice(0, 8)}...
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
