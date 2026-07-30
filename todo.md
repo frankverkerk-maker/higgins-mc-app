@@ -318,3 +318,10 @@
 - [x] Auto-play TTS bij nieuwe assistant berichten (wanneer toggle aan)
 - [x] i18n keys voor NL/EN/DE (speakerPlay, speakerStop, speakerLoading, voiceAutoPlay, voiceAutoPlayDesc)
 - [x] TypeScript 0 fouten
+
+## Fase 34: Per-Agent Stemkeuze + Snelheidsregeling
+
+- [x] Per-agent voice routing — delegatie-antwoorden gebruiken de stem van de betreffende agent (Warren=Josh, Nathalie=Rachel, etc.)
+- [x] Playback speed selector in Chat — 0.75x / 1x / 1.25x / 1.5x keuze voor TTS voorlezing (cycleSpeed knop verschijnt tijdens afspelen)
+- [x] Speed voorkeur opslaan in AsyncStorage
+- [x] TypeScript 0 fouten

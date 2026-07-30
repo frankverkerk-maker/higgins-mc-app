@@ -93,6 +93,8 @@ type Message = {
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
 const VOICE_AUTOPLAY_KEY = "@higgins_settings_voice_autoplay";
+const VOICE_SPEED_KEY = "@higgins_settings_voice_speed";
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
 const getInitialMessage = (name: string | null, lang: string): Message => {
   const greetings: Record<string, string> = {
@@ -215,12 +217,19 @@ export default function ChatScreen() {
   const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
   const [isSpeakLoading, setIsSpeakLoading] = useState(false);
   const [voiceAutoPlay, setVoiceAutoPlay] = useState(false);
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
 
-  // Load voice auto-play preference
+  // Load voice auto-play preference and speed
   useEffect(() => {
     AsyncStorage.getItem(VOICE_AUTOPLAY_KEY).then((val) => {
       if (val === "true") setVoiceAutoPlay(true);
+    });
+    AsyncStorage.getItem(VOICE_SPEED_KEY).then((val) => {
+      if (val) {
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && SPEED_OPTIONS.includes(parsed as any)) setVoiceSpeed(parsed);
+      }
     });
   }, []);
 
@@ -254,7 +263,21 @@ export default function ChatScreen() {
     setPlayingMsgId(null);
   }, []);
 
-  const playMessage = useCallback(async (msgId: string, text: string) => {
+  const cycleSpeed = useCallback(() => {
+    setVoiceSpeed((prev) => {
+      const idx = SPEED_OPTIONS.indexOf(prev as any);
+      const next = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+      AsyncStorage.setItem(VOICE_SPEED_KEY, String(next));
+      // Update current player speed if playing
+      if (audioPlayerRef.current) {
+        try { audioPlayerRef.current.setPlaybackRate(next); } catch (_) {}
+      }
+      return next;
+    });
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const playMessage = useCallback(async (msgId: string, text: string, agentName?: string) => {
     // If already playing this message, stop it
     if (playingMsgId === msgId) {
       stopPlayback();
@@ -271,7 +294,7 @@ export default function ChatScreen() {
     try {
       const result = await speakMutation.mutateAsync({
         text: text.substring(0, 5000),
-        agentName: "Higgins",
+        agentName: agentName || "Higgins",
       });
 
       if (!result.success || !result.audioBase64) {
@@ -299,6 +322,9 @@ export default function ChatScreen() {
       audioPlayerRef.current = player;
       setIsSpeakLoading(false);
 
+      // Set playback speed
+      try { player.setPlaybackRate(voiceSpeed); } catch (_) {}
+
       // Listen for playback end
       player.addListener("playbackStatusUpdate", (status) => {
         if (status.didJustFinish) {
@@ -313,15 +339,15 @@ export default function ChatScreen() {
       setPlayingMsgId(null);
       setIsSpeakLoading(false);
     }
-  }, [playingMsgId, stopPlayback, speakMutation]);
+  }, [playingMsgId, stopPlayback, speakMutation, voiceSpeed]);
 
   // Auto-play TTS for new assistant messages
-  const autoPlayTTS = useCallback((text: string, msgId: string) => {
+  const autoPlayTTS = useCallback((text: string, msgId: string, agentName?: string) => {
     if (!voiceAutoPlay) return;
     // Don't auto-play error messages or very short messages
     if (text.length < 10) return;
     // Small delay to let the UI update first
-    setTimeout(() => playMessage(msgId, text), 300);
+    setTimeout(() => playMessage(msgId, text, agentName), 300);
   }, [voiceAutoPlay, playMessage]);
 
   // Voice recorder (voor chat mic)
@@ -1111,23 +1137,41 @@ export default function ChatScreen() {
             </Text>
             {/* Speaker button for assistant messages */}
             {!isUser && item.content.length > 10 && (
-              <Pressable
-                onPress={() => playMessage(item.id, item.content)}
-                style={({ pressed }) => [{
-                  marginLeft: 6,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                  borderRadius: 10,
-                  backgroundColor: playingMsgId === item.id ? "rgba(0,212,212,0.2)" : "transparent",
-                  opacity: pressed ? 0.6 : 1,
-                }]}
-              >
-                <Text style={{ fontSize: 14 }}>
-                  {playingMsgId === item.id
-                    ? (isSpeakLoading ? "⏳" : "⏸️")
-                    : "🔊"}
-                </Text>
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                <Pressable
+                  onPress={() => playMessage(item.id, item.content, item.assignedAgent || "Higgins")}
+                  style={({ pressed }) => [{
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 10,
+                    backgroundColor: playingMsgId === item.id ? "rgba(0,212,212,0.2)" : "transparent",
+                    opacity: pressed ? 0.6 : 1,
+                  }]}
+                >
+                  <Text style={{ fontSize: 14 }}>
+                    {playingMsgId === item.id
+                      ? (isSpeakLoading ? "⏳" : "⏸️")
+                      : "🔊"}
+                  </Text>
+                </Pressable>
+                {/* Speed button — only visible when this message is playing */}
+                {playingMsgId === item.id && !isSpeakLoading && (
+                  <Pressable
+                    onPress={cycleSpeed}
+                    style={({ pressed }) => [{
+                      paddingHorizontal: 5,
+                      paddingVertical: 1,
+                      borderRadius: 8,
+                      backgroundColor: "rgba(0,212,212,0.15)",
+                      opacity: pressed ? 0.6 : 1,
+                    }]}
+                  >
+                    <Text style={{ fontSize: 11, color: C.cyan, fontFamily: FONT_BOLD }}>
+                      {voiceSpeed}x
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             )}
           </View>
         </View>
