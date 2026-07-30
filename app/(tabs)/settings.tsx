@@ -49,6 +49,7 @@ const LOCATION_KEY = "@higgins_weather_location";
 const SETTINGS_NOTIFICATIONS_KEY = "@higgins_settings_notifications";
 const SETTINGS_BRIEFING_KEY = "@higgins_settings_briefing";
 const SETTINGS_HAPTIC_KEY = "@higgins_settings_haptic";
+const SETTINGS_VOICE_AUTOPLAY_KEY = "@higgins_settings_voice_autoplay";
 
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
@@ -56,6 +57,7 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [voiceAutoPlay, setVoiceAutoPlay] = useState(false);
   const [locationInput, setLocationInput] = useState("Bottighofen, CH");
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSaved, setLocationSaved] = useState(false);
@@ -81,6 +83,9 @@ export default function SettingsScreen() {
     });
     AsyncStorage.getItem(SETTINGS_HAPTIC_KEY).then((val) => {
       if (val !== null) setHapticEnabled(val === "true");
+    });
+    AsyncStorage.getItem(SETTINGS_VOICE_AUTOPLAY_KEY).then((val) => {
+      if (val !== null) setVoiceAutoPlay(val === "true");
     });
   }, []);
 
@@ -174,6 +179,7 @@ export default function SettingsScreen() {
               SETTINGS_NOTIFICATIONS_KEY,
               SETTINGS_BRIEFING_KEY,
               SETTINGS_HAPTIC_KEY,
+              SETTINGS_VOICE_AUTOPLAY_KEY,
             ]);
             // Navigate to onboarding
             router.replace("/onboarding");
@@ -463,6 +469,25 @@ export default function SettingsScreen() {
                 onValueChange={() => handleToggle(setHapticEnabled, hapticEnabled, SETTINGS_HAPTIC_KEY)}
                 trackColor={{ true: C.cyan, false: C.border }}
                 thumbColor={hapticEnabled ? "#0A0C0E" : "#E8EDF2"}
+              />
+            </View>
+
+            {/* Voice Auto-Play */}
+            <View style={[s.row, s.rowBorder]}>
+              <View style={s.rowLeft}>
+                <View style={[s.rowIcon, { backgroundColor: "rgba(0,212,212,0.12)" }]}>
+                  <Text style={{ fontSize: 14 }}>🔊</Text>
+                </View>
+                <View>
+                  <Text style={s.rowLabel}>{t.settings.voiceAutoPlay}</Text>
+                  <Text style={s.rowSub}>{t.settings.voiceAutoPlayDesc}</Text>
+                </View>
+              </View>
+              <Switch
+                value={voiceAutoPlay}
+                onValueChange={() => handleToggle(setVoiceAutoPlay, voiceAutoPlay, SETTINGS_VOICE_AUTOPLAY_KEY)}
+                trackColor={{ true: C.cyan, false: C.border }}
+                thumbColor={voiceAutoPlay ? "#0A0C0E" : "#E8EDF2"}
               />
             </View>
           </View>

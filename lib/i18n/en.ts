@@ -122,6 +122,9 @@ export const en: Translations = {
     uploadError: "Upload failed. Please try again.",
     errorGeneric: "My apologies, I could not process your message. Please try again.",
     uploadOpenBtn: "Open",
+    speakerPlay: "Read aloud",
+    speakerStop: "Stop",
+    speakerLoading: "Loading voice...",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -168,6 +171,8 @@ export const en: Translations = {
     darkModeDesc: "Automatic based on system",
     notifications: "Notifications",
     notificationsDesc: "Push notifications from Higgins",
+    voiceAutoPlay: "Voice Auto-Play",
+    voiceAutoPlayDesc: "Automatically read Higgins' replies aloud",
     about: "About",
     appVersion: "App Version",
     higginsVersion: "Higgins Version",

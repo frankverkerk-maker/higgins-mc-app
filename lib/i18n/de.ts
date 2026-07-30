@@ -122,6 +122,9 @@ export const de: Translations = {
     uploadError: "Upload fehlgeschlagen. Bitte erneut versuchen.",
     errorGeneric: "Entschuldigung, ich konnte Ihre Nachricht nicht verarbeiten. Bitte versuchen Sie es erneut.",
     uploadOpenBtn: "Öffnen",
+    speakerPlay: "Vorlesen",
+    speakerStop: "Stopp",
+    speakerLoading: "Stimme wird geladen...",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -168,6 +171,8 @@ export const de: Translations = {
     darkModeDesc: "Automatisch basierend auf System",
     notifications: "Benachrichtigungen",
     notificationsDesc: "Push-Benachrichtigungen von Higgins",
+    voiceAutoPlay: "Stimme Auto-Play",
+    voiceAutoPlayDesc: "Higgins' Antworten automatisch vorlesen",
     about: "Über",
     appVersion: "App-Version",
     higginsVersion: "Higgins-Version",

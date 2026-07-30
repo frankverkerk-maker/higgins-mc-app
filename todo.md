@@ -310,3 +310,11 @@
 - [x] Elena Vasquez (JLC) ongewijzigd geverifieerd in database ✓
 - [x] ELEVENLABS_API_KEY validatie — key succesvol gevalideerd (TTS endpoint HTTP 200)
 - [x] TypeScript 0 fouten, 32+ tests groen
+
+## Fase 33: TTS Speaker Button + Voice Auto-Play
+
+- [x] Speaker-knop (🔊) op Higgins berichtbubbels in Chat — tRPC higgins.speak → expo-audio playback
+- [x] Voice auto-play toggle in Settings — AsyncStorage persistent, automatisch voorlezen van Higgins antwoorden
+- [x] Auto-play TTS bij nieuwe assistant berichten (wanneer toggle aan)
+- [x] i18n keys voor NL/EN/DE (speakerPlay, speakerStop, speakerLoading, voiceAutoPlay, voiceAutoPlayDesc)
+- [x] TypeScript 0 fouten

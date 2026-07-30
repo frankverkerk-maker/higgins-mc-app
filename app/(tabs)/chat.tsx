@@ -23,7 +23,9 @@ import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
+  createAudioPlayer,
 } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import { getApiBaseUrl } from "@/constants/oauth";
@@ -90,6 +92,7 @@ type Message = {
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
+const VOICE_AUTOPLAY_KEY = "@higgins_settings_voice_autoplay";
 
 const getInitialMessage = (name: string | null, lang: string): Message => {
   const greetings: Record<string, string> = {
@@ -208,13 +211,118 @@ export default function ChatScreen() {
   const [meetingDuration, setMeetingDuration] = useState(0);
   const meetingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ─── TTS playback state ─────────────────────────────────────────────────────
+  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
+  const [isSpeakLoading, setIsSpeakLoading] = useState(false);
+  const [voiceAutoPlay, setVoiceAutoPlay] = useState(false);
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
+
+  // Load voice auto-play preference
+  useEffect(() => {
+    AsyncStorage.getItem(VOICE_AUTOPLAY_KEY).then((val) => {
+      if (val === "true") setVoiceAutoPlay(true);
+    });
+  }, []);
+
+  // Cleanup audio player on unmount
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        try { audioPlayerRef.current.pause(); } catch (_) {}
+        try { audioPlayerRef.current.remove(); } catch (_) {}
+        audioPlayerRef.current = null;
+      }
+    };
+  }, []);
+
   // tRPC mutations
   const chatMutation = trpc.higgins.chat.useMutation();
   const transcribeMutation = trpc.higgins.transcribe.useMutation();
   const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
   const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
   const activateAgentMutation = trpc.higgins.activateAgent.useMutation();
+  const speakMutation = trpc.higgins.speak.useMutation();
   const uploadPdfMutation = trpc.higgins.uploadPdf.useMutation();
+
+  // ─── TTS playback functions ──────────────────────────────────────────────────
+  const stopPlayback = useCallback(() => {
+    if (audioPlayerRef.current) {
+      try { audioPlayerRef.current.pause(); } catch (_) {}
+      try { audioPlayerRef.current.remove(); } catch (_) {}
+      audioPlayerRef.current = null;
+    }
+    setPlayingMsgId(null);
+  }, []);
+
+  const playMessage = useCallback(async (msgId: string, text: string) => {
+    // If already playing this message, stop it
+    if (playingMsgId === msgId) {
+      stopPlayback();
+      return;
+    }
+
+    // Stop any current playback first
+    stopPlayback();
+
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSpeakLoading(true);
+    setPlayingMsgId(msgId);
+
+    try {
+      const result = await speakMutation.mutateAsync({
+        text: text.substring(0, 5000),
+        agentName: "Higgins",
+      });
+
+      if (!result.success || !result.audioBase64) {
+        setPlayingMsgId(null);
+        setIsSpeakLoading(false);
+        return;
+      }
+
+      // Create a data URI from the base64 audio
+      const dataUri = `data:audio/mpeg;base64,${result.audioBase64}`;
+
+      // Write to temp file for native playback (data URIs may not work on all platforms)
+      let audioSource: string;
+      if (Platform.OS !== "web" && FileSystem.cacheDirectory) {
+        const tempPath = `${FileSystem.cacheDirectory}tts_${msgId}.mp3`;
+        await FileSystem.writeAsStringAsync(tempPath, result.audioBase64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        audioSource = tempPath;
+      } else {
+        audioSource = dataUri;
+      }
+
+      const player = createAudioPlayer(audioSource);
+      audioPlayerRef.current = player;
+      setIsSpeakLoading(false);
+
+      // Listen for playback end
+      player.addListener("playbackStatusUpdate", (status) => {
+        if (status.didJustFinish) {
+          setPlayingMsgId(null);
+          try { player.remove(); } catch (_) {}
+          audioPlayerRef.current = null;
+        }
+      });
+
+      player.play();
+    } catch (_err) {
+      setPlayingMsgId(null);
+      setIsSpeakLoading(false);
+    }
+  }, [playingMsgId, stopPlayback, speakMutation]);
+
+  // Auto-play TTS for new assistant messages
+  const autoPlayTTS = useCallback((text: string, msgId: string) => {
+    if (!voiceAutoPlay) return;
+    // Don't auto-play error messages or very short messages
+    if (text.length < 10) return;
+    // Small delay to let the UI update first
+    setTimeout(() => playMessage(msgId, text), 300);
+  }, [voiceAutoPlay, playMessage]);
 
   // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -584,6 +692,8 @@ export default function ChatScreen() {
       setMessages(updatedMessages);
       await saveMessages(updatedMessages);
       notifyHigginsReply(result.reply);
+      // Auto-play TTS if enabled
+      autoPlayTTS(result.reply, assistantMsg.id);
     } catch (error) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -999,6 +1109,26 @@ export default function ChatScreen() {
             <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser]}>
               {formatTime(item.timestamp)}
             </Text>
+            {/* Speaker button for assistant messages */}
+            {!isUser && item.content.length > 10 && (
+              <Pressable
+                onPress={() => playMessage(item.id, item.content)}
+                style={({ pressed }) => [{
+                  marginLeft: 6,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 10,
+                  backgroundColor: playingMsgId === item.id ? "rgba(0,212,212,0.2)" : "transparent",
+                  opacity: pressed ? 0.6 : 1,
+                }]}
+              >
+                <Text style={{ fontSize: 14 }}>
+                  {playingMsgId === item.id
+                    ? (isSpeakLoading ? "⏳" : "⏸️")
+                    : "🔊"}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>

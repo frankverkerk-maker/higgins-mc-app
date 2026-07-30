@@ -121,6 +121,9 @@ export const nl = {
     uploadError: "Upload mislukt. Probeer opnieuw.",
     errorGeneric: "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
     uploadOpenBtn: "Openen",
+    speakerPlay: "Voorlezen",
+    speakerStop: "Stop",
+    speakerLoading: "Stem laden...",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────
@@ -167,6 +170,8 @@ export const nl = {
     darkModeDesc: "Automatisch op basis van systeem",
     notifications: "Notificaties",
     notificationsDesc: "Push notificaties van Higgins",
+    voiceAutoPlay: "Stem Auto-Play",
+    voiceAutoPlayDesc: "Lees antwoorden van Higgins automatisch voor",
     about: "Over",
     appVersion: "App Versie",
     higginsVersion: "Higgins Versie",
