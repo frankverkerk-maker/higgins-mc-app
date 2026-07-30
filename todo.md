@@ -298,3 +298,15 @@
 - [x] SQL migratiescript aangemaakt (mc-implementation/migrate-elena-to-nathalie.sql)
 - [x] Eleven Labs voice profielen geconfigureerd voor 8 agents (server/voice-profiles.ts)
 - [x] TypeScript 0 fouten, 33 tests groen (1 timeout door server restart, geen code-fout)
+
+## Fase 32: Eleven Labs TTS + Nathalie Gateway + SQL Migratie
+
+- [x] ELEVENLABS_API_KEY toegevoegd aan server/_core/env.ts
+- [x] server/tts-service.ts aangemaakt (generateSpeech + isTTSAvailable)
+- [x] higgins.speak tRPC endpoint toegevoegd aan server/routers.ts (base64 audio response)
+- [x] Nathalie system prompt geïntegreerd in server/command-router.ts (NATHALIE_SYSTEM_PROMPT export)
+- [x] routeAsNathalie() gateway-functie gebouwd (escalation logic voor managers, high-risk downgrade)
+- [x] SQL migratie uitgevoerd op MC Cloud database (agent_registry + building_floors: Elena → Nathalie)
+- [x] Elena Vasquez (JLC) ongewijzigd geverifieerd in database ✓
+- [ ] ELEVENLABS_API_KEY validatie — key retourneerde 401, wacht op correcte key van gebruiker
+- [x] TypeScript 0 fouten, 32+ tests groen

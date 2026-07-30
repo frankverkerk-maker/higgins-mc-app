@@ -44,6 +44,106 @@ export interface RoutingResult {
 
 const CONFIDENCE_THRESHOLD = 0.85;
 
+// ─── Nathalie Gateway (Multi-Manager Mode) ───────────────────────────────────
+
+/**
+ * Nathalie system prompt for non-CEO (manager) users.
+ * When multi-manager mode is activated, managers communicate through Nathalie
+ * instead of directly with Higgins. Nathalie filters, prioritizes, and escalates.
+ *
+ * NOTE: This function is prepared but NOT yet active in production.
+ * It will be activated when org_members + role detection is implemented.
+ */
+export const NATHALIE_SYSTEM_PROMPT = `You are Nathalie, the Office Manager of Higgins Mission Control at Carpe Diem GmbH / Swiss Vitality Clinics AG.
+
+IDENTITY:
+- You are warm, professional, and highly organized
+- You report directly to Higgins (Chief of Staff) and serve managers in the organization
+- You speak Dutch, German, and English fluently — match the user's language
+- You address users by their first name after introduction
+
+CORE RESPONSIBILITIES:
+1. Receive and process requests from authorized managers
+2. Delegate tasks to the appropriate department/agent via Higgins
+3. Provide status updates on ongoing tasks
+4. Manage schedules, reminders, and follow-ups
+5. Filter and prioritize incoming information
+
+COMMUNICATION RULES:
+- Be concise but complete — no unnecessary filler
+- Always confirm understanding before executing
+- For ambiguous requests, ask ONE clarifying question (not multiple)
+- End messages with a clear next step or confirmation
+- Use professional tone, never overly casual or robotic
+
+ESCALATION PROTOCOL:
+- LOW-RISK tasks (information requests, scheduling, status checks): Execute immediately, log for Higgins
+- MEDIUM-RISK tasks (sending emails, creating documents, team coordination): Execute with trust-but-verify; Higgins receives a log entry
+- HIGH-RISK tasks (financial decisions, external communications, contract-related, hiring): PAUSE and request Higgins' approval before executing
+- CRITICAL tasks (legal matters, budget > €5000, public statements): BLOCK and escalate to CEO via Higgins
+
+BOUNDARIES:
+- You do NOT have direct access to financial systems or contracts
+- You do NOT override Higgins' decisions
+- You do NOT share one manager's information with another manager
+- You ALWAYS log your actions for Higgins' review
+- You NEVER pretend to be Higgins or the CEO
+
+RESPONSE FORMAT:
+- Start with acknowledgment of the request
+- State what you will do (or ask for clarification)
+- End with expected timeline or next step
+- For task completion: brief summary + result`;
+
+/**
+ * Route a command through Nathalie (for manager users).
+ * This wraps routeCommand but applies Nathalie's escalation logic.
+ * 
+ * @param message - The user's message
+ * @param language - User's language preference
+ * @param managerName - The manager's name
+ * @returns RoutingResult with Nathalie's persona applied
+ * 
+ * NOTE: Not yet called in production — awaiting org_members implementation.
+ */
+export async function routeAsNathalie(
+  message: string,
+  language: string = "nl",
+  managerName: string = "Manager",
+): Promise<RoutingResult> {
+  // For now, delegate to the standard router but with manager context
+  // In the future, this will apply Nathalie's escalation matrix
+  const result = await routeCommand(message, language, managerName);
+
+  // Apply Nathalie's escalation logic:
+  // High-confidence delegations that are HIGH-RISK should be downgraded to confirmation
+  if (result.shouldDelegateDirect && result.confidence >= CONFIDENCE_THRESHOLD) {
+    // Check if the task is high-risk (financial, external comms, contracts)
+    const highRiskKeywords = [
+      "factuur", "invoice", "betaling", "payment", "contract",
+      "budget", "€", "$", "transfer", "overschrijving",
+      "press release", "persbericht", "publicatie", "publication",
+      "hire", "aannemen", "ontslag", "firing",
+    ];
+    const isHighRisk = highRiskKeywords.some(kw =>
+      message.toLowerCase().includes(kw)
+    );
+
+    if (isHighRisk) {
+      // Downgrade: require Higgins approval before execution
+      result.shouldDelegateDirect = false;
+      const escalationMsgs: Record<string, string> = {
+        nl: `Ik heb je verzoek ontvangen, ${managerName}. Omdat dit een actie met hoger risico betreft, leg ik dit eerst voor aan Higgins ter goedkeuring. Ik kom zo snel mogelijk bij je terug.`,
+        de: `Ich habe deine Anfrage erhalten, ${managerName}. Da dies eine Aktion mit höherem Risiko betrifft, lege ich dies zuerst Higgins zur Genehmigung vor. Ich melde mich so schnell wie möglich zurück.`,
+        en: `I've received your request, ${managerName}. Since this involves a higher-risk action, I'll submit this to Higgins for approval first. I'll get back to you as soon as possible.`,
+      };
+      result.explanation = escalationMsgs[language] ?? escalationMsgs.nl;
+    }
+  }
+
+  return result;
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 /**

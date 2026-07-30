@@ -39,6 +39,7 @@ import { getDailyBriefing } from "./daily-briefing-service";
 import { buildRosterPromptBlock, buildRoutingTable, AGENT_MAP, DEPT_KEYWORDS, DEPARTMENTS } from "../shared/roster";
 import { routeCommand, type RoutingResult } from "./command-router";
 import { watchTask } from "./task-watcher";
+import { generateSpeech, isTTSAvailable } from "./tts-service";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -1021,6 +1022,38 @@ Antwoord ALLEEN in dit JSON formaat:
           console.error("[getBuilding] DB query failed:", err);
           return { floors: [], source: "fallback" as const };
         }
+      }),
+
+    // ── TTS: genereer spraak-audio voor een agent-bericht ─────────────────────
+    speak: publicProcedure
+      .input(
+        z.object({
+          text: z.string().min(1).max(5000),
+          agentName: z.string().default("Higgins"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        if (!isTTSAvailable()) {
+          return { success: false, error: "TTS not configured", audioBase64: null };
+        }
+
+        const result = await generateSpeech({
+          agentName: input.agentName,
+          text: input.text,
+        });
+
+        if (!result.success || !result.audioBuffer) {
+          return { success: false, error: result.error ?? "TTS generation failed", audioBase64: null };
+        }
+
+        // Return base64-encoded audio for the client to play
+        const audioBase64 = result.audioBuffer.toString("base64");
+        return {
+          success: true,
+          error: null,
+          audioBase64,
+          contentType: result.contentType ?? "audio/mpeg",
+        };
       }),
 
     checkBreakingNews: publicProcedure
