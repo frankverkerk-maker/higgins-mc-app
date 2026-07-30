@@ -39,6 +39,7 @@ import { useChatUnread } from "@/lib/chat-unread-provider";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
+import { VoiceWaveform } from "@/components/voice-waveform";
 import { DelegationTracker } from "@/components/delegation-tracker";
 import { isOnline, enqueueMessage, getQueue, dequeueMessage } from "@/lib/offline-queue";
 
@@ -1135,7 +1136,7 @@ export default function ChatScreen() {
             <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser]}>
               {formatTime(item.timestamp)}
             </Text>
-            {/* Speaker button for assistant messages */}
+            {/* Speaker button + waveform for assistant messages */}
             {!isUser && item.content.length > 10 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
                 <Pressable
@@ -1154,6 +1155,10 @@ export default function ChatScreen() {
                       : "🔊"}
                   </Text>
                 </Pressable>
+                {/* Waveform animation — visible during playback */}
+                {playingMsgId === item.id && !isSpeakLoading && (
+                  <VoiceWaveform isPlaying={true} color={C.cyan} height={14} barCount={4} barWidth={2} />
+                )}
                 {/* Speed button — only visible when this message is playing */}
                 {playingMsgId === item.id && !isSpeakLoading && (
                   <Pressable

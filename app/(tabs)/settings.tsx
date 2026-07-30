@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable, Switch, TextInput, ActivityIndicator, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -10,6 +10,11 @@ import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 import { MC_TEAM_FEED_URL_KEY } from "@/lib/team-feed";
 import { SiriShortcutsSettings } from "@/components/siri-shortcuts-settings";
 import { USER_NAME_KEY } from "@/app/onboarding";
+import { trpc } from "@/lib/trpc";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
+import * as FileSystem from "expo-file-system/legacy";
+import { VoiceWaveform } from "@/components/voice-waveform";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -51,6 +56,17 @@ const SETTINGS_BRIEFING_KEY = "@higgins_settings_briefing";
 const SETTINGS_HAPTIC_KEY = "@higgins_settings_haptic";
 const SETTINGS_VOICE_AUTOPLAY_KEY = "@higgins_settings_voice_autoplay";
 
+// Voice preview agents
+const VOICE_PREVIEW_AGENTS = [
+  { name: "Higgins", emoji: "🎩", desc: "Clyde — deep, authoritative" },
+  { name: "Nathalie", emoji: "👩‍💼", desc: "Rachel — warm, professional" },
+  { name: "Warren", emoji: "📊", desc: "Josh — calm, analytical" },
+  { name: "Gary", emoji: "🎨", desc: "Antoni — energetic, creative" },
+  { name: "Elon", emoji: "⚙️", desc: "Arnold — direct, technical" },
+  { name: "Victoria", emoji: "📈", desc: "Bella — confident, strategic" },
+  { name: "Morgan", emoji: "💰", desc: "Sam — steady, precise" },
+] as const;
+
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
   const router = useRouter();
@@ -58,6 +74,10 @@ export default function SettingsScreen() {
   const [briefingEnabled, setBriefingEnabled] = useState(true);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [voiceAutoPlay, setVoiceAutoPlay] = useState(false);
+  const [previewPlaying, setPreviewPlaying] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<string | null>(null);
+  const previewPlayerRef = useRef<AudioPlayer | null>(null);
+  const speakMutation = trpc.higgins.speak.useMutation();
   const [locationInput, setLocationInput] = useState("Bottighofen, CH");
   const [locationSaving, setLocationSaving] = useState(false);
   const [locationSaved, setLocationSaved] = useState(false);
@@ -88,6 +108,90 @@ export default function SettingsScreen() {
       if (val !== null) setVoiceAutoPlay(val === "true");
     });
   }, []);
+
+  // Cleanup voice preview on unmount
+  useEffect(() => {
+    return () => {
+      if (previewPlayerRef.current) {
+        try { previewPlayerRef.current.remove(); } catch (_) {}
+        previewPlayerRef.current = null;
+      }
+    };
+  }, []);
+
+  const playVoicePreview = useCallback(async (agentName: string) => {
+    // If already playing this agent, stop
+    if (previewPlaying === agentName) {
+      if (previewPlayerRef.current) {
+        try { previewPlayerRef.current.remove(); } catch (_) {}
+        previewPlayerRef.current = null;
+      }
+      setPreviewPlaying(null);
+      return;
+    }
+
+    // Stop any current preview
+    if (previewPlayerRef.current) {
+      try { previewPlayerRef.current.remove(); } catch (_) {}
+      previewPlayerRef.current = null;
+    }
+    setPreviewPlaying(null);
+
+    haptic(Haptics.ImpactFeedbackStyle.Light);
+    setPreviewLoading(agentName);
+
+    try {
+      // Set audio mode for iOS silent switch
+      await setAudioModeAsync({ playsInSilentMode: true });
+
+      const sampleTexts: Record<string, string> = {
+        Higgins: "Good afternoon, sir. I am Higgins, your Chief of Staff. How may I be of service today?",
+        Nathalie: "Goedemiddag. Ik ben Nathalie, uw persoonlijke manager. Wat kan ik voor u betekenen?",
+        Warren: "The markets are showing interesting patterns today. Let me analyze the data for you.",
+        Gary: "I have three creative campaign ideas ready for your review. Shall we dive in?",
+        Elon: "System diagnostics complete. All infrastructure components are operating at optimal capacity.",
+        Victoria: "The quarterly sales figures are in. Revenue is up twelve percent year over year.",
+        Morgan: "Your portfolio allocation has been rebalanced according to the latest risk parameters.",
+      };
+
+      const text = sampleTexts[agentName] || `Hello, I am ${agentName}. This is my voice.`;
+      const result = await speakMutation.mutateAsync({ text, agentName });
+
+      if (!result.success || !result.audioBase64) {
+        setPreviewLoading(null);
+        return;
+      }
+
+      let audioSource: string;
+      if (Platform.OS !== "web" && FileSystem.cacheDirectory) {
+        const tempPath = `${FileSystem.cacheDirectory}preview_${agentName}.mp3`;
+        await FileSystem.writeAsStringAsync(tempPath, result.audioBase64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        audioSource = tempPath;
+      } else {
+        audioSource = `data:audio/mpeg;base64,${result.audioBase64}`;
+      }
+
+      const player = createAudioPlayer(audioSource);
+      previewPlayerRef.current = player;
+      setPreviewLoading(null);
+      setPreviewPlaying(agentName);
+
+      player.addListener("playbackStatusUpdate", (status) => {
+        if (status.didJustFinish) {
+          setPreviewPlaying(null);
+          try { player.remove(); } catch (_) {}
+          previewPlayerRef.current = null;
+        }
+      });
+
+      player.play();
+    } catch (_) {
+      setPreviewLoading(null);
+      setPreviewPlaying(null);
+    }
+  }, [previewPlaying, speakMutation]);
 
   const saveFeedUrl = async () => {
     const url = feedInput.trim();
@@ -490,6 +594,48 @@ export default function SettingsScreen() {
                 thumbColor={voiceAutoPlay ? "#0A0C0E" : "#E8EDF2"}
               />
             </View>
+          </View>
+        </View>
+
+        {/* ── Stem Preview ── */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{language === "de" ? "STIMMEN TESTEN" : language === "en" ? "TEST VOICES" : "STEMMEN TESTEN"}</Text>
+          <View style={s.card}>
+            {VOICE_PREVIEW_AGENTS.map((agent, i) => (
+              <Pressable
+                key={agent.name}
+                style={({ pressed }) => [s.row, i > 0 && s.rowBorder, pressed && { opacity: 0.75 }]}
+                onPress={() => playVoicePreview(agent.name)}
+              >
+                <View style={s.rowLeft}>
+                  <View style={[s.rowIcon, { backgroundColor: C.cyanDim }]}>
+                    <Text style={{ fontSize: 14 }}>{agent.emoji}</Text>
+                  </View>
+                  <View>
+                    <Text style={s.rowLabel}>{agent.name}</Text>
+                    <Text style={s.rowSub}>{agent.desc}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  {previewPlaying === agent.name && (
+                    <VoiceWaveform isPlaying={true} color={C.cyan} height={12} barCount={3} barWidth={2} />
+                  )}
+                  {previewLoading === agent.name ? (
+                    <ActivityIndicator size="small" color={C.cyan} />
+                  ) : (
+                    <View style={[s.connectedBadge, {
+                      backgroundColor: previewPlaying === agent.name ? C.cyanDim : "rgba(90,100,114,0.15)",
+                    }]}>
+                      <Text style={[s.statusText, {
+                        color: previewPlaying === agent.name ? C.cyan : C.muted,
+                      }]}>
+                        {previewPlaying === agent.name ? "⏸️" : "▶️"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            ))}
           </View>
         </View>
 

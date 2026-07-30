@@ -325,3 +325,10 @@
 - [x] Playback speed selector in Chat — 0.75x / 1x / 1.25x / 1.5x keuze voor TTS voorlezing (cycleSpeed knop verschijnt tijdens afspelen)
 - [x] Speed voorkeur opslaan in AsyncStorage
 - [x] TypeScript 0 fouten
+
+## Fase 35: Voice Waveform Visualisatie + Stem Preview in Settings
+
+- [x] Waveform animatie component — subtiele geluidsgolf in berichtbubbel tijdens TTS afspelen (components/voice-waveform.tsx)
+- [x] Integratie in Chat renderMessage — waveform zichtbaar wanneer playingMsgId === item.id
+- [x] Stem preview sectie in Settings — per-agent "Test stem" knoppen (Higgins, Nathalie, Warren, Gary, Elon, Victoria, Morgan)
+- [x] TypeScript 0 fouten
