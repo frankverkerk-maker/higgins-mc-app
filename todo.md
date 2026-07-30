@@ -308,5 +308,5 @@
 - [x] routeAsNathalie() gateway-functie gebouwd (escalation logic voor managers, high-risk downgrade)
 - [x] SQL migratie uitgevoerd op MC Cloud database (agent_registry + building_floors: Elena → Nathalie)
 - [x] Elena Vasquez (JLC) ongewijzigd geverifieerd in database ✓
-- [ ] ELEVENLABS_API_KEY validatie — key retourneerde 401, wacht op correcte key van gebruiker
+- [x] ELEVENLABS_API_KEY validatie — key succesvol gevalideerd (TTS endpoint HTTP 200)
 - [x] TypeScript 0 fouten, 32+ tests groen
