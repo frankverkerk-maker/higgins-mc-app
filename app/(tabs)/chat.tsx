@@ -94,6 +94,8 @@ type Message = {
   delegationTaskId?: string;
   assignedAgent?: string;
   pageCount?: number;
+  // Voice memo attached indicator
+  audioAttached?: boolean;
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
@@ -224,6 +226,8 @@ export default function ChatScreen() {
   const [voiceAutoPlay, setVoiceAutoPlay] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
+  // Track the last voice memo transcript to attach as context to the next message
+  const pendingAudioTranscriptRef = useRef<string | null>(null);
 
   // Load voice auto-play preference and speed
   useEffect(() => {
@@ -574,6 +578,10 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
+      // Include audio transcript if it was attached when the delegation was proposed
+      const audioForConfirm = pendingAudioTranscriptRef.current ?? undefined;
+      pendingAudioTranscriptRef.current = null;
+
       const result = await chatMutation.mutateAsync({
         message: "__confirm__",
         history: [],
@@ -583,6 +591,7 @@ export default function ChatScreen() {
           targetAgent: pendingDelegation.targetAgent,
           taskDescription: pendingDelegation.taskDescription,
           additionalTargets: pendingDelegation.additionalTargets?.map(t => ({ agent: t.agent, task: t.task })),
+          audioTranscript: audioForConfirm,
         },
       });
 
@@ -635,12 +644,14 @@ export default function ChatScreen() {
 
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    const hasAudioAttached = !!pendingAudioTranscriptRef.current;
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
       content: text,
       timestamp: new Date(),
       type: "text",
+      audioAttached: hasAudioAttached || undefined,
     };
 
     const newMessages = [...messages, userMsg];
@@ -670,11 +681,16 @@ export default function ChatScreen() {
       const agentContext = buildAgentContext();
       const messageWithContext = agentContext ? text + agentContext : text;
 
+      // Consume pending audio transcript if available
+      const audioTranscript = pendingAudioTranscriptRef.current ?? undefined;
+      pendingAudioTranscriptRef.current = null;
+
       const result = await chatMutation.mutateAsync({
         message: messageWithContext,
         history: history.map(h => ({ role: h.role, content: String(h.content) })),
         userName: userName ?? undefined,
         language,
+        audioTranscript,
       });
 
       historyRef.current = [
@@ -827,7 +843,9 @@ export default function ChatScreen() {
             saveMessages(updated);
             return updated;
           });
-          // Auto-send the transcribed text to Higgins
+          // Store transcript as pending context for the next sent message
+          pendingAudioTranscriptRef.current = result.text;
+          // Auto-fill the input so user can edit or send directly
           setInput(result.text);
         } catch (err) {
           setMessages(prev => {
@@ -1181,6 +1199,9 @@ export default function ChatScreen() {
             </View>
           )}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            {isUser && item.audioAttached && (
+              <Text style={{ fontSize: 10, color: "#00D4D4" }}>🎤</Text>
+            )}
             {isUser && item.status === "queued" && (
               <Text style={{ fontSize: 10, color: "#F59E0B" }}>⏳</Text>
             )}

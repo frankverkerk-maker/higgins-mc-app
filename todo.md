@@ -343,3 +343,12 @@
 - [x] UI: naam-invoer + upload-knop + status indicator + voice ID badge in Settings
 - [x] i18n keys NL/DE/EN voor voice cloning
 - [x] TypeScript 0 fouten
+
+## Fase 37: Voice Memo Doorsturen naar Agents bij Delegatie
+
+- [x] Voice memo context meesturen bij delegatie — transcriptie van audio-opname als extra context voor agent
+- [x] Chat UX: na voice memo opname wordt transcript als pendingAudioTranscript bewaard en meegestuurd bij volgende bericht
+- [x] Server command-router: audioTranscript veld accepteren en meesturen in Manus API taak (primary + additional targets)
+- [x] Delegatie-bericht in chat toont 🎤 indicator bij user-berichten met voice memo bijlage
+- [x] Confirmed delegation ook verrijkt met audioTranscript
+- [x] TypeScript 0 fouten

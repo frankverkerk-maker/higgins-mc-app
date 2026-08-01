@@ -131,11 +131,14 @@ export const appRouter = router({
           userName: z.string().optional(),
           language: z.string().optional(),
           agentStatuses: z.record(z.string(), z.string()).optional(),
+          // Voice memo transcript to include as context for delegation
+          audioTranscript: z.string().optional(),
           // When user confirms a pending delegation proposal
           confirmDelegation: z.object({
             targetAgent: z.string(),
             taskDescription: z.string(),
             additionalTargets: z.array(z.object({ agent: z.string(), task: z.string() })).optional(),
+            audioTranscript: z.string().optional(),
           }).optional(),
         })
       )
@@ -145,10 +148,14 @@ export const appRouter = router({
 
         // ── Handle confirmed delegation (user tapped "Akkoord") ──────────────
         if (input.confirmDelegation) {
-          const { targetAgent, taskDescription, additionalTargets } = input.confirmDelegation;
+          const { targetAgent, taskDescription, additionalTargets, audioTranscript: confirmAudio } = input.confirmDelegation;
+          // Enrich with voice memo if attached
+          const enrichedConfirmTask = confirmAudio
+            ? `${taskDescription}\n\n[Voice memo from ${userName}]: "${confirmAudio}"`
+            : taskDescription;
           try {
             // Activate primary target
-            const result = await activateAgent(targetAgent, taskDescription, "en");
+            const result = await activateAgent(targetAgent, enrichedConfirmTask, "en");
             watchTask({ taskId: result.taskId, agentName: targetAgent, language: lang });
 
             // Multi-delegation: activate additional targets in parallel
@@ -159,7 +166,10 @@ export const appRouter = router({
               const settled = await Promise.all(
                 additionalTargets.map(async (t) => {
                   try {
-                    const r = await activateAgent(t.agent, t.task, "en");
+                    const enrichedAdditionalConfirmTask = confirmAudio
+                      ? `${t.task}\n\n[Voice memo from ${userName}]: "${confirmAudio}"`
+                      : t.task;
+                    const r = await activateAgent(t.agent, enrichedAdditionalConfirmTask, "en");
                     watchTask({ taskId: r.taskId, agentName: t.agent, language: lang });
                     return { agent: t.agent, taskId: r.taskId };
                   } catch (e) {
@@ -199,14 +209,24 @@ export const appRouter = router({
           }
         }
 
+        // ── Prepare audio context if voice memo transcript is attached ──────
+        const audioContext = input.audioTranscript
+          ? `\n\n[VOICE MEMO TRANSCRIPT ATTACHED]:\n"${input.audioTranscript}"`
+          : "";
+        const messageWithAudio = input.message + audioContext;
+
         // ── Step 1: Route the command ────────────────────────────────────────
-        const routing = await routeCommand(input.message, lang, userName);
+        const routing = await routeCommand(messageWithAudio, lang, userName);
 
         // ── Step 2a: Direct delegation (high confidence) ─────────────────────
         if (routing.shouldDelegateDirect && routing.targetAgent && routing.taskDescription) {
           try {
+            // Enrich task description with voice memo context
+            const enrichedTask = input.audioTranscript
+              ? `${routing.taskDescription}\n\n[Voice memo from ${userName}]: "${input.audioTranscript}"`
+              : routing.taskDescription;
             // Activate primary target
-            const result = await activateAgent(routing.targetAgent, routing.taskDescription, "en");
+            const result = await activateAgent(routing.targetAgent, enrichedTask, "en");
             watchTask({ taskId: result.taskId, agentName: routing.targetAgent, language: lang });
 
             // Multi-delegation: activate additional targets in parallel
@@ -215,7 +235,10 @@ export const appRouter = router({
               const settled = await Promise.all(
                 routing.additionalTargets.map(async (t) => {
                   try {
-                    const r = await activateAgent(t.agent, t.task, "en");
+                    const enrichedAdditionalTask = input.audioTranscript
+                      ? `${t.task}\n\n[Voice memo from ${userName}]: "${input.audioTranscript}"`
+                      : t.task;
+                    const r = await activateAgent(t.agent, enrichedAdditionalTask, "en");
                     watchTask({ taskId: r.taskId, agentName: t.agent, language: lang });
                     return { agent: t.agent, taskId: r.taskId };
                   } catch (e) {
