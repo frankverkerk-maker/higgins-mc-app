@@ -128,6 +128,11 @@ export const en: Translations = {
     voiceMemo: "Voice memo",
     voiceMemoDuration: "Duration",
     voiceMemoTranscript: "Transcript",
+    exportChat: "Export chat",
+    exportChatDesc: "Download conversation as PDF",
+    exportChatSuccess: "PDF exported successfully",
+    exportChatError: "Export failed",
+    exporting: "Exporting...",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────

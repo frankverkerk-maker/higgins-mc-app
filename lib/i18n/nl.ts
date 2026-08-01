@@ -127,6 +127,11 @@ export const nl = {
     voiceMemo: "Spraakbericht",
     voiceMemoDuration: "Duur",
     voiceMemoTranscript: "Transcriptie",
+    exportChat: "Exporteer chat",
+    exportChatDesc: "Download gesprek als PDF",
+    exportChatSuccess: "PDF succesvol geëxporteerd",
+    exportChatError: "Export mislukt",
+    exporting: "Exporteren...",
   },
 
   // ─── Agents / Team Pulse ─────────────────────────────────────────────────────

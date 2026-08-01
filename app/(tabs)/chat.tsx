@@ -156,6 +156,7 @@ export default function ChatScreen() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   // Dynamische agent statussen — bijgewerkt na echte Manus API activering
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({});
   const listRef = useRef<FlatList>(null);
@@ -258,6 +259,7 @@ export default function ChatScreen() {
   const transcribeMutation = trpc.higgins.transcribe.useMutation();
   const transcribeMeetingMutation = trpc.higgins.transcribeMeeting.useMutation();
   const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
+  const exportChatMutation = trpc.higgins.exportChat.useMutation();
   const activateAgentMutation = trpc.higgins.activateAgent.useMutation();
   const speakMutation = trpc.higgins.speak.useMutation();
   const uploadPdfMutation = trpc.higgins.uploadPdf.useMutation();
@@ -799,6 +801,45 @@ export default function ChatScreen() {
     }
   }, [messages, generatePdfMutation, userName, language, saveMessages]);
 
+  // ─── Export hele chat als PDF ─────────────────────────────────────────────────────────────────
+  const handleExportChat = useCallback(async () => {
+    if (messages.length === 0) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExporting(true);
+
+    try {
+      const exportMessages = messages
+        .filter(m => m.type === "text" || m.type === "voiceMemo")
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : String(m.timestamp),
+          type: m.type ?? "text",
+          assignedAgent: m.assignedAgent ?? undefined,
+          audioAttached: m.audioAttached ?? undefined,
+        }));
+
+      const result = await exportChatMutation.mutateAsync({
+        messages: exportMessages,
+        userName: userName ?? undefined,
+        language,
+      });
+
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Open the PDF URL
+      await Linking.openURL(result.url);
+    } catch (err) {
+      Alert.alert(
+        t.chat.exportChatError ?? "Export failed",
+        "Could not export the conversation. Please try again."
+      );
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [messages, exportChatMutation, userName, language, t]);
+
   // ─── Chat mic: Voice-to-Higgins ───────────────────────────────────────────
   const recordStartRef = useRef<number>(0);
   const handleVoicePress = useCallback(async () => {
@@ -1283,6 +1324,22 @@ export default function ChatScreen() {
           </View>
           {/* Taalwisselaar */}
           <LanguageSwitcher />
+          {/* Export chat knop */}
+          {messages.length > 0 && (
+            <Pressable
+              style={({ pressed }) => [{
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 8,
+                backgroundColor: isExporting ? "rgba(0,212,212,0.2)" : "transparent",
+                opacity: pressed ? 0.6 : 1,
+              }]}
+              onPress={handleExportChat}
+              disabled={isExporting}
+            >
+              <Text style={{ fontSize: 18 }}>{isExporting ? "⏳" : "💾"}</Text>
+            </Pressable>
+          )}
           {/* Vergadering opname knop in header */}
           {Platform.OS !== "web" && (
             <Animated.View style={{ transform: [{ scale: meetingPulseAnim }] }}>

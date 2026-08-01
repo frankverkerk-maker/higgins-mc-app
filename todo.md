@@ -352,3 +352,11 @@
 - [x] Delegatie-bericht in chat toont 🎤 indicator bij user-berichten met voice memo bijlage
 - [x] Confirmed delegation ook verrijkt met audioTranscript
 - [x] TypeScript 0 fouten
+
+## Fase 38: Conversatie-Export als PDF
+
+- [x] Server endpoint exportChat — ontvangt berichten-array, genereert PDF met gesprek (generateResponsePdf + S3 upload)
+- [x] PDF bevat: datum, gebruikersnaam, alle berichten (user + assistant), voice memo transcripties, delegatie-info
+- [x] Export-knop (💾) in Chat header — tik genereert PDF en opent in browser via Linking.openURL
+- [x] i18n keys voor NL/DE/EN (exportChat, exportChatDesc, exportChatSuccess, exportChatError, exporting)
+- [x] TypeScript 0 fouten

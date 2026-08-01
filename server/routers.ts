@@ -1127,6 +1127,75 @@ Antwoord ALLEEN in dit JSON formaat:
         }
       }),
 
+    exportChat: publicProcedure
+      .input(
+        z.object({
+          messages: z.array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: z.string(),
+              timestamp: z.string(),
+              type: z.string().optional(),
+              assignedAgent: z.string().optional(),
+              audioAttached: z.boolean().optional(),
+            })
+          ),
+          userName: z.string().optional(),
+          language: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const userName = input.userName ?? "Frank";
+        const lang = input.language ?? "nl";
+        const now = new Date();
+        const locale = lang === "de" ? "de-DE" : lang === "en" ? "en-GB" : "nl-NL";
+        const dateStr = now.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
+        const timeStr = now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+
+        const titleMap: Record<string, string> = {
+          nl: "Gesprek met Higgins",
+          de: "Gespräch mit Higgins",
+          en: "Conversation with Higgins",
+        };
+
+        // Build markdown content from messages
+        let content = `# ${titleMap[lang] ?? titleMap.nl}\n\n`;
+        content += `**${userName}** — ${dateStr} ${timeStr}\n\n---\n\n`;
+
+        for (const msg of input.messages) {
+          const time = new Date(msg.timestamp).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+          const sender = msg.role === "user" ? userName : (msg.assignedAgent ?? "Higgins");
+          const icon = msg.role === "user" ? "👤" : "🤖";
+          const audioTag = msg.audioAttached ? " 🎤" : "";
+
+          content += `### ${icon} ${sender} — ${time}${audioTag}\n\n`;
+          content += `${msg.content}\n\n`;
+
+          if (msg.type === "voiceMemo") {
+            content += `> *[Voice memo transcript]*\n\n`;
+          }
+        }
+
+        content += `---\n\n*Geëxporteerd door Higgins Mission Control*`;
+
+        const pdfBuffer = await generateResponsePdf(
+          titleMap[lang] ?? titleMap.nl,
+          content,
+          userName,
+          lang
+        );
+
+        const fileName = `higgins-chat-${Date.now()}.pdf`;
+        const { url } = await storageUpload(fileName, pdfBuffer, "application/pdf");
+
+        return {
+          url,
+          fileName,
+          sizeBytes: pdfBuffer.length,
+          generatedAt: new Date().toISOString(),
+        };
+      }),
+
     checkBreakingNews: publicProcedure
       .input(z.object({ lang: z.string().optional() }))
       .mutation(async ({ input }) => {
