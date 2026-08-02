@@ -41,6 +41,7 @@ import { routeCommand, type RoutingResult } from "./command-router";
 import { watchTask } from "./task-watcher";
 import { generateSpeech, isTTSAvailable } from "./tts-service";
 import { ENV } from "./_core/env";
+import { mcProxyRouter } from "./routers/mc-proxy";
 
 // ─── Higgins system prompt (meertalig) ────────────────────────────────────────────
 const HIGGINS_LANGUAGE_INSTRUCTIONS: Record<string, string> = {
@@ -113,7 +114,10 @@ export const appRouter = router({
     }),
   }),
 
-  higgins: router({
+  higgins: mcProxyRouter,
+
+  // ═══ ORIGINELE HIGGINS ROUTER (uitgeschakeld — proxy actief) ═══
+  _higgins_local_disabled: router({
     // ── Chat: stuur een bericht naar Higgins — met intelligente command routing ──
     chat: publicProcedure
       .input(

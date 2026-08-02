@@ -360,3 +360,10 @@
 - [x] Export-knop (💾) in Chat header — tik genereert PDF en opent in browser via Linking.openURL
 - [x] i18n keys voor NL/DE/EN (exportChat, exportChatDesc, exportChatSuccess, exportChatError, exporting)
 - [x] TypeScript 0 fouten
+
+## Fase 39: MC-Cloud Proxy Patch
+
+- [x] server/routers/mc-proxy.ts aangemaakt — alle higgins.* tRPC calls doorgestuurd naar MC-cloud (higgins-dash-bbdpujw2.manus.space)
+- [x] routers.ts: higgins router vervangen door mcProxyRouter (origineel behouden als _higgins_local_disabled)
+- [x] Proxy schema's uitgebreid met alle velden die de app meestuurt (agentName, mimeType, audioTranscript, userName, actionDescription, removeBackgroundNoise)
+- [x] TypeScript 0 fouten

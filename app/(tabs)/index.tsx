@@ -146,7 +146,7 @@ export default function DashboardScreen() {
     if (approvalsQuery.data) {
       // Trust the server's real list — including an empty array (nothing to approve).
       setApprovals(
-        approvalsQuery.data.map((a) => ({ ...a, time: formatApprovalTime(a.time) })),
+        approvalsQuery.data.map((a: any) => ({ ...a, time: formatApprovalTime(a.time) })),
       );
     }
   }, [approvalsQuery.data, formatApprovalTime]);
