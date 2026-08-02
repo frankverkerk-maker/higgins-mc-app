@@ -59,6 +59,18 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // ── Proxy Health Check — MC-cloud bereikbaarheid + circuit breaker status ──
+  app.get("/api/proxy-health", async (_req, res) => {
+    try {
+      const { checkMcCloudHealth } = await import("../routers/mc-proxy");
+      const health = await checkMcCloudHealth();
+      const statusCode = health.mcCloudReachable ? 200 : 503;
+      res.status(statusCode).json(health);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message, timestamp: Date.now() });
+    }
+  });
+
   // ── Legal pages (required by Apple App Store) ────────────────────────────
   // Apple requires a publicly reachable Privacy Policy URL for every app.
   // Served here so https://<domain>/privacy works without a separate site.

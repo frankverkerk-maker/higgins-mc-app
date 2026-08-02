@@ -367,3 +367,11 @@
 - [x] routers.ts: higgins router vervangen door mcProxyRouter (origineel behouden als _higgins_local_disabled)
 - [x] Proxy schema's uitgebreid met alle velden die de app meestuurt (agentName, mimeType, audioTranscript, userName, actionDescription, removeBackgroundNoise)
 - [x] TypeScript 0 fouten
+
+## Fase 40: Proxy Health Check + Circuit Breaker
+
+- [x] /api/proxy-health endpoint — pingt MC-cloud en retourneert bereikbaarheid + circuit breaker status
+- [x] Circuit breaker patroon in mc-proxy.ts — CLOSED/OPEN/HALF_OPEN states met 3-failure threshold en 30s cooldown
+- [x] Request timeouts — 15s voor queries, 60s voor mutations
+- [x] Automatische recovery — na cooldown probeert HALF_OPEN state, bij 2 successen → CLOSED
+- [x] TypeScript 0 fouten
