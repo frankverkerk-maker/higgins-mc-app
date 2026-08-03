@@ -18,6 +18,54 @@ import { router, publicProcedure } from "../_core/trpc";
 const MC_BASE = "https://higgins-dash-bbdpujw2.manus.space/api/trpc";
 
 // ═══════════════════════════════════════════════════════════════════════════
+// LOCAL FALLBACK — calls the local _higgins_local_disabled router via internal HTTP
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LOCAL_BASE = "http://127.0.0.1:" + (process.env.PORT || "3000") + "/api/trpc";
+
+async function localFallbackQuery(procedure: string, input: any): Promise<any> {
+  try {
+    const encoded = encodeURIComponent(JSON.stringify({ json: input || {} }));
+    const url = `${LOCAL_BASE}/_higgins_local_disabled.${procedure}?input=${encoded}`;
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!resp.ok) {
+      console.error(`[MC-Proxy] Local fallback query ${procedure} failed (${resp.status})`);
+      throw new Error(`Local fallback error: ${resp.status}`);
+    }
+    const data = await resp.json();
+    return data?.result?.data?.json ?? data;
+  } catch (err: any) {
+    console.error(`[MC-Proxy] Local fallback query ${procedure} error:`, err.message);
+    throw new Error(`Both MC-cloud and local fallback unavailable for ${procedure}`);
+  }
+}
+
+async function localFallbackMutation(procedure: string, input: any): Promise<any> {
+  try {
+    const url = `${LOCAL_BASE}/_higgins_local_disabled.${procedure}`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ json: input }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!resp.ok) {
+      console.error(`[MC-Proxy] Local fallback mutation ${procedure} failed (${resp.status})`);
+      throw new Error(`Local fallback error: ${resp.status}`);
+    }
+    const data = await resp.json();
+    return data?.result?.data?.json ?? data;
+  } catch (err: any) {
+    console.error(`[MC-Proxy] Local fallback mutation ${procedure} error:`, err.message);
+    throw new Error(`Both MC-cloud and local fallback unavailable for ${procedure}`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CIRCUIT BREAKER STATE
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -70,13 +118,35 @@ function recordSuccess(): void {
 function recordFailure(): void {
   circuitBreaker.failureCount++;
   circuitBreaker.lastFailureTime = Date.now();
+  const wasOpen = circuitBreaker.state === "OPEN";
 
   if (circuitBreaker.state === "HALF_OPEN") {
     circuitBreaker.state = "OPEN";
     console.log("[MC-Proxy] Circuit breaker → OPEN (half-open request failed)");
+    if (!wasOpen) notifyCircuitBreakerOpen();
   } else if (circuitBreaker.failureCount >= circuitBreaker.failureThreshold) {
     circuitBreaker.state = "OPEN";
     console.log(`[MC-Proxy] Circuit breaker → OPEN (${circuitBreaker.failureCount} consecutive failures)`);
+    if (!wasOpen) notifyCircuitBreakerOpen();
+  }
+}
+
+// Push notification when circuit breaker opens
+async function notifyCircuitBreakerOpen(): Promise<void> {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { pushTokenStore, sendExpoPushNotifications } = await import("../push-service");
+    const tokens = Array.from(pushTokenStore.values()).map(r => r.token);
+    if (tokens.length === 0) return;
+    await sendExpoPushNotifications(tokens, {
+      title: "⚠️ MC-Cloud Onbereikbaar",
+      body: `Circuit breaker OPEN — ${circuitBreaker.failureCount} opeenvolgende fouten. Lokale fallback actief.`,
+      data: { type: "circuit_breaker", state: "OPEN" },
+      channelId: "higgins-system",
+    });
+    console.log("[MC-Proxy] Push notification sent: circuit breaker OPEN");
+  } catch (err: any) {
+    console.error("[MC-Proxy] Failed to send circuit breaker push:", err.message);
   }
 }
 
@@ -96,7 +166,8 @@ export function getCircuitBreakerStatus() {
 
 async function proxyQuery(procedure: string, input: any): Promise<any> {
   if (!shouldProxy()) {
-    throw new Error(`MC-cloud unreachable (circuit breaker OPEN). Fallback active.`);
+    console.log(`[MC-Proxy] Circuit breaker OPEN — falling back to local for query: ${procedure}`);
+    return localFallbackQuery(procedure, input);
   }
 
   try {
@@ -127,7 +198,8 @@ async function proxyQuery(procedure: string, input: any): Promise<any> {
 
 async function proxyMutation(procedure: string, input: any): Promise<any> {
   if (!shouldProxy()) {
-    throw new Error(`MC-cloud unreachable (circuit breaker OPEN). Fallback active.`);
+    console.log(`[MC-Proxy] Circuit breaker OPEN — falling back to local for mutation: ${procedure}`);
+    return localFallbackMutation(procedure, input);
   }
 
   try {

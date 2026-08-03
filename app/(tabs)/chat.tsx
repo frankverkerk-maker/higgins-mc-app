@@ -157,6 +157,7 @@ export default function ChatScreen() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [mcCloudOnline, setMcCloudOnline] = useState(true);
   // Dynamische agent statussen — bijgewerkt na echte Manus API activering
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({});
   const listRef = useRef<FlatList>(null);
@@ -241,6 +242,27 @@ export default function ChatScreen() {
         if (!isNaN(parsed) && SPEED_OPTIONS.includes(parsed as any)) setVoiceSpeed(parsed);
       }
     });
+  }, []);
+
+  // MC-cloud health polling (every 30s)
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      try {
+        const base = getApiBaseUrl();
+        const resp = await fetch(`${base}/api/proxy-health`, { signal: AbortSignal.timeout(10_000) });
+        if (!mounted) return;
+        if (resp.ok) {
+          const data = await resp.json();
+          setMcCloudOnline(!!data.mcCloudReachable);
+        } else {
+          setMcCloudOnline(false);
+        }
+      } catch { if (mounted) setMcCloudOnline(false); }
+    };
+    check();
+    const iv = setInterval(check, 30_000);
+    return () => { mounted = false; clearInterval(iv); };
   }, []);
 
   // Cleanup audio player on unmount
@@ -1318,8 +1340,8 @@ export default function ChatScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.headerName}>{t.chat.title}</Text>
             <View style={styles.headerStatus}>
-              <View style={[styles.headerStatusDot, { backgroundColor: "#34D399" }]} />
-              <Text style={styles.headerStatusText}>{t.chat.statusOnline}</Text>
+              <View style={[styles.headerStatusDot, { backgroundColor: mcCloudOnline ? "#34D399" : "#FF4D6A" }]} />
+              <Text style={styles.headerStatusText}>{mcCloudOnline ? t.chat.statusOnline : t.chat.statusOffline}</Text>
             </View>
           </View>
           {/* Taalwisselaar */}

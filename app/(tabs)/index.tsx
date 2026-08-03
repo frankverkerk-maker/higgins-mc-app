@@ -89,6 +89,7 @@ export default function DashboardScreen() {
   const [userName, setUserName] = useState<string | null>(null);
   const [approvalFeedback, setApprovalFeedback] = useState<Record<string, string>>({});
   const [weatherLocation, setWeatherLocation] = useState<{ lat: number; lon: number; name: string } | undefined>(undefined);
+  const [mcCloudStatus, setMcCloudStatus] = useState<"online" | "degraded" | "offline">("online");
 
   // Subtiele puls animatie op de status dot
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -172,6 +173,31 @@ export default function DashboardScreen() {
     });
   }, []);
 
+  // MC-cloud proxy health polling (every 30s)
+  useEffect(() => {
+    let mounted = true;
+    const checkHealth = async () => {
+      try {
+        const { getApiBaseUrl } = await import("@/constants/oauth");
+        const resp = await fetch(`${getApiBaseUrl()}/api/proxy-health`, { signal: AbortSignal.timeout(10_000) });
+        if (!mounted) return;
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.mcCloudReachable) setMcCloudStatus("online");
+          else if (data.circuitBreaker?.state === "HALF_OPEN") setMcCloudStatus("degraded");
+          else setMcCloudStatus("offline");
+        } else {
+          setMcCloudStatus("offline");
+        }
+      } catch {
+        if (mounted) setMcCloudStatus("offline");
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30_000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
+
   useEffect(() => {
     if (userName) {
       approvalsQuery.refetch();
@@ -239,9 +265,9 @@ export default function DashboardScreen() {
           </View>
           <View style={s.headerRight}>
             <LanguageSwitcher />
-            <View style={s.statusBadge}>
-              <Animated.View style={[s.statusDot, { transform: [{ scale: pulseAnim }] }]} />
-              <Text style={s.statusText}>{t.common.online}</Text>
+            <View style={[s.statusBadge, mcCloudStatus === "offline" && { backgroundColor: C.redDim, borderColor: "rgba(255,77,106,0.3)" }, mcCloudStatus === "degraded" && { backgroundColor: "rgba(245,158,11,0.15)", borderColor: "rgba(245,158,11,0.3)" }]}>
+              <Animated.View style={[s.statusDot, { transform: [{ scale: pulseAnim }] }, mcCloudStatus === "offline" && { backgroundColor: C.red }, mcCloudStatus === "degraded" && { backgroundColor: "#F59E0B" }]} />
+              <Text style={[s.statusText, mcCloudStatus === "offline" && { color: C.red }, mcCloudStatus === "degraded" && { color: "#F59E0B" }]}>{mcCloudStatus === "online" ? t.common.online : mcCloudStatus === "degraded" ? "Degraded" : t.common.offline}</Text>
             </View>
           </View>
         </View>

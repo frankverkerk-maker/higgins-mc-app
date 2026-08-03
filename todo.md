@@ -375,3 +375,10 @@
 - [x] Request timeouts — 15s voor queries, 60s voor mutations
 - [x] Automatische recovery — na cooldown probeert HALF_OPEN state, bij 2 successen → CLOSED
 - [x] TypeScript 0 fouten
+
+## Fase 41: Status Indicator + Fallback Router + Alert Notifications
+
+- [x] MC-cloud status indicator in app header — groen/rood bolletje op basis van /api/proxy-health polling (Command + Chat)
+- [x] Fallback naar lokale router wanneer circuit breaker OPEN — _higgins_local_disabled wordt actief via internal HTTP
+- [x] Push notification alert wanneer circuit breaker naar OPEN gaat (⚠️ MC-Cloud Onbereikbaar)
+- [x] TypeScript 0 fouten
