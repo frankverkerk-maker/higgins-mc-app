@@ -382,3 +382,9 @@
 - [x] Fallback naar lokale router wanneer circuit breaker OPEN — _higgins_local_disabled wordt actief via internal HTTP
 - [x] Push notification alert wanneer circuit breaker naar OPEN gaat (⚠️ MC-Cloud Onbereikbaar)
 - [x] TypeScript 0 fouten
+
+## Fase 42: Recovery Notificatie
+
+- [x] Push notification bij circuit breaker recovery (✅ MC-Cloud Hersteld)
+- [x] notifyCircuitBreakerRecovered() functie in mc-proxy.ts
+- [x] TypeScript 0 fouten

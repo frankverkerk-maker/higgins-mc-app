@@ -109,6 +109,7 @@ function recordSuccess(): void {
       circuitBreaker.state = "CLOSED";
       circuitBreaker.failureCount = 0;
       console.log("[MC-Proxy] Circuit breaker → CLOSED (recovered)");
+      notifyCircuitBreakerRecovered();
     }
   } else if (circuitBreaker.state === "CLOSED") {
     circuitBreaker.failureCount = 0; // Reset on success
@@ -147,6 +148,24 @@ async function notifyCircuitBreakerOpen(): Promise<void> {
     console.log("[MC-Proxy] Push notification sent: circuit breaker OPEN");
   } catch (err: any) {
     console.error("[MC-Proxy] Failed to send circuit breaker push:", err.message);
+  }
+}
+
+// Push notification when circuit breaker recovers
+async function notifyCircuitBreakerRecovered(): Promise<void> {
+  try {
+    const { pushTokenStore, sendExpoPushNotifications } = await import("../push-service");
+    const tokens = Array.from(pushTokenStore.values()).map(r => r.token);
+    if (tokens.length === 0) return;
+    await sendExpoPushNotifications(tokens, {
+      title: "✅ MC-Cloud Hersteld",
+      body: "Circuit breaker CLOSED — verbinding met MC-cloud is hersteld. Proxy werkt weer normaal.",
+      data: { type: "circuit_breaker", state: "CLOSED" },
+      channelId: "higgins-system",
+    });
+    console.log("[MC-Proxy] Push notification sent: circuit breaker RECOVERED");
+  } catch (err: any) {
+    console.error("[MC-Proxy] Failed to send circuit breaker recovery push:", err.message);
   }
 }
 
