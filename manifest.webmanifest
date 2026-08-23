@@ -1,0 +1,14 @@
+{
+  "name": "Higgins MC Cloud",
+  "short_name": "Higgins MC",
+  "id": "/higgins-mc-app/",
+  "start_url": "/higgins-mc-app/",
+  "scope": "/higgins-mc-app/",
+  "display": "standalone",
+  "background_color": "#0b1416",
+  "theme_color": "#0b1416",
+  "icons": [
+    { "src": "/higgins-mc-app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/higgins-mc-app/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
