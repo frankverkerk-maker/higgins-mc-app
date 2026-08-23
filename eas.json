@@ -11,7 +11,7 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://higginsmc-fzaggof9.manus.space"
+        "EXPO_PUBLIC_API_BASE_URL": "https://higgins-dash-bbdpujw2.manus.space"
       }
     },
     "preview": {
@@ -20,13 +20,13 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://higginsmc-fzaggof9.manus.space"
+        "EXPO_PUBLIC_API_BASE_URL": "https://higgins-dash-bbdpujw2.manus.space"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://higginsmc-fzaggof9.manus.space"
+        "EXPO_PUBLIC_API_BASE_URL": "https://higgins-dash-bbdpujw2.manus.space"
       }
     }
   },

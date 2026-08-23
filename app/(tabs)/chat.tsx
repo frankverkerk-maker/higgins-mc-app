@@ -14,6 +14,7 @@ import {
   ScrollView,
   Linking,
   Alert,
+  AppState,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -39,6 +40,7 @@ import * as Notifications from "expo-notifications";
 import { TypingDots } from "@/components/typing-dots";
 import { DelegationTracker } from "@/components/delegation-tracker";
 import { isOnline, enqueueMessage, getQueue, dequeueMessage } from "@/lib/offline-queue";
+import { isStaleRequest, RequestDeadlineError, withDeadline } from "@/lib/request-deadline";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -90,6 +92,10 @@ type Message = {
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
+const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.1";
+const ONLINE_CHECK_TIMEOUT_MS = 5_000;
+const CHAT_REQUEST_TIMEOUT_MS = 20_000;
+const STALE_REQUEST_MS = 25_000;
 
 const getInitialMessage = (name: string | null, lang: string): Message => {
   const greetings: Record<string, string> = {
@@ -150,6 +156,8 @@ export default function ChatScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const meetingPulseAnim = useRef(new Animated.Value(1)).current;
   const historyRef = useRef<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const sendGenerationRef = useRef(0);
+  const sendStartedAtRef = useRef<number | null>(null);
 
   // Pre-fill input from Tower long-press (Higgins command about a department)
   useEffect(() => {
@@ -215,6 +223,26 @@ export default function ChatScreen() {
   const generatePdfMutation = trpc.higgins.generatePdf.useMutation();
   const activateAgentMutation = trpc.higgins.activateAgent.useMutation();
   const uploadPdfMutation = trpc.higgins.uploadPdf.useMutation();
+
+  const releaseSendLock = useCallback(() => {
+    sendGenerationRef.current += 1;
+    sendStartedAtRef.current = null;
+    setIsLoading(false);
+    chatMutation.reset();
+  }, [chatMutation]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (
+        state === "active" &&
+        isLoading &&
+        isStaleRequest(sendStartedAtRef.current, Date.now(), STALE_REQUEST_MS)
+      ) {
+        releaseSendLock();
+      }
+    });
+    return () => subscription.remove();
+  }, [isLoading, releaseSendLock]);
 
   // Voice recorder (voor chat mic)
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -494,6 +522,9 @@ export default function ChatScreen() {
     const text = (textOverride ?? input).trim();
     if (!text || isLoading) return;
 
+    const generation = ++sendGenerationRef.current;
+    sendStartedAtRef.current = Date.now();
+
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const userMsg: Message = {
@@ -514,7 +545,11 @@ export default function ChatScreen() {
 
     try {
       // ── Offline check: queue if no connectivity ──────────────────────────
-      const online = await isOnline();
+      const online = await withDeadline(
+        isOnline(),
+        ONLINE_CHECK_TIMEOUT_MS,
+        "connectivity check",
+      );
       if (!online) {
         // Mark message as queued and save
         const queuedMsg: Message = { ...userMsg, status: "queued" };
@@ -522,7 +557,6 @@ export default function ChatScreen() {
         setMessages(queuedMessages);
         await saveMessages(queuedMessages);
         await enqueueMessage(text);
-        setIsLoading(false);
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         return;
       }
@@ -531,12 +565,18 @@ export default function ChatScreen() {
       const agentContext = buildAgentContext();
       const messageWithContext = agentContext ? text + agentContext : text;
 
-      const result = await chatMutation.mutateAsync({
-        message: messageWithContext,
-        history: history.map(h => ({ role: h.role, content: String(h.content) })),
-        userName: userName ?? undefined,
-        language,
-      });
+      const result = await withDeadline(
+        chatMutation.mutateAsync({
+          message: messageWithContext,
+          history: history.map(h => ({ role: h.role, content: String(h.content) })),
+          userName: userName ?? undefined,
+          language,
+        }),
+        CHAT_REQUEST_TIMEOUT_MS,
+        "Higgins chat request",
+      );
+
+      if (generation !== sendGenerationRef.current) return;
 
       historyRef.current = [
         ...historyRef.current,
@@ -585,20 +625,26 @@ export default function ChatScreen() {
       await saveMessages(updatedMessages);
       notifyHigginsReply(result.reply);
     } catch (error) {
+      if (generation !== sendGenerationRef.current) return;
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: t.chat.errorGeneric || "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
+        content: error instanceof RequestDeadlineError
+          ? "De verbinding duurde te lang. U kunt direct opnieuw verzenden."
+          : t.chat.errorGeneric || "Mijn excuses, ik kon uw bericht niet verwerken. Probeert u het nogmaals.",
         timestamp: new Date(),
         type: "text",
       };
       const updatedMessages = [...newMessages, errorMsg];
       setMessages(updatedMessages);
       await saveMessages(updatedMessages);
+    } finally {
+      if (generation === sendGenerationRef.current) {
+        sendStartedAtRef.current = null;
+        setIsLoading(false);
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+      }
     }
-
-    setIsLoading(false);
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, isLoading, userName, chatMutation, activateAgentMutation, messages, language, saveMessages, notifyHigginsReply]);
 
   // ─── PDF genereren van het laatste Higgins antwoord ───────────────────────
@@ -1024,7 +1070,7 @@ export default function ChatScreen() {
             <Text style={styles.headerName}>{t.chat.title}</Text>
             <View style={styles.headerStatus}>
               <View style={[styles.headerStatusDot, { backgroundColor: "#34D399" }]} />
-              <Text style={styles.headerStatusText}>{t.chat.statusOnline}</Text>
+              <Text style={styles.headerStatusText}>{t.chat.statusOnline} · v{CLIENT_VERSION}</Text>
             </View>
           </View>
           {/* Taalwisselaar */}
@@ -1137,13 +1183,17 @@ export default function ChatScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.sendButton,
-              (!input.trim() || isLoading) && styles.sendButtonDisabled,
+              !isLoading && !input.trim() && styles.sendButtonDisabled,
+              isLoading && styles.sendButtonCancel,
               pressed && { opacity: 0.8 },
             ]}
-            onPress={() => sendMessage()}
-            disabled={!input.trim() || isLoading}
+            onPress={isLoading ? releaseSendLock : () => sendMessage()}
+            disabled={!isLoading && !input.trim()}
+            accessibilityLabel={isLoading ? "Annuleer wachtende aanvraag" : "Verstuur bericht"}
           >
-            <Text style={styles.sendButtonText}>›</Text>
+            <Text style={[styles.sendButtonText, isLoading && styles.sendButtonCancelText]}>
+              {isLoading ? "×" : "›"}
+            </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -1284,7 +1334,9 @@ const styles = StyleSheet.create({
   attachButtonIcon: { fontSize: 18 },
   sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.cyan, alignItems: "center", justifyContent: "center" },
   sendButtonDisabled: { backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
+  sendButtonCancel: { backgroundColor: C.red, borderWidth: 1, borderColor: C.red },
   sendButtonText: { fontSize: 24, color: C.bg, fontWeight: "900", marginTop: -2 },
+  sendButtonCancelText: { color: "#FFFFFF", marginTop: 0 },
   // PDF kaart — Manus witte documentkaart stijl
   pdfCard: { maxWidth: "88%", backgroundColor: "#FFFFFF", borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2 },
   pdfIconWrap: { width: 36, height: 36, backgroundColor: "#EBF4FF", borderRadius: 6, alignItems: "center", justifyContent: "center" },

@@ -43,10 +43,13 @@ const env = {
   androidPackage: bundleId,
 };
 
+const clientVersion = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.1";
+const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.trim() || undefined;
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.0.0",
+  version: clientVersion,
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
@@ -148,6 +151,7 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+    ...(webBaseUrl ? { baseUrl: webBaseUrl } : {}),
   },
   extra: {
     // EAS project ID — populated automatically by `eas init` once an
@@ -158,6 +162,7 @@ const config: ExpoConfig = {
     },
     privacyPolicyUrl: PRIVACY_POLICY_URL,
     termsUrl: TERMS_URL,
+    clientVersion,
   },
 };
 
