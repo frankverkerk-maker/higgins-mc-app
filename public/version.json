@@ -1,6 +1,6 @@
 {
-  "clientVersion": "1.0.1",
-  "release": "chat-send-recovery-1",
+  "clientVersion": "1.0.2",
+  "release": "team-pulse-names-1",
   "apiBaseUrl": "https://higgins-dash-bbdpujw2.manus.space",
   "sourceCommit": "b7853eac6dec90113d7d366ac39bc2ef6b45a7d9"
 }

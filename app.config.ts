@@ -43,7 +43,7 @@ const env = {
   androidPackage: bundleId,
 };
 
-const clientVersion = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.1";
+const clientVersion = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.2";
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.trim() || undefined;
 
 const config: ExpoConfig = {

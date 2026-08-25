@@ -131,6 +131,7 @@ export const de: Translations = {
     searchPlaceholder: "Agent oder Abteilung suchen...",
     allDepartments: "Alle Abteilungen",
     activeAgents: "aktive Agenten",
+    totalAgents: "Agenten gesamt",
     statusActive: "Aktiv",
     statusStandby: "Bereitschaft",
     statusBusy: "Beschäftigt",

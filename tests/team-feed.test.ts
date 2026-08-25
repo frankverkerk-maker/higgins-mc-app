@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getTeam, type Agent } from "../constants/team";
+import { countActiveAgents, getCanonicalAgentDisplayName } from "../lib/team-pulse";
 
 // The useTeamFeed hook performs a deterministic merge between the live MC feed
 // payload and the built-in metadata. We extract and test that pure mapping here
@@ -7,6 +8,7 @@ import { getTeam, type Agent } from "../constants/team";
 
 type FeedAgent = {
   name: string;
+  displayName?: string;
   role: string;
   department: string;
   departmentId?: string;
@@ -14,12 +16,14 @@ type FeedAgent = {
   isActive?: number | boolean;
   status?: string;
   currentTask?: string | null;
+  reportsToDisplayName?: string | null;
 };
 
 // Mirror of mergeFeedAgent in lib/team-feed.ts (kept in sync intentionally).
 function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
   return {
     name: feed.name,
+    displayName: feed.displayName,
     role: feed.role,
     department: feed.department,
     isClassified: feed.isClassified ? true : builtin?.isClassified,
@@ -27,6 +31,7 @@ function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
     provider: builtin?.provider,
     team: builtin?.team,
     reportsTo: builtin?.reportsTo,
+    reportsToDisplayName: feed.reportsToDisplayName,
     specialties: builtin?.specialties,
     isOrchestrator: builtin?.isOrchestrator,
     isAddOn: builtin?.isAddOn,
@@ -74,5 +79,40 @@ describe("Higgins MC — team feed mapping", () => {
     const whitelabAgents = SAMPLE_FEED.agents.filter((a) => !a.isClassified);
     const merged = whitelabAgents.map((fa) => mergeFeedAgent(fa, builtinByName.get(fa.name)));
     expect(merged.some((a) => a.isClassified)).toBe(false);
+  });
+
+  it("separates the live activity count from the total roster size", () => {
+    const activity = {
+      Higgins: { status: "standby" },
+      Elena: { status: "active" },
+      Gary: { status: "busy" },
+      Morgan: { status: "idle" },
+    };
+    expect(countActiveAgents(activity)).toBe(2);
+    expect(getTeam("internal").length).toBe(88);
+  });
+
+  it("renders legacy Warren keys as canonical Morgan without changing stored routing keys", () => {
+    expect(getCanonicalAgentDisplayName("Warren")).toBe("Morgan");
+    expect(getCanonicalAgentDisplayName("Morgan")).toBe("Morgan");
+    expect(getCanonicalAgentDisplayName("Warren Buffett")).toBe("Warren Buffett");
+  });
+
+  it("renders verified JLC, FMC, and UTA full identities while preserving raw keys", () => {
+    expect(getCanonicalAgentDisplayName("Adrian")).toBe("Adrian Blackstone");
+    expect(getCanonicalAgentDisplayName("Isabelle")).toBe("Isabelle Laurent");
+    expect(getCanonicalAgentDisplayName("Matteo")).toBe("Matteo Bellini");
+    expect(getCanonicalAgentDisplayName("Nadia")).toBe("Nadia Okonkwo");
+    expect(getCanonicalAgentDisplayName("David")).toBe("David Sinclair");
+    expect(getCanonicalAgentDisplayName("Sophia")).toBe("Sophia Adler");
+    expect(getCanonicalAgentDisplayName("Victoria")).toBe("Victoria Sterling");
+    expect(getCanonicalAgentDisplayName("Elena Vasquez")).toBe("Nathalie Vasquez");
+    expect(getCanonicalAgentDisplayName("Alexander", "Alexander Whitfield")).toBe("Alexander Whitfield");
+  });
+
+  it("does not invent surnames for meaningful canonical mononyms", () => {
+    for (const name of ["Justitia", "Avicenna"]) {
+      expect(getCanonicalAgentDisplayName(name)).toBe(name);
+    }
   });
 });

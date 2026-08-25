@@ -26,6 +26,7 @@ export type AgentStatus =
 
 export type Agent = {
   name: string;
+  displayName?: string;
   role: string;
   /** Department display name (matches DEPARTMENTS entry). */
   department: string;
@@ -39,6 +40,7 @@ export type Agent = {
   team?: string;
   /** Aan wie deze agent rapporteert. */
   reportsTo?: string;
+  reportsToDisplayName?: string | null;
   isOrchestrator?: boolean;
   /** Add-on afdeling (optioneel uitbreidbaar pakket). */
   isAddOn?: boolean;
@@ -62,7 +64,7 @@ export type DepartmentMeta = {
 export const DEPARTMENTS: DepartmentMeta[] = [
   { id: "executive",        name: "Executive Office",           shortName: "EXEC",  head: "Higgins" },
   { id: "einstein-lab",     name: "Einstein Lab",               shortName: "ELAB",  head: "Einstein" },
-  { id: "finance",          name: "Finance",                    shortName: "FIN",   head: "Warren" },
+  { id: "finance",          name: "Finance",                    shortName: "FIN",   head: "Morgan" },
   { id: "technology",       name: "Technology Division",        shortName: "TECH",  head: "Elon" },
   { id: "marketing",        name: "Marketing & Creative",       shortName: "GMD",   head: "Gary" },
   { id: "enterprise",       name: "Enterprise Operations",      shortName: "ENT",   head: "Atlas" },

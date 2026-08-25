@@ -8,6 +8,7 @@ import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { useEdition } from "@/lib/edition-provider";
 import { useTeamFeed } from "@/lib/team-feed";
+import { countActiveAgents, getCanonicalAgentDisplayName } from "@/lib/team-pulse";
 import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export default function TeamPulseScreen() {
   const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
+  const activeAgentCount = countActiveAgents(activity);
 
   // Live agent status from server
   const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
@@ -127,7 +129,9 @@ export default function TeamPulseScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
             <Text style={s.headerTitle}>{t.agents.title}</Text>
-            <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}</Text>
+            <Text style={s.headerSub}>
+              {activeAgentCount} {t.agents.activeAgents} · {TEAM.length} {t.agents.totalAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}
+            </Text>
             <View style={s.sourceRow}>
               <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : C.muted }]} />
               <Text style={s.sourceText}>{source === "live" ? t.agents.sourceLive : t.agents.sourceBuiltin}</Text>
@@ -140,7 +144,7 @@ export default function TeamPulseScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
-            {["Higgins", "Elena", "Gary", "Warren"].map((name, i) => {
+            {["Higgins", "Elena", "Gary", "Morgan"].map((name, i) => {
               const act = activity[name] ?? { status: "idle", task: t.dashboard.taskAwaitingOrder };
               const agent = TEAM.find(a => a.name === name)!;
               const isHiggins = name === "Higgins";
@@ -163,7 +167,7 @@ export default function TeamPulseScreen() {
                     )
                   }
                   <View style={{ flex: 1 }}>
-                    <Text style={s.agentName}>{name}</Text>
+                    <Text style={s.agentName}>{getCanonicalAgentDisplayName(name)}</Text>
                     <Text style={s.agentTask}>{act.task}</Text>
                     {isExpanded && agent && (
                       <Text style={[s.agentTask, { color: C.cyan, marginTop: 4 }]}>{agent.role}</Text>
@@ -243,13 +247,13 @@ export default function TeamPulseScreen() {
                           : (
                             <View style={[s.agentAvatar, { backgroundColor: colors.bg }]}>
                               <Text style={[s.agentAvatarText, { color: colors.text }]}>
-                                {agentInitial(agent.name)}
+                                {agentInitial(getCanonicalAgentDisplayName(agent.name, agent.displayName))}
                               </Text>
                             </View>
                           )
                         }
                         <View style={{ flex: 1 }}>
-                          <Text style={s.agentName}>{agent.name}</Text>
+                          <Text style={s.agentName}>{getCanonicalAgentDisplayName(agent.name, agent.displayName)}</Text>
                           <Text style={s.agentRole}>{agent.role}</Text>
                           {isExpanded && (
                             <View style={{ marginTop: 6, gap: 4 }}>
@@ -265,7 +269,7 @@ export default function TeamPulseScreen() {
                                 </Text>
                               )}
                               {!!agent.reportsTo && (
-                                <Text style={s.agentMeta}>{t.agents.reportsTo}: {agent.reportsTo}</Text>
+                                  <Text style={s.agentMeta}>{t.agents.reportsTo}: {getCanonicalAgentDisplayName(agent.reportsTo, agent.reportsToDisplayName)}</Text>
                               )}
                               {!!agent.specialties?.length && (
                                 <Text style={s.agentMeta} numberOfLines={2}>

@@ -130,6 +130,7 @@ export const nl = {
     searchPlaceholder: "Zoek agent of departement...",
     allDepartments: "Alle departementen",
     activeAgents: "actieve agents",
+    totalAgents: "agenten totaal",
     statusActive: "Actief",
     statusStandby: "Stand-by",
     statusBusy: "Bezig",

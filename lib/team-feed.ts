@@ -32,6 +32,7 @@ const ENV_FEED_URL = (process.env.EXPO_PUBLIC_MC_TEAM_FEED_URL ?? "").trim();
 /** Eén agent zoals de MC-feed die teruggeeft. */
 type FeedAgent = {
   name: string;
+  displayName?: string;
   role: string;
   department: string;
   departmentId?: string;
@@ -39,6 +40,7 @@ type FeedAgent = {
   isActive?: number | boolean;
   status?: string;
   currentTask?: string | null;
+  reportsToDisplayName?: string | null;
 };
 
 type FeedResponse = {
@@ -81,6 +83,7 @@ export async function resolveFeedUrl(): Promise<string> {
 function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
   return {
     name: feed.name,
+    displayName: feed.displayName,
     role: feed.role,
     department: feed.department,
     isClassified: feed.isClassified ? true : builtin?.isClassified,
@@ -89,6 +92,7 @@ function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
     provider: builtin?.provider,
     team: builtin?.team,
     reportsTo: builtin?.reportsTo,
+    reportsToDisplayName: feed.reportsToDisplayName,
     specialties: builtin?.specialties,
     isOrchestrator: builtin?.isOrchestrator,
     isAddOn: builtin?.isAddOn,

@@ -131,6 +131,7 @@ export const en: Translations = {
     searchPlaceholder: "Search agent or department...",
     allDepartments: "All departments",
     activeAgents: "active agents",
+    totalAgents: "agents total",
     statusActive: "Active",
     statusStandby: "Standby",
     statusBusy: "Busy",
