@@ -27,6 +27,8 @@ export type AgentStatus =
 export type Agent = {
   name: string;
   displayName?: string;
+  /** Stable MC department identifier used for live joins. */
+  departmentId?: string;
   role: string;
   /** Department display name (matches DEPARTMENTS entry). */
   department: string;

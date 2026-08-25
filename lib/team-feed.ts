@@ -38,6 +38,7 @@ type FeedAgent = {
   role: string;
   department: string;
   departmentId?: string;
+  department_id?: string;
   isClassified?: number | boolean;
   isActive?: number | boolean;
   status?: string;
@@ -90,6 +91,7 @@ function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
   return {
     name: feed.name,
     displayName: feed.displayName,
+    departmentId: feed.departmentId ?? feed.department_id,
     role: feed.role,
     department: feed.department,
     isClassified: feed.isClassified ? true : builtin?.isClassified,
