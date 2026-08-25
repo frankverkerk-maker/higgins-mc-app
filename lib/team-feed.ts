@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getTeam,
@@ -24,6 +25,7 @@ import {
   type DepartmentMeta,
   type Edition,
 } from "@/constants/team";
+import { selectTeamFeedUrl, TEAM_FEED_SETTINGS_TIMEOUT_MS } from "@/lib/team-feed-config";
 
 export const MC_TEAM_FEED_URL_KEY = "higgins_mc_team_feed_url";
 
@@ -69,14 +71,18 @@ export interface TeamFeedResult {
 
 /** Resolve de te gebruiken feed-URL (Settings > env). */
 export async function resolveFeedUrl(): Promise<string> {
+  const directWebUrl = selectTeamFeedUrl(Platform.OS, ENV_FEED_URL);
+  if (directWebUrl) return directWebUrl;
+
   try {
-    const stored = (await AsyncStorage.getItem(MC_TEAM_FEED_URL_KEY)) ?? "";
-    const trimmed = stored.trim();
-    if (trimmed) return trimmed;
+    const stored = await Promise.race([
+      AsyncStorage.getItem(MC_TEAM_FEED_URL_KEY),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), TEAM_FEED_SETTINGS_TIMEOUT_MS)),
+    ]);
+    return selectTeamFeedUrl(Platform.OS, ENV_FEED_URL, stored);
   } catch (_) {
-    /* ignore */
+    return ENV_FEED_URL;
   }
-  return ENV_FEED_URL;
 }
 
 /** Normaliseer een feed-agent naar het app-Agent type. */

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getTeam, type Agent } from "../constants/team";
 import { countActiveAgents, getCanonicalAgentDisplayName } from "../lib/team-pulse";
+import { selectTeamFeedUrl } from "../lib/team-feed-config";
 
 // The useTeamFeed hook performs a deterministic merge between the live MC feed
 // payload and the built-in metadata. We extract and test that pure mapping here
@@ -73,6 +74,18 @@ describe("Higgins MC — team feed mapping", () => {
     expect(unknown.name).toBe("BrandNewAgent");
     expect(unknown.model).toBeUndefined();
     expect(unknown.isClassified).toBeFalsy();
+  });
+
+  it("uses the audited MC feed immediately on web even when stale settings exist", () => {
+    expect(selectTeamFeedUrl("web", "https://mc.example/api/app/team-feed", "https://stale.example/feed"))
+      .toBe("https://mc.example/api/app/team-feed");
+  });
+
+  it("preserves a native operator override and falls back to the build URL", () => {
+    expect(selectTeamFeedUrl("ios", "https://mc.example/feed", "https://operator.example/feed"))
+      .toBe("https://operator.example/feed");
+    expect(selectTeamFeedUrl("ios", "https://mc.example/feed", null))
+      .toBe("https://mc.example/feed");
   });
 
   it("a whitelab feed payload would contain no classified agents", () => {
