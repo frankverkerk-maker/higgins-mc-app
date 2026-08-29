@@ -148,6 +148,9 @@ export const nl = {
     classifiedRosterSub: "Agentnamen verborgen · operational security",
     sourceLive: "Live via Mission Control",
     sourceBuiltin: "Ingebouwde lijst",
+    sourceCached: "Laatste MC-snapshot",
+    sourceConnecting: "Verbinden met Mission Control",
+    sourceDiagnostic: "Feedstatus",
   },
 
   // ─── Settings / Instellingen ─────────────────────────────────────────────────

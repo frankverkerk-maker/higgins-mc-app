@@ -149,6 +149,9 @@ export const de: Translations = {
     classifiedRosterSub: "Agentennamen verborgen · operative Sicherheit",
     sourceLive: "Live über Mission Control",
     sourceBuiltin: "Integrierte Liste",
+    sourceCached: "Letzter MC-Snapshot",
+    sourceConnecting: "Verbindung mit Mission Control",
+    sourceDiagnostic: "Feedstatus",
   },
 
   // ─── Settings / Einstellungen ────────────────────────────────────────────────

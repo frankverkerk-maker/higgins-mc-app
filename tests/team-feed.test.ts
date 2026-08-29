@@ -2,6 +2,11 @@ import { describe, it, expect } from "vitest";
 import { getTeam, type Agent } from "../constants/team";
 import { countActiveAgents, getCanonicalAgentDisplayName } from "../lib/team-pulse";
 import { selectTeamFeedUrl } from "../lib/team-feed-config";
+import {
+  fetchValidatedJson,
+  isTeamFeedPayload,
+  TeamFeedRequestError,
+} from "../lib/team-feed-request";
 
 // The useTeamFeed hook performs a deterministic merge between the live MC feed
 // payload and the built-in metadata. We extract and test that pure mapping here
@@ -127,5 +132,76 @@ describe("Higgins MC — team feed mapping", () => {
     for (const name of ["Justitia", "Avicenna"]) {
       expect(getCanonicalAgentDisplayName(name)).toBe(name);
     }
+  });
+});
+
+describe("Higgins MC — Home Screen-safe feed transport", () => {
+  it("accepts the validated live MC payload in standalone web mode", async () => {
+    const fetchImpl = async () =>
+      new Response(JSON.stringify(SAMPLE_FEED), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    const payload = await fetchValidatedJson({
+      url: "https://mc.example/api/app/team-feed",
+      validate: isTeamFeedPayload,
+      fetchImpl: fetchImpl as typeof fetch,
+      timeoutMs: 100,
+    });
+    expect(payload.count).toBe(3);
+  });
+
+  it("retries a transient cold-start network failure and then goes live", async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError("WebKit cold-start network unavailable");
+      return new Response(JSON.stringify(SAMPLE_FEED), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const payload = await fetchValidatedJson({
+      url: "https://mc.example/api/app/team-feed",
+      validate: isTeamFeedPayload,
+      fetchImpl: fetchImpl as typeof fetch,
+      retryDelayMs: 1,
+      timeoutMs: 100,
+    });
+    expect(calls).toBe(2);
+    expect(payload.agents).toHaveLength(3);
+  });
+
+  it("fails truthfully on an invalid payload instead of labelling fallback data live", async () => {
+    const fetchImpl = async () =>
+      new Response(JSON.stringify({ count: 88, agents: "invalid" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    await expect(
+      fetchValidatedJson({
+        url: "https://mc.example/api/app/team-feed",
+        validate: isTeamFeedPayload,
+        fetchImpl: fetchImpl as typeof fetch,
+        attempts: 1,
+        timeoutMs: 100,
+      }),
+    ).rejects.toMatchObject({ code: "invalid_payload" });
+  });
+
+  it("aborts a hung Home Screen request at the deadline", async () => {
+    const fetchImpl = (_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      });
+    await expect(
+      fetchValidatedJson({
+        url: "https://mc.example/api/app/team-feed",
+        validate: isTeamFeedPayload,
+        fetchImpl: fetchImpl as typeof fetch,
+        attempts: 1,
+        timeoutMs: 5,
+      }),
+    ).rejects.toMatchObject({ code: "timeout" });
   });
 });

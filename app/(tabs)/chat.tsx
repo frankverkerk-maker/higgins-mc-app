@@ -92,7 +92,7 @@ type Message = {
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
-const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.4";
+const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.5";
 const ONLINE_CHECK_TIMEOUT_MS = 5_000;
 const CHAT_REQUEST_TIMEOUT_MS = 20_000;
 const STALE_REQUEST_MS = 25_000;

@@ -85,7 +85,7 @@ export default function TeamPulseScreen() {
   const { t } = useLanguage();
   const { edition: fallbackEdition } = useEdition();
   // Live MC-feed met nette terugval op de ingebouwde lijst.
-  const { team: TEAM, departments: DEPARTMENTS, source } = useTeamFeed(fallbackEdition);
+  const { team: TEAM, departments: DEPARTMENTS, source, error: feedError } = useTeamFeed(fallbackEdition);
   const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
@@ -133,8 +133,19 @@ export default function TeamPulseScreen() {
               {activeAgentCount} {t.agents.activeAgents} · {TEAM.length} {t.agents.totalAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}
             </Text>
             <View style={s.sourceRow}>
-              <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : C.muted }]} />
-              <Text style={s.sourceText}>{source === "live" ? t.agents.sourceLive : t.agents.sourceBuiltin}</Text>
+              <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : source === "cached" ? C.amber : source === "loading" ? C.cyan : C.muted }]} />
+              <View>
+                <Text style={s.sourceText}>
+                  {source === "live"
+                    ? t.agents.sourceLive
+                    : source === "cached"
+                      ? t.agents.sourceCached
+                      : source === "loading"
+                        ? t.agents.sourceConnecting
+                        : t.agents.sourceBuiltin}
+                </Text>
+                {feedError ? <Text style={s.sourceDiagnostic}>{t.agents.sourceDiagnostic}: {feedError}</Text> : null}
+              </View>
             </View>
           </View>
           <LanguageSwitcher />
@@ -303,6 +314,7 @@ const s = StyleSheet.create({
   sourceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
   sourceDot: { width: 6, height: 6, borderRadius: 3 },
   sourceText: { fontSize: 11, color: C.muted, fontFamily: FONT, letterSpacing: 0.3 },
+  sourceDiagnostic: { fontSize: 9, color: C.amber, fontFamily: FONT, marginTop: 2 },
 
   section: { paddingHorizontal: 16, marginBottom: 20 },
   deptHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
