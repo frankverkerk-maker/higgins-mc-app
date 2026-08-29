@@ -136,6 +136,27 @@ describe("Higgins MC — team feed mapping", () => {
 });
 
 describe("Higgins MC — Home Screen-safe feed transport", () => {
+  it("uses only simple CORS-safe request headers and avoids a cache-control preflight", async () => {
+    let capturedInit: RequestInit | undefined;
+    const fetchImpl = async (_url: string | URL | Request, init?: RequestInit) => {
+      capturedInit = init;
+      return new Response(JSON.stringify(SAMPLE_FEED), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    await fetchValidatedJson({
+      url: "https://mc.example/api/app/team-feed",
+      validate: isTeamFeedPayload,
+      fetchImpl: fetchImpl as typeof fetch,
+      timeoutMs: 100,
+    });
+    const headers = new Headers(capturedInit?.headers);
+    expect(headers.get("Accept")).toBe("application/json");
+    expect(headers.has("Cache-Control")).toBe(false);
+    expect(capturedInit?.cache).toBe("no-store");
+  });
+
   it("accepts the validated live MC payload in standalone web mode", async () => {
     const fetchImpl = async () =>
       new Response(JSON.stringify(SAMPLE_FEED), {

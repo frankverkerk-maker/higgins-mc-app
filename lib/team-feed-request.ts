@@ -97,7 +97,6 @@ export async function fetchValidatedJson<T>({
         method: "GET",
         headers: {
           Accept: "application/json",
-          "Cache-Control": "no-cache",
         },
         cache: "no-store",
         credentials: "omit",
