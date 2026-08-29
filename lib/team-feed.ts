@@ -22,32 +22,13 @@ import {
   TeamFeedRequestError,
   type TeamFeedFailureCode,
 } from "@/lib/team-feed-request";
+import { mapPayload, type FeedResponse } from "@/lib/team-feed-map";
 
 export const MC_TEAM_FEED_URL_KEY = "higgins_mc_team_feed_url";
 
 const ENV_FEED_URL = (process.env.EXPO_PUBLIC_MC_TEAM_FEED_URL ?? "").trim();
-const TEAM_FEED_CACHE_KEY = "higgins_mc_team_feed_snapshot_v1";
+const TEAM_FEED_CACHE_KEY = "higgins_mc_team_feed_snapshot_v2";
 const TEAM_FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-type FeedAgent = {
-  name: string;
-  displayName?: string;
-  role: string;
-  department: string;
-  departmentId?: string;
-  department_id?: string;
-  isClassified?: number | boolean;
-  isActive?: number | boolean;
-  status?: string;
-  currentTask?: string | null;
-  reportsToDisplayName?: string | null;
-};
-
-type FeedResponse = {
-  edition: Edition;
-  count: number;
-  agents: FeedAgent[];
-};
 
 type CachedFeed = {
   savedAt: number;
@@ -80,39 +61,6 @@ export async function resolveFeedUrl(): Promise<string> {
   } catch {
     return ENV_FEED_URL;
   }
-}
-
-function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
-  return {
-    name: feed.name,
-    displayName: feed.displayName,
-    departmentId: feed.departmentId ?? feed.department_id,
-    role: feed.role,
-    department: feed.department,
-    isClassified: feed.isClassified ? true : builtin?.isClassified,
-    model: builtin?.model,
-    provider: builtin?.provider,
-    team: builtin?.team,
-    reportsTo: builtin?.reportsTo,
-    reportsToDisplayName: feed.reportsToDisplayName,
-    specialties: builtin?.specialties,
-    isOrchestrator: builtin?.isOrchestrator,
-    isAddOn: builtin?.isAddOn,
-  };
-}
-
-function mapPayload(data: FeedResponse): {
-  team: Agent[];
-  departments: DepartmentMeta[];
-  edition: Edition;
-} {
-  const edition: Edition = data.edition === "whitelab" ? "whitelab" : "internal";
-  const builtinByName = new Map(getTeam("internal").map((agent) => [agent.name, agent]));
-  return {
-    team: data.agents.map((agent) => mergeFeedAgent(agent, builtinByName.get(agent.name))),
-    departments: getDepartments(edition),
-    edition,
-  };
 }
 
 async function readCachedFeed(): Promise<CachedFeed | null> {

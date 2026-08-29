@@ -1,17 +1,8 @@
-import { DEPARTMENTS, type Agent } from "../constants/team";
 import { buildTowerFloors, getTowerAgentTotal } from "../lib/tower-model";
+import { mapPayload, type FeedResponse } from "../lib/team-feed-map";
 import { getCanonicalAgentDisplayName } from "../lib/team-pulse";
 
 const FEED_URL = "https://higgins-dash-bbdpujw2.manus.space/api/app/team-feed";
-
-type LiveAgent = {
-  name: string;
-  displayName?: string;
-  role: string;
-  department: string;
-  department_id?: string;
-  is_classified?: number | boolean;
-};
 
 async function main(): Promise<void> {
   const response = await fetch(`${FEED_URL}?tower-validation=${Date.now()}`, {
@@ -19,17 +10,9 @@ async function main(): Promise<void> {
   });
   if (!response.ok) throw new Error(`Team feed HTTP ${response.status}`);
 
-  const payload = await response.json() as { count: number; agents: LiveAgent[] };
-  const team: Agent[] = payload.agents.map((agent) => ({
-    name: agent.name,
-    displayName: agent.displayName,
-    departmentId: agent.department_id,
-    role: agent.role,
-    department: agent.department,
-    isClassified: Boolean(agent.is_classified),
-  }));
-
-  const floors = buildTowerFloors(team, DEPARTMENTS, true);
+  const payload = await response.json() as FeedResponse;
+  const mapped = mapPayload(payload);
+  const floors = buildTowerFloors(mapped.team, mapped.departments, true);
   const names = floors.flatMap((floor) => floor.agents.map((agent) =>
     getCanonicalAgentDisplayName(agent.name, agent.displayName)));
 
@@ -42,6 +25,12 @@ async function main(): Promise<void> {
     morganCanonical: names.includes("Morgan") && !names.includes("Warren"),
     verifiedNames: ["Adrian Blackstone", "Sophia Adler", "Victoria Sterling", "Nathalie Vasquez"]
       .every((name) => names.includes(name)),
+    exactDepartmentCounts: [
+      ["executive", 6], ["einstein-lab", 3], ["finance", 5], ["technology", 6],
+      ["marketing", 7], ["enterprise", 14], ["fmc", 9], ["jlc", 6],
+      ["mtd", 7], ["uta", 23], ["task-force-ghost", 2],
+    ].every(([departmentId, count]) =>
+      floors.find((floor) => floor.departmentId === departmentId)?.agents.length === count),
   };
 
   const failed = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);

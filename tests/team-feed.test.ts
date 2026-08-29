@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getTeam, type Agent } from "../constants/team";
+import { getTeam } from "../constants/team";
+import { mapPayload } from "../lib/team-feed-map";
 import { countActiveAgents, getCanonicalAgentDisplayName } from "../lib/team-pulse";
 import { selectTeamFeedUrl } from "../lib/team-feed-config";
 import {
@@ -7,42 +8,6 @@ import {
   isTeamFeedPayload,
   TeamFeedRequestError,
 } from "../lib/team-feed-request";
-
-// The useTeamFeed hook performs a deterministic merge between the live MC feed
-// payload and the built-in metadata. We extract and test that pure mapping here
-// (the hook itself wraps it with React/AsyncStorage which we don't unit-test).
-
-type FeedAgent = {
-  name: string;
-  displayName?: string;
-  role: string;
-  department: string;
-  departmentId?: string;
-  isClassified?: number | boolean;
-  isActive?: number | boolean;
-  status?: string;
-  currentTask?: string | null;
-  reportsToDisplayName?: string | null;
-};
-
-// Mirror of mergeFeedAgent in lib/team-feed.ts (kept in sync intentionally).
-function mergeFeedAgent(feed: FeedAgent, builtin?: Agent): Agent {
-  return {
-    name: feed.name,
-    displayName: feed.displayName,
-    role: feed.role,
-    department: feed.department,
-    isClassified: feed.isClassified ? true : builtin?.isClassified,
-    model: builtin?.model,
-    provider: builtin?.provider,
-    team: builtin?.team,
-    reportsTo: builtin?.reportsTo,
-    reportsToDisplayName: feed.reportsToDisplayName,
-    specialties: builtin?.specialties,
-    isOrchestrator: builtin?.isOrchestrator,
-    isAddOn: builtin?.isAddOn,
-  };
-}
 
 // A representative payload shaped exactly like GET /api/app/team-feed returns.
 const SAMPLE_FEED = {
@@ -56,29 +21,74 @@ const SAMPLE_FEED = {
 };
 
 describe("Higgins MC — team feed mapping", () => {
-  const builtinByName = new Map(getTeam("internal").map((a) => [a.name, a]));
-
-  it("preserves the feed's name/role/department", () => {
-    const merged = SAMPLE_FEED.agents.map((fa) => mergeFeedAgent(fa, builtinByName.get(fa.name)));
-    expect(merged[0]).toMatchObject({ name: "Higgins", role: "Chief Operating Officer", department: "Executive Office" });
+  it("overlays live data without replacing the canonical 88-agent roster", () => {
+    const mapped = mapPayload(SAMPLE_FEED);
+    expect(mapped.team).toHaveLength(88);
+    expect(mapped.team.find((agent) => agent.name === "Higgins")).toMatchObject({
+      name: "Higgins",
+      role: "Chief Operating Officer",
+      department: "Executive Office",
+      departmentId: "executive",
+    });
+    expect(mapped.team.some((agent) => agent.name === "BrandNewAgent")).toBe(false);
   });
 
-  it("enriches known agents with built-in metadata (model/provider)", () => {
-    const higgins = mergeFeedAgent(SAMPLE_FEED.agents[0], builtinByName.get("Higgins"));
-    expect(higgins.model).toBe("Claude Opus");
-    expect(higgins.provider).toBe("Anthropic");
+  it("filters duplicate service placeholders instead of admitting them as agents", () => {
+    const mapped = mapPayload({
+      edition: "internal",
+      count: 2,
+      agents: [
+        { name: "Content Pipeline", role: "7-agent productieteam", department: "Einstein Lab", departmentId: "einstein-lab" },
+        { name: "Content Pipeline", role: "7-agent productieteam", department: "Finance", departmentId: "finance" },
+      ],
+    });
+    expect(mapped.team).toHaveLength(88);
+    expect(mapped.team.filter((agent) => agent.name === "Content Pipeline")).toHaveLength(0);
+    expect(mapped.team.filter((agent) => agent.department === "Einstein Lab")).toHaveLength(3);
+    expect(mapped.team.filter((agent) => agent.department === "Finance")).toHaveLength(5);
   });
 
-  it("maps numeric isClassified flag to a boolean", () => {
-    const morgan = mergeFeedAgent(SAMPLE_FEED.agents[1], builtinByName.get("Morgan"));
-    expect(morgan.isClassified).toBe(true);
+  it("joins approved aliases while retaining stable raw routing keys", () => {
+    const mapped = mapPayload({
+      edition: "internal",
+      count: 2,
+      agents: [
+        { name: "Nathalie", displayName: "Nathalie Vasquez", role: "Lex Researcher", department: "Justitia Legal Council", departmentId: "jlc" },
+        { name: "Warren", displayName: "Warren", role: "CFO", department: "Finance", departmentId: "finance" },
+      ],
+    });
+    expect(mapped.team.find((agent) => agent.name === "Elena Vasquez")).toMatchObject({
+      displayName: "Nathalie Vasquez",
+      role: "Lex Researcher",
+    });
+    expect(mapped.team.find((agent) => agent.name === "Warren")).toMatchObject({
+      displayName: "Morgan",
+      role: "CFO",
+      departmentId: "finance",
+    });
   });
 
-  it("accepts unknown agents from the feed without crashing", () => {
-    const unknown = mergeFeedAgent(SAMPLE_FEED.agents[2], builtinByName.get("BrandNewAgent"));
-    expect(unknown.name).toBe("BrandNewAgent");
-    expect(unknown.model).toBeUndefined();
-    expect(unknown.isClassified).toBeFalsy();
+  it("keeps Finance Warren and MTD Morgan as separate stable raw identities", () => {
+    const mapped = mapPayload({
+      edition: "internal",
+      count: 2,
+      agents: [
+        { name: "Warren", displayName: "Warren", role: "CFO", department: "Finance", departmentId: "finance" },
+        { name: "Morgan", displayName: "Morgan", role: "Desk Lead", department: "Morgan Trading Desk", departmentId: "mtd" },
+      ],
+    });
+    expect(mapped.team.find((agent) => agent.name === "Warren")).toMatchObject({
+      displayName: "Morgan",
+      role: "CFO",
+      department: "Finance",
+      departmentId: "finance",
+    });
+    expect(mapped.team.find((agent) => agent.name === "Morgan")).toMatchObject({
+      displayName: "Morgan",
+      role: "Desk Lead",
+      department: "Morgan Trading Desk",
+      departmentId: "mtd",
+    });
   });
 
   it("uses the audited MC feed immediately on web even when stale settings exist", () => {
@@ -94,9 +104,9 @@ describe("Higgins MC — team feed mapping", () => {
   });
 
   it("a whitelab feed payload would contain no classified agents", () => {
-    const whitelabAgents = SAMPLE_FEED.agents.filter((a) => !a.isClassified);
-    const merged = whitelabAgents.map((fa) => mergeFeedAgent(fa, builtinByName.get(fa.name)));
-    expect(merged.some((a) => a.isClassified)).toBe(false);
+    const mapped = mapPayload({ ...SAMPLE_FEED, edition: "whitelab" });
+    expect(mapped.team).toHaveLength(56);
+    expect(mapped.team.some((agent) => agent.isClassified)).toBe(false);
   });
 
   it("separates the live activity count from the total roster size", () => {
