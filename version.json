@@ -1,6 +1,6 @@
 {
-  "clientVersion": "1.0.4",
-  "release": "tower-restoration-1",
+  "clientVersion": "1.0.5",
+  "release": "ios-team-feed-recovery-1",
   "apiBaseUrl": "https://higgins-dash-bbdpujw2.manus.space",
-  "sourceCommit": "d99bd1eab166ba342d71f73aa2ccdef82c147d39"
+  "sourceCommit": "19b32f5c3b9eb6dc2a5030aaeddfa00be04023f5"
 }
