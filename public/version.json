@@ -1,6 +1,6 @@
 {
-  "clientVersion": "1.0.6",
-  "release": "canonical-live-roster-1",
+  "clientVersion": "1.1.0",
+  "release": "secure-device-pairing-loading-1",
   "apiBaseUrl": "https://higgins-dash-bbdpujw2.manus.space",
-  "sourceCommit": "dbacecbbea4f64924b071f5c43eaf6610c245915"
+  "sourceCommit": "f0bb2d2ad3bb1b74797eb9121a87230ee2dc0c7c"
 }
