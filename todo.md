@@ -388,3 +388,16 @@
 - [x] Push notification bij circuit breaker recovery (✅ MC-Cloud Hersteld)
 - [x] notifyCircuitBreakerRecovered() functie in mc-proxy.ts
 - [x] TypeScript 0 fouten
+
+## Fase 43: tRPC Proxy- en Devservervalidatie
+
+- [x] Directe MC-cloud tRPC query valideren
+- [x] Lokale higgins.* proxy end-to-end valideren (3 queries, HTTP 200, payload gelijk)
+- [x] Proxy-health en circuit-breakerstatus controleren (bereikbaar, CLOSED, 0 fouten)
+- [x] Ontwikkelserverlogs controleren en fouten herstellen (geen actuele runtimefouten)
+- [x] SuperJSON-fidelity herstellen voor undefined, Date en andere getransformeerde waarden
+- [x] API-healthtest robuust maken voor normale Cloudflare-latency
+- [x] TypeScript en gerichte Vitest-tests uitvoeren (36 geslaagd, 1 overgeslagen)
+- [x] Gevalideerde checkpoint opslaan
+- [ ] Bijgewerkt project naar GitHub pushen
+- [ ] GitHub-gebruiker tmprsns uitnodigen met write-toegang

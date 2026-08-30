@@ -13,9 +13,18 @@
  * ============================================================================
  */
 import { z } from "zod";
+import superjson from "superjson";
 import { router, publicProcedure } from "../_core/trpc";
 
 const MC_BASE = "https://higgins-dash-bbdpujw2.manus.space/api/trpc";
+
+export function unwrapTrpcResponse(payload: any): any {
+  const resultData = payload?.result?.data;
+  if (resultData && typeof resultData === "object" && "json" in resultData) {
+    return superjson.deserialize(resultData);
+  }
+  return payload;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LOCAL FALLBACK — calls the local _higgins_local_disabled router via internal HTTP
@@ -37,7 +46,7 @@ async function localFallbackQuery(procedure: string, input: any): Promise<any> {
       throw new Error(`Local fallback error: ${resp.status}`);
     }
     const data = await resp.json();
-    return data?.result?.data?.json ?? data;
+    return unwrapTrpcResponse(data);
   } catch (err: any) {
     console.error(`[MC-Proxy] Local fallback query ${procedure} error:`, err.message);
     throw new Error(`Both MC-cloud and local fallback unavailable for ${procedure}`);
@@ -58,7 +67,7 @@ async function localFallbackMutation(procedure: string, input: any): Promise<any
       throw new Error(`Local fallback error: ${resp.status}`);
     }
     const data = await resp.json();
-    return data?.result?.data?.json ?? data;
+    return unwrapTrpcResponse(data);
   } catch (err: any) {
     console.error(`[MC-Proxy] Local fallback mutation ${procedure} error:`, err.message);
     throw new Error(`Both MC-cloud and local fallback unavailable for ${procedure}`);
@@ -205,8 +214,7 @@ async function proxyQuery(procedure: string, input: any): Promise<any> {
     }
     const data = await resp.json();
     recordSuccess();
-    // tRPC wraps in { result: { data: { json: ... } } }
-    return data?.result?.data?.json ?? data;
+    return unwrapTrpcResponse(data);
   } catch (err: any) {
     if (err.message?.includes("MC proxy error")) throw err;
     console.error(`[MC-Proxy] Query higgins.${procedure} network error:`, err.message);
@@ -237,7 +245,7 @@ async function proxyMutation(procedure: string, input: any): Promise<any> {
     }
     const data = await resp.json();
     recordSuccess();
-    return data?.result?.data?.json ?? data;
+    return unwrapTrpcResponse(data);
   } catch (err: any) {
     if (err.message?.includes("MC proxy error")) throw err;
     console.error(`[MC-Proxy] Mutation higgins.${procedure} network error:`, err.message);
