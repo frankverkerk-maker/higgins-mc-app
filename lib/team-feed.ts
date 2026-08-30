@@ -36,6 +36,7 @@ type CachedFeed = {
 };
 
 export type TeamFeedSource = "live" | "cached" | "builtin" | "loading";
+export type TeamFeedActivity = "initial" | "refreshing" | "retrying" | "idle" | "cached" | "fallback";
 export type TeamFeedDiagnostic = TeamFeedFailureCode | "missing_url" | null;
 
 export interface TeamFeedResult {
@@ -44,6 +45,7 @@ export interface TeamFeedResult {
   edition: Edition;
   source: TeamFeedSource;
   loading: boolean;
+  activity: TeamFeedActivity;
   error: TeamFeedDiagnostic;
   refresh: () => void;
 }
@@ -106,6 +108,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
     edition: Edition;
     source: TeamFeedSource;
     loading: boolean;
+    activity: TeamFeedActivity;
     error: TeamFeedDiagnostic;
   }>(() => ({
     team: getTeam(fallbackEdition),
@@ -113,6 +116,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
     edition: fallbackEdition,
     source: "loading",
     loading: true,
+    activity: "initial",
     error: null,
   }));
   const generationRef = useRef(0);
@@ -124,6 +128,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
       ...previous,
       source: previous.source === "builtin" ? "loading" : previous.source,
       loading: true,
+      activity: previous.source === "loading" ? "initial" : "refreshing",
       error: null,
     }));
 
@@ -136,6 +141,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
           ...mapPayload(cached.payload),
           source: "cached",
           loading: true,
+          activity: "refreshing",
           error: null,
         });
       }
@@ -146,13 +152,14 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
     if (!url) {
       setState((previous) =>
         previous.source === "cached"
-          ? { ...previous, loading: false, error: "missing_url" }
+          ? { ...previous, loading: false, activity: "cached", error: "missing_url" }
           : {
               team: getTeam(fallbackEdition),
               departments: getDepartments(fallbackEdition),
               edition: fallbackEdition,
               source: "builtin",
               loading: false,
+              activity: "fallback",
               error: "missing_url",
             },
       );
@@ -165,15 +172,20 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
         validate: isTeamFeedPayload,
         attempts: 2,
         timeoutMs: 8_000,
+        onAttempt: (attempt) => {
+          if (attempt > 1 && generation === generationRef.current) {
+            setState((previous) => ({ ...previous, activity: "retrying" }));
+          }
+        },
       })) as FeedResponse;
       if (generation !== generationRef.current) return;
-      setState({ ...mapPayload(payload), source: "live", loading: false, error: null });
+      setState({ ...mapPayload(payload), source: "live", loading: false, activity: "idle", error: null });
       await writeCachedFeed(payload);
     } catch (error) {
       if (generation !== generationRef.current) return;
       const diagnostic = error instanceof TeamFeedRequestError ? error.code : "network_error";
       if (cachedApplied) {
-        setState((previous) => ({ ...previous, source: "cached", loading: false, error: diagnostic }));
+        setState((previous) => ({ ...previous, source: "cached", loading: false, activity: "cached", error: diagnostic }));
       } else {
         setState({
           team: getTeam(fallbackEdition),
@@ -181,6 +193,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
           edition: fallbackEdition,
           source: "builtin",
           loading: false,
+          activity: "fallback",
           error: diagnostic,
         });
       }

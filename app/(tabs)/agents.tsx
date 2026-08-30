@@ -10,6 +10,7 @@ import { useEdition } from "@/lib/edition-provider";
 import { useTeamFeed } from "@/lib/team-feed";
 import { countActiveAgents, getCanonicalAgentDisplayName } from "@/lib/team-pulse";
 import { trpc } from "@/lib/trpc";
+import { McCloudActivity } from "@/components/mc-cloud-activity";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -85,7 +86,7 @@ export default function TeamPulseScreen() {
   const { t } = useLanguage();
   const { edition: fallbackEdition } = useEdition();
   // Live MC-feed met nette terugval op de ingebouwde lijst.
-  const { team: TEAM, departments: DEPARTMENTS, source, error: feedError } = useTeamFeed(fallbackEdition);
+  const { team: TEAM, departments: DEPARTMENTS, source, activity: feedActivity, error: feedError } = useTeamFeed(fallbackEdition);
   const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
@@ -146,6 +147,7 @@ export default function TeamPulseScreen() {
                 </Text>
                 {feedError ? <Text style={s.sourceDiagnostic}>{t.agents.sourceDiagnostic}: {feedError}</Text> : null}
               </View>
+              <McCloudActivity state={feedActivity} compact style={{ marginLeft: 4 }} />
             </View>
           </View>
           <LanguageSwitcher />

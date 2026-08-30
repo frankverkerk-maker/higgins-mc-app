@@ -10,6 +10,9 @@ import { type Language, LANGUAGE_NAMES, LANGUAGE_FLAGS } from "@/lib/i18n";
 import { MC_TEAM_FEED_URL_KEY } from "@/lib/team-feed";
 import { SiriShortcutsSettings } from "@/components/siri-shortcuts-settings";
 import { USER_NAME_KEY } from "@/app/onboarding";
+import { DevicePairingSettings } from "@/components/device-pairing-settings";
+import { clearDeviceSession } from "@/lib/device-pairing";
+import { McCloudActivity } from "@/components/mc-cloud-activity";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -49,6 +52,7 @@ const LOCATION_KEY = "@higgins_weather_location";
 const SETTINGS_NOTIFICATIONS_KEY = "@higgins_settings_notifications";
 const SETTINGS_BRIEFING_KEY = "@higgins_settings_briefing";
 const SETTINGS_HAPTIC_KEY = "@higgins_settings_haptic";
+const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.1.0";
 
 export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
@@ -175,6 +179,7 @@ export default function SettingsScreen() {
               SETTINGS_BRIEFING_KEY,
               SETTINGS_HAPTIC_KEY,
             ]);
+            await clearDeviceSession();
             // Navigate to onboarding
             router.replace("/onboarding");
           } catch (_) {
@@ -341,6 +346,10 @@ export default function SettingsScreen() {
                       : t.settings.mcFeedEmpty}
                 </Text>
               </View>
+              <McCloudActivity
+                state={feedSaving ? "initial" : feedStatus === "fallback" ? "fallback" : "idle"}
+                label={feedSaving ? "MC-cloudverbinding testen" : undefined}
+              />
             </View>
 
             {/* Mission Control */}
@@ -363,7 +372,7 @@ export default function SettingsScreen() {
               </View>
             </Pressable>
 
-            {/* Hermes Agent */}
+            {/* Optional local execution — never presented as an app dependency */}
             <Pressable
               style={({ pressed }) => [s.row, s.rowBorder, pressed && { opacity: 0.75 }]}
               onPress={() => haptic(Haptics.ImpactFeedbackStyle.Light)}
@@ -373,13 +382,19 @@ export default function SettingsScreen() {
                   <Text style={{ fontSize: 14 }}>🖥️</Text>
                 </View>
                 <View>
-                  <Text style={s.rowLabel}>Hermes Agent</Text>
-                  <Text style={s.rowSub}>Mac Mini · Tailscale</Text>
+                  <Text style={s.rowLabel}>
+                    {language === "de" ? "Lokale Ausführung" : language === "en" ? "Local execution" : "Lokale uitvoering"}
+                  </Text>
+                  <Text style={s.rowSub}>
+                    {language === "de" ? "Optional · kein Tunnel erforderlich" : language === "en" ? "Optional · no tunnel required" : "Optioneel · geen tunnel nodig"}
+                  </Text>
                 </View>
               </View>
               <View style={s.connectedBadge}>
-                <View style={[s.statusDot, { backgroundColor: C.green }]} />
-                <Text style={[s.statusText, { color: C.green }]}>{t.common.online}</Text>
+                <View style={[s.statusDot, { backgroundColor: C.muted }]} />
+                <Text style={[s.statusText, { color: C.muted }]}>
+                  {language === "de" ? "Optional" : language === "en" ? "Optional" : "Optioneel"}
+                </Text>
               </View>
             </Pressable>
 
@@ -404,6 +419,8 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         </View>
+
+        <DevicePairingSettings />
 
         {/* ── Voorkeuren ── */}
         <View style={s.section}>
@@ -474,7 +491,7 @@ export default function SettingsScreen() {
           <View style={s.card}>
             <View style={s.row}>
               <Text style={s.rowLabel}>{t.settings.appVersion}</Text>
-              <Text style={s.rowValue}>1.0.0 (Beta)</Text>
+              <Text style={s.rowValue}>{CLIENT_VERSION}</Text>
             </View>
             <View style={[s.row, s.rowBorder]}>
               <Text style={s.rowLabel}>Product</Text>

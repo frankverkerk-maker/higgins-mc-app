@@ -19,6 +19,7 @@ import * as Haptics from "expo-haptics";
 import { USER_NAME_KEY } from "@/app/onboarding";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
+import { McCloudActivity, type McCloudActivityState } from "@/components/mc-cloud-activity";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -118,6 +119,17 @@ export default function DashboardScreen() {
     { userName: userName ?? undefined },
     { staleTime: 30 * 1000, refetchInterval: 30 * 1000 }
   );
+
+  const cloudQueries = [briefQuery, dailyQuery, approvalsQuery];
+  const dashboardCloudActivity: McCloudActivityState = cloudQueries.some((query) => query.isFetching && query.failureCount > 0)
+    ? "retrying"
+    : cloudQueries.some((query) => query.isLoading && !query.data)
+      ? "initial"
+      : cloudQueries.some((query) => query.isFetching)
+        ? "refreshing"
+        : cloudQueries.some((query) => query.isError)
+          ? "fallback"
+          : "idle";
 
   // Use live approvals from server, fallback to localized mock if loading
   const [approvals, setApprovals] = useState<Approval[]>(() => buildApprovals(t));
@@ -253,6 +265,7 @@ export default function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <Text style={s.briefLabel}>{t.dashboard.morningBriefing}</Text>
               <Text style={s.briefDate}>{briefQuery.data?.date ?? ""}</Text>
+              <McCloudActivity state={dashboardCloudActivity} />
             </View>
             <View style={s.newBadge}>
               <Text style={s.newBadgeText}>{t.dashboard.morningBriefingNew}</Text>

@@ -20,6 +20,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { AppBackground } from "@/components/app-background";
 import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/lib/language-provider";
+import { McCloudActivity } from "@/components/mc-cloud-activity";
 import { getApiBaseUrl } from "@/constants/oauth";
 import { USER_NAME_KEY } from "@/app/onboarding";
 
@@ -346,6 +347,10 @@ export default function DocsScreen() {
                 ? "Geen documenten"
                 : `${filteredDocs.length}${searchQuery ? ` van ${docs.length}` : ""} document${docs.length !== 1 ? "en" : ""}`}
             </Text>
+            <McCloudActivity
+              state={isUploading ? "initial" : "idle"}
+              label="Document via MC-cloud uploaden"
+            />
           </View>
           <Pressable
             style={({ pressed }) => [styles.uploadBtn, pressed && { opacity: 0.75 }, isUploading && { opacity: 0.5 }]}

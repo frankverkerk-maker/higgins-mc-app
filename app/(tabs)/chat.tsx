@@ -37,7 +37,7 @@ import { useLanguage } from "@/lib/language-provider";
 import { useChatUnread } from "@/lib/chat-unread-provider";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
-import { TypingDots } from "@/components/typing-dots";
+import { McCloudActivity } from "@/components/mc-cloud-activity";
 import { DelegationTracker } from "@/components/delegation-tracker";
 import { isOnline, enqueueMessage, getQueue, dequeueMessage } from "@/lib/offline-queue";
 import { isStaleRequest, RequestDeadlineError, withDeadline } from "@/lib/request-deadline";
@@ -92,7 +92,7 @@ type Message = {
 };
 
 const CHAT_STORAGE_KEY = "higgins_chat_history_v2";
-const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.0.6";
+const CLIENT_VERSION = process.env.EXPO_PUBLIC_CLIENT_VERSION?.trim() || "1.1.0";
 const ONLINE_CHECK_TIMEOUT_MS = 5_000;
 const CHAT_REQUEST_TIMEOUT_MS = 20_000;
 const STALE_REQUEST_MS = 25_000;
@@ -1107,14 +1107,16 @@ export default function ChatScreen() {
           <View style={styles.typingRow}>
             <HigginsAvatar size={32} />
             <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
-              {isTranscribing
-                ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>🎙 Transcriberen...</Text>
-                : isUploading
-                  ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📎 {t.chat.uploadUploading}</Text>
-                : isGeneratingPdf
-                  ? <Text style={[styles.bubbleText, { fontSize: 12 }]}>📄 PDF genereren...</Text>
-                  : <TypingDots color={C.cyan} />
-              }
+              <McCloudActivity
+                state="initial"
+                label={isTranscribing
+                  ? "Audio via MC-cloud transcriberen"
+                  : isUploading
+                    ? `MC-cloud: ${t.chat.uploadUploading}`
+                    : isGeneratingPdf
+                      ? "PDF via MC-cloud genereren"
+                      : "Higgins verwerkt via MC-cloud"}
+              />
             </View>
           </View>
         )}

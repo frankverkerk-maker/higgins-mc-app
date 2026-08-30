@@ -1,6 +1,6 @@
 {
   "name": "app-template",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev:metro": "cross-env EXPO_USE_METRO_WORKSPACE_ROOT=1 npx expo start --web --port ${EXPO_PORT:-8081}",
     "build": "pnpm build:web && pnpm build:server",
     "build:web": "node scripts/patch-css-interop.mjs && cross-env NODE_OPTIONS=--max-old-space-size=2048 expo export --platform web --output-dir dist/web",
-    "build:pages": "cross-env EXPO_PUBLIC_API_BASE_URL=https://higgins-dash-bbdpujw2.manus.space EXPO_PUBLIC_MC_TEAM_FEED_URL=https://higgins-dash-bbdpujw2.manus.space/api/app/team-feed EXPO_PUBLIC_WEB_BASE_URL=/higgins-mc-app EXPO_PUBLIC_CLIENT_VERSION=1.0.6 NODE_OPTIONS=--max-old-space-size=2048 expo export --platform web --output-dir dist/pages --clear",
+    "build:pages": "cross-env EXPO_PUBLIC_API_BASE_URL=https://higgins-dash-bbdpujw2.manus.space EXPO_PUBLIC_MC_TEAM_FEED_URL=https://higgins-dash-bbdpujw2.manus.space/api/app/team-feed EXPO_PUBLIC_WEB_BASE_URL=/higgins-mc-app EXPO_PUBLIC_CLIENT_VERSION=1.1.0 NODE_OPTIONS=--max-old-space-size=2048 expo export --platform web --output-dir dist/pages --clear",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
@@ -29,6 +29,7 @@
     "@react-navigation/bottom-tabs": "^7.8.12",
     "@react-navigation/elements": "^2.9.2",
     "@react-navigation/native": "^7.1.25",
+    "@simplewebauthn/browser": "13.3.0",
     "@tanstack/react-query": "^5.90.12",
     "@trpc/client": "11.7.2",
     "@trpc/react-query": "11.7.2",

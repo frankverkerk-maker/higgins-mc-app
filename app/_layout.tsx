@@ -26,6 +26,7 @@ import { useSiriShortcuts } from "@/hooks/use-siri-shortcuts";
 import { LanguageProvider } from "@/lib/language-provider";
 import { EditionProvider } from "@/lib/edition-provider";
 import { ChatUnreadProvider } from "@/lib/chat-unread-provider";
+import { DevicePairingProvider } from "@/lib/device-pairing-provider";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -139,15 +140,17 @@ export default function RootLayout() {
       <LanguageProvider>
         <EditionProvider>
           <ChatUnreadProvider>
-            <ThemeProvider>
-              <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-                <SafeAreaFrameContext.Provider value={frame}>
-                  <SafeAreaInsetsContext.Provider value={insets}>
-                    {content}
-                  </SafeAreaInsetsContext.Provider>
-                </SafeAreaFrameContext.Provider>
-              </SafeAreaProvider>
-            </ThemeProvider>
+            <DevicePairingProvider>
+              <ThemeProvider>
+                <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+                  <SafeAreaFrameContext.Provider value={frame}>
+                    <SafeAreaInsetsContext.Provider value={insets}>
+                      {content}
+                    </SafeAreaInsetsContext.Provider>
+                  </SafeAreaFrameContext.Provider>
+                </SafeAreaProvider>
+              </ThemeProvider>
+            </DevicePairingProvider>
           </ChatUnreadProvider>
         </EditionProvider>
       </LanguageProvider>
@@ -158,9 +161,11 @@ export default function RootLayout() {
     <LanguageProvider>
       <EditionProvider>
         <ChatUnreadProvider>
-          <ThemeProvider>
-            <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
-          </ThemeProvider>
+          <DevicePairingProvider>
+            <ThemeProvider>
+              <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+            </ThemeProvider>
+          </DevicePairingProvider>
         </ChatUnreadProvider>
       </EditionProvider>
     </LanguageProvider>

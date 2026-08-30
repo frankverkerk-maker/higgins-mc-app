@@ -25,6 +25,7 @@ type FetchValidatedJsonOptions<T> = {
   timeoutMs?: number;
   retryDelayMs?: number;
   fetchImpl?: FetchLike;
+  onAttempt?: (attempt: number, totalAttempts: number) => void;
 };
 
 export type ValidatedTeamFeedPayload = {
@@ -80,11 +81,13 @@ export async function fetchValidatedJson<T>({
   timeoutMs = 8_000,
   retryDelayMs = 350,
   fetchImpl = fetch,
+  onAttempt,
 }: FetchValidatedJsonOptions<T>): Promise<T> {
   const safeAttempts = Math.max(1, Math.min(attempts, 3));
   let lastFailure = new TeamFeedRequestError("network_error", "Team feed request failed");
 
   for (let attempt = 1; attempt <= safeAttempts; attempt += 1) {
+    onAttempt?.(attempt, safeAttempts);
     const controller = new AbortController();
     let timedOut = false;
     const timer = setTimeout(() => {

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Text, View, ScrollView, StyleSheet, Platform, Pressable, ActivityIndicator } from "react-native";
+import { Text, View, ScrollView, StyleSheet, Platform, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -10,6 +10,7 @@ import { getCanonicalAgentDisplayName } from "@/lib/team-pulse";
 import { buildTowerFloors, formatTowerFloorNumber, getTowerAgentTotal, type TowerFloor } from "@/lib/tower-model";
 import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
+import { McCloudActivity } from "@/components/mc-cloud-activity";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export default function TowerScreen() {
   const { edition: fallbackEdition, isInternal } = useEdition();
   const router = useRouter();
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null);
-  const { team, departments, source, loading } = useTeamFeed(fallbackEdition);
+  const { team, departments, source, activity: feedActivity } = useTeamFeed(fallbackEdition);
 
   // Fetch live agent statuses
   const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
@@ -88,9 +89,7 @@ export default function TowerScreen() {
             <Text style={styles.sourceText}>
               {isLive ? (t.tower?.sourceLive || "Live via database") : (t.tower?.sourceBuiltin || "Ingebouwde lijst")}
             </Text>
-            {loading && (
-              <ActivityIndicator size="small" color="#00D4D4" style={{ marginLeft: 8 }} />
-            )}
+            <McCloudActivity state={feedActivity} compact style={{ marginLeft: 8 }} />
           </View>
         </View>
 
