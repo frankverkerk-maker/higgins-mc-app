@@ -399,5 +399,5 @@
 - [x] API-healthtest robuust maken voor normale Cloudflare-latency
 - [x] TypeScript en gerichte Vitest-tests uitvoeren (36 geslaagd, 1 overgeslagen)
 - [x] Gevalideerde checkpoint opslaan
-- [ ] Bijgewerkt project naar GitHub pushen
-- [ ] GitHub-gebruiker tmprsns uitnodigen met write-toegang
+- [x] Bijgewerkt project naar GitHub pushen (branch: manus/fase-43-validated-proxy)
+- [x] GitHub-gebruiker tmprsns write-toegang geven (bestaande write-toegang geverifieerd)
