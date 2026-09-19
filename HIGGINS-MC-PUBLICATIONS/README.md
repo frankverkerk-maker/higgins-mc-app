@@ -8,9 +8,9 @@ Higgins acts as the Chief of Staff and orchestration layer. Each publication rem
 
 | Department | Scope | Library |
 |---|---|---|
-| **Justitia Legal Council (JLC)** | Legal intelligence, compliance, governance, legal-agent architecture, and legal operations | [Open JLC publications](departments/justitia-legal-council/) |
-| **Morgan Trading Desk** | Prediction markets, trading systems, financial AI, market intelligence, and risk | [Open Morgan publications](departments/morgan-trading-desk/) |
-| **Team Elon — Technology Department** | Platform architecture, software engineering, AI infrastructure, cybersecurity, and emerging technology | [Open Team Elon publications](departments/team-elon-technology/) |
+| **Justitia Legal Council (JLC)** | Legal intelligence, compliance, governance, legal-agent architecture, and legal operations | [Open JLC publications](departments/justitia-legal-council/README.md) |
+| **Morgan Trading Desk** | Prediction markets, trading systems, financial AI, market intelligence, and risk | [Open Morgan publications](departments/morgan-trading-desk/README.md) |
+| **Team Elon — Technology Department** | Platform architecture, software engineering, AI infrastructure, cybersecurity, and emerging technology | [Open Team Elon publications](departments/team-elon-technology/README.md) |
 
 Additional departments can be added under `HIGGINS-MC-PUBLICATIONS/departments/` without changing the publication contract.
 
