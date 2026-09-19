@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "library": "Higgins Mission Control Publications",
+  "language": "en",
+  "repository": "frankverkerk-maker/higgins-mc-app",
+  "updatedAt": "2026-09-19",
+  "publications": [
+    {
+      "id": "JLC-SEC-2026-001",
+      "department": "Justitia Legal Council",
+      "departmentSlug": "justitia-legal-council",
+      "title": "Harvey-Grade Security and Guardrail Architecture — Detailed Technical Implementation Plan",
+      "version": "1.0.0",
+      "publicationDate": "2026-09-19",
+      "language": "en",
+      "status": "published",
+      "path": "departments/justitia-legal-council/2026/JLC-SEC-2026-001",
+      "file": "Justitia_Harvey_Grade_Security_Guardrail_Implementation_Plan_EN.pdf",
+      "sha256": "514aac42120b8a48487833015048a37bae9b784bd42a6ae98843977dd6b4b3a8"
+    }
+  ]
+}
