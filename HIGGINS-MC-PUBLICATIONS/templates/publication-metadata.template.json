@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "DEPT-CATEGORY-YYYY-NNN",
+  "title": "English publication title",
+  "shortTitle": "Short English title",
+  "summary": "Concise English summary of the publication and its principal scope.",
+  "department": "Department display name",
+  "departmentSlug": "department-slug",
+  "higginsDomain": "Higgins MC department or function",
+  "documentType": "report",
+  "category": "research",
+  "language": "en",
+  "publicationDate": "YYYY-MM-DD",
+  "referenceDate": "YYYY-MM-DD",
+  "version": "1.0.0",
+  "status": "published",
+  "visibility": "public",
+  "file": "Descriptive_File_Name_EN_v1.0.pdf",
+  "mediaType": "application/pdf",
+  "pageCount": 1,
+  "sizeBytes": 0,
+  "sha256": "64-character-lowercase-sha256",
+  "topics": [
+    "topic"
+  ],
+  "supersedes": null,
+  "supersededBy": null,
+  "rights": "All rights reserved",
+  "disclaimer": "Document-specific disclaimer."
+}
