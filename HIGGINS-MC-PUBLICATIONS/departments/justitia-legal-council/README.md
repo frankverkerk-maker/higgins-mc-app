@@ -6,7 +6,7 @@ Justitia Legal Council is the Higgins Mission Control legal department. This col
 
 | Publication ID | Title | Version | Date | Status |
 |---|---|---:|---:|---|
-| [`JLC-SEC-2026-001`](2026/JLC-SEC-2026-001/) | Harvey-Grade Security and Guardrail Architecture — Detailed Technical Implementation Plan | 1.0.0 | 2026-09-19 | Published |
+| [`JLC-SEC-2026-001`](2026/JLC-SEC-2026-001/README.md) | Harvey-Grade Security and Guardrail Architecture — Detailed Technical Implementation Plan | 1.0.0 | 2026-09-19 | Published |
 
 **Publication prefix:** `JLC`
 

@@ -80,7 +80,7 @@
 
 ## Higgins MC Publications
 
-The repository includes the central, English-language [Higgins Mission Control Publications](HIGGINS-MC-PUBLICATIONS/) library. It provides one governed catalogue for approved reports and technical papers from Justitia Legal Council, Morgan Trading Desk, Team Elon — Technology Department, and future Higgins MC departments.
+The repository includes the central, English-language [Higgins Mission Control Publications](HIGGINS-MC-PUBLICATIONS/README.md) library. It provides one governed catalogue for approved reports and technical papers from Justitia Legal Council, Morgan Trading Desk, Team Elon — Technology Department, and future Higgins MC departments.
 
 Every indexed publication includes machine-readable metadata, a SHA-256 integrity checksum, departmental ownership, a stable publication ID, and a validated PDF. See the [Publishing Guide](HIGGINS-MC-PUBLICATIONS/PUBLISHING-GUIDE.md) for the reusable workflow from any authorised Sandbox.
 
