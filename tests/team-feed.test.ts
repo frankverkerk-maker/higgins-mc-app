@@ -19,6 +19,15 @@ const SAMPLE_FEED: FeedAgent[] = [
 ];
 
 describe("Higgins MC — Mission Control team feed mapping", () => {
+  it("shows Nathalie as Office Manager even if the live feed is unavailable", () => {
+    expect(builtinTeam.find(agent => agent.name === "Nathalie")).toMatchObject({
+      role: "Office Manager / Receptioniste", department: "Executive Office",
+    });
+    expect(builtinTeam.find(agent => agent.name === "Elena Vasquez")).toMatchObject({
+      role: "International Law", department: "Justitia Legal Council",
+    });
+  });
+
   it("maps the legacy Executive Office Manager Elena to Nathalie, retaining her actual role", () => {
     const merged = mapTeamFeedAgents(SAMPLE_FEED, builtinTeam);
     const officeManager = merged.find(agent => agent.role.startsWith("Office Manager"));

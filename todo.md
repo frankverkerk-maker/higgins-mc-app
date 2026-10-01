@@ -405,5 +405,6 @@
 ## Fase 44: Team Pulse Office Manager-identiteit en publicatie
 - [x] Live-feed uit Mission Control: uitsluitend de Executive Office Office Manager-alias Elena naar Nathalie normaliseren; Elena Vasquez (JLC) bewaren.
 - [x] De echte live-roster-mapping rechtstreeks met regressietests afdekken, inclusief dubbel voorkomende Nathalie en onbekende agenten.
-- [x] Statusweergave, TypeScript en relevante tests na wijziging valideren (38 geslaagd, 1 overgeslagen; 0 TypeScript-fouten).
+- [x] Ingebouwde fallbackrol naar Office Manager / Receptioniste aanpassen; live UI met oude Elena-feed verifiëren zonder Elena Vasquez te wijzigen.
+- [x] Statusweergave, TypeScript en relevante tests na wijziging valideren (39 geslaagd, 1 overgeslagen; 0 TypeScript-fouten).
 - [ ] Nieuw WebDev-checkpoint bewaren en de daadwerkelijk gepubliceerde domeinversie afzonderlijk verifiëren/bijwerken.
