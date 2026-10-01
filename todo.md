@@ -401,3 +401,9 @@
 - [x] Gevalideerde checkpoint opslaan
 - [x] Bijgewerkt project naar GitHub pushen (branch: manus/fase-43-validated-proxy)
 - [x] GitHub-gebruiker tmprsns write-toegang geven (bestaande write-toegang geverifieerd)
+
+## Fase 44: Team Pulse Office Manager-identiteit en publicatie
+- [x] Live-feed uit Mission Control: uitsluitend de Executive Office Office Manager-alias Elena naar Nathalie normaliseren; Elena Vasquez (JLC) bewaren.
+- [x] De echte live-roster-mapping rechtstreeks met regressietests afdekken, inclusief dubbel voorkomende Nathalie en onbekende agenten.
+- [x] Statusweergave, TypeScript en relevante tests na wijziging valideren (38 geslaagd, 1 overgeslagen; 0 TypeScript-fouten).
+- [ ] Nieuw WebDev-checkpoint bewaren en de daadwerkelijk gepubliceerde domeinversie afzonderlijk verifiëren/bijwerken.
