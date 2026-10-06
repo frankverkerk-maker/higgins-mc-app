@@ -408,3 +408,11 @@
 - [x] Ingebouwde fallbackrol naar Office Manager / Receptioniste aanpassen; live UI met oude Elena-feed verifiëren zonder Elena Vasquez te wijzigen.
 - [x] Statusweergave, TypeScript en relevante tests na wijziging valideren (39 geslaagd, 1 overgeslagen; 0 TypeScript-fouten).
 - [ ] Nieuw WebDev-checkpoint bewaren en de daadwerkelijk gepubliceerde domeinversie afzonderlijk verifiëren/bijwerken.
+
+## Fase 45: Team-directory v2 — broncontract en releasegate
+- [x] MC-cloud-feed (92 records) vergeleken: dubbele Office Manager, vier afdelingslabels, afzonderlijke JLC-identiteiten en verouderd onveilig bronmigratiescript vastgesteld.
+- [x] Read-only same-origin directoryroute met Zod-validatie, canonieke `department_id`-mapping, gerichte legacy-alias, whitelab-beveiliging en begrensde stale/retry gebouwd.
+- [x] Team Pulse standaard aan één directory gekoppeld; mockstatus/taken verwijderd; automatisch en handmatig verversen; live/stale/builtin gescheiden.
+- [x] Werkelijke MC-directory end-to-end gecontroleerd (HTTP 200, 91 canonieke agents, alleen Nathalie als Office Manager, JLC-naam Elena Vasquez intact).
+- [x] 50 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; Expo-web- en Express-serverbuild geslaagd.
+- [ ] Productiepublicatie en MC-cloud-databasemigratie: productie-acceptatieroute gaf op 6 oktober HTTP 404. Afzonderlijke WebDev-publishfunctie en MC-bronproject zijn vanuit deze sessie niet beschikbaar; zonder live verificatie niet als voltooid markeren.

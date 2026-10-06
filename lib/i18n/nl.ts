@@ -145,6 +145,7 @@ export const nl = {
     statusStandby: "Stand-by",
     statusBusy: "Bezig",
     statusOffline: "Offline",
+    statusUnknown: "Status onbekend",
     role: "Rol",
     department: "Departement",
     departmentsPlural: "Departementen",
@@ -157,7 +158,9 @@ export const nl = {
     classifiedRoster: "Afgeschermd team",
     classifiedRosterSub: "Agentnamen verborgen · operational security",
     sourceLive: "Live via Mission Control",
+    sourceStale: "MC tijdelijk onbereikbaar · vorige live-lijst",
     sourceBuiltin: "Ingebouwde lijst",
+    refreshTeam: "Vernieuw team",
   },
 
   // ─── Settings / Instellingen ─────────────────────────────────────────────────

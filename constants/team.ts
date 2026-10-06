@@ -44,6 +44,9 @@ export type Agent = {
   isAddOn?: boolean;
   /** Geheime/interne afdeling. Wordt verborgen in de Whitelab-klantversie. */
   isClassified?: boolean;
+  /** Actuele MC-directorystatus; ontbreekt bewust bij offline/fallback. */
+  status?: string;
+  currentTask?: string | null;
 };
 
 export type DepartmentMeta = {

@@ -146,6 +146,7 @@ export const en: Translations = {
     statusStandby: "Standby",
     statusBusy: "Busy",
     statusOffline: "Offline",
+    statusUnknown: "Status unavailable",
     role: "Role",
     department: "Department",
     departmentsPlural: "Departments",
@@ -158,7 +159,9 @@ export const en: Translations = {
     classifiedRoster: "Shielded team",
     classifiedRosterSub: "Agent names hidden · operational security",
     sourceLive: "Live via Mission Control",
+    sourceStale: "MC temporarily unavailable · previous live list",
     sourceBuiltin: "Built-in list",
+    refreshTeam: "Refresh team",
   },
 
   // ─── Settings ────────────────────────────────────────────────────────────────

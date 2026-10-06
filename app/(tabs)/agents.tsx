@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from "react-native";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { HigginsAvatar } from "@/components/higgins-avatar";
@@ -8,7 +8,6 @@ import { AppBackground } from "@/components/app-background";
 import { useLanguage } from "@/lib/language-provider";
 import { useEdition } from "@/lib/edition-provider";
 import { useTeamFeed } from "@/lib/team-feed";
-import { trpc } from "@/lib/trpc";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -54,24 +53,12 @@ function agentInitial(name: string) {
   return name.replace(/^(Dr\.|Prof\.)\s+/, "").charAt(0).toUpperCase();
 }
 
-// Mock activiteit als fallback (taken worden vertaald via buildMockActivity)
-type ActivityMap = Record<string, { status: "active" | "idle" | "busy"; task: string }>;
-function buildMockActivity(t: any): ActivityMap {
-  return {
-    "Higgins":  { status: "active", task: t.dashboard.taskPrepBriefing },
-    "Nathalie": { status: "active", task: t.dashboard.taskProcessEmails },
-    "Gary":     { status: "busy",   task: t.dashboard.qcSendReport },
-    "Elon":     { status: "idle",   task: t.dashboard.taskAwaitingOrder },
-    "Warren":   { status: "busy",   task: t.dashboard.prio1 },
-    "Justitia": { status: "idle",   task: t.dashboard.taskAwaitingOrder },
-    "Victoria": { status: "idle",   task: t.dashboard.taskAwaitingOrder },
-  };
-}
-
 const STATUS_COLORS = {
   active: C.green,
   busy:   C.amber,
   idle:   C.muted,
+  offline: C.red,
+  unknown: C.muted,
 };
 
 function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) {
@@ -83,31 +70,19 @@ function haptic(style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle
 export default function TeamPulseScreen() {
   const { t } = useLanguage();
   const { edition: fallbackEdition } = useEdition();
-  // Live MC-feed met nette terugval op de ingebouwde lijst.
-  const { team: TEAM, departments: DEPARTMENTS, source } = useTeamFeed(fallbackEdition);
+  const { team: TEAM, departments: DEPARTMENTS, source, refresh } = useTeamFeed(fallbackEdition);
   const DEPARTMENT_ORDER = DEPARTMENTS.map(d => d.name);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
-  const [activity, setActivity] = useState<ActivityMap>(() => buildMockActivity(t));
 
-  // Live agent status from server
-  const agentStatusQuery = trpc.higgins.getAgentStatus.useQuery(
-    {},
-    { staleTime: 15 * 1000, refetchInterval: 15 * 1000 }
-  );
-
-  // Update activity when server data changes
-  useEffect(() => {
-    if (agentStatusQuery.data) {
-      const typedData = agentStatusQuery.data as Record<string, { status: "active" | "idle" | "busy"; task: string }>;
-      setActivity(typedData);
-    }
-  }, [agentStatusQuery.data]);
-
-  // Houd fallback-taken in sync met de gekozen taal zolang er geen live data is
-  useEffect(() => {
-    if (!agentStatusQuery.data) setActivity(buildMockActivity(t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, agentStatusQuery.data]);
+  // Never invent status or current work when MC is stale or unavailable.
+  const getActivity = (name: string) => {
+    const agent = TEAM.find(candidate => candidate.name === name);
+    const raw = source === "live" ? agent?.status : undefined;
+    const status: keyof typeof STATUS_COLORS =
+      raw === "active" ? "active" : raw === "busy" ? "busy" :
+      raw === "standby" || raw === "idle" ? "idle" : raw === "offline" ? "offline" : "unknown";
+    return { status, task: source === "live" ? agent?.currentTask : null };
+  };
 
   const handleAgentPress = (name: string) => {
     haptic(Haptics.ImpactFeedbackStyle.Light);
@@ -128,10 +103,17 @@ export default function TeamPulseScreen() {
             <Text style={s.headerLabel}>{t.agents.subtitle.toUpperCase()}</Text>
             <Text style={s.headerTitle}>{t.agents.title}</Text>
             <Text style={s.headerSub}>{TEAM.length} {t.agents.activeAgents} · {DEPARTMENTS.length} {t.agents.departmentsPlural}</Text>
-            <View style={s.sourceRow}>
-              <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : C.muted }]} />
-              <Text style={s.sourceText}>{source === "live" ? t.agents.sourceLive : t.agents.sourceBuiltin}</Text>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t.agents.refreshTeam}
+              onPress={refresh}
+              style={s.sourceRow}
+            >
+              <View style={[s.sourceDot, { backgroundColor: source === "live" ? C.green : source === "stale" ? C.amber : C.muted }]} />
+              <Text style={s.sourceText}>
+                {source === "live" ? t.agents.sourceLive : source === "stale" ? t.agents.sourceStale : t.agents.sourceBuiltin}  ↻
+              </Text>
+            </Pressable>
           </View>
           <LanguageSwitcher />
         </View>
@@ -141,8 +123,8 @@ export default function TeamPulseScreen() {
           <Text style={s.sectionTitle}>{t.agents.statusActive}</Text>
           <View style={s.card}>
             {["Higgins", "Nathalie", "Gary", "Warren"].map((name, i) => {
-              const act = activity[name] ?? { status: "idle", task: t.dashboard.taskAwaitingOrder };
-              const agent = TEAM.find(a => a.name === name)!;
+              const act = getActivity(name);
+              const agent = TEAM.find(a => a.name === name);
               const isHiggins = name === "Higgins";
               const isExpanded = expandedAgent === name;
               return (
@@ -164,14 +146,14 @@ export default function TeamPulseScreen() {
                   }
                   <View style={{ flex: 1 }}>
                     <Text style={s.agentName}>{name}</Text>
-                    <Text style={s.agentTask}>{act.task}</Text>
+                    <Text style={s.agentTask}>{act.task || (act.status === "unknown" ? t.agents.statusUnknown : act.status === "active" ? t.agents.statusActive : act.status === "busy" ? t.agents.statusBusy : act.status === "offline" ? t.agents.statusOffline : t.agents.statusStandby)}</Text>
                     {isExpanded && agent && (
                       <Text style={[s.agentTask, { color: C.cyan, marginTop: 4 }]}>{agent.role}</Text>
                     )}
                   </View>
                   <View style={[s.statusBadge, { backgroundColor: STATUS_COLORS[act.status] + "22" }]}>
                     <Text style={[s.statusBadgeText, { color: STATUS_COLORS[act.status] }]}>
-                      {act.status === "active" ? t.agents.statusActive : act.status === "busy" ? t.agents.statusBusy : t.agents.statusStandby}
+                      {act.status === "active" ? t.agents.statusActive : act.status === "busy" ? t.agents.statusBusy : act.status === "idle" ? t.agents.statusStandby : act.status === "offline" ? t.agents.statusOffline : t.agents.statusUnknown}
                     </Text>
                   </View>
                 </Pressable>
@@ -231,7 +213,7 @@ export default function TeamPulseScreen() {
                   agents.map((agent, i) => {
                     const isHiggins = agent.name === "Higgins";
                     const isExpanded = expandedAgent === agent.name;
-                    const act = activity[agent.name];
+                    const act = getActivity(agent.name);
                     return (
                       <Pressable
                         key={agent.name}
@@ -253,10 +235,10 @@ export default function TeamPulseScreen() {
                           <Text style={s.agentRole}>{agent.role}</Text>
                           {isExpanded && (
                             <View style={{ marginTop: 6, gap: 4 }}>
-                              {act && (
+                              {act.status !== "unknown" && (
                                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                                   <View style={[s.statusDotSmall, { backgroundColor: STATUS_COLORS[act.status] }]} />
-                                  <Text style={[s.agentTask, { color: STATUS_COLORS[act.status] }]}>{act.task}</Text>
+                                  <Text style={[s.agentTask, { color: STATUS_COLORS[act.status] }]}>{act.task || t.agents.statusStandby}</Text>
                                 </View>
                               )}
                               {!!agent.model && (

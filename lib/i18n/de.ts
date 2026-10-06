@@ -146,6 +146,7 @@ export const de: Translations = {
     statusStandby: "Bereitschaft",
     statusBusy: "Beschäftigt",
     statusOffline: "Offline",
+    statusUnknown: "Status nicht verfügbar",
     role: "Rolle",
     department: "Abteilung",
     departmentsPlural: "Abteilungen",
@@ -158,7 +159,9 @@ export const de: Translations = {
     classifiedRoster: "Abgeschirmtes Team",
     classifiedRosterSub: "Agentennamen verborgen · operative Sicherheit",
     sourceLive: "Live über Mission Control",
+    sourceStale: "MC vorübergehend nicht erreichbar · letzte Live-Liste",
     sourceBuiltin: "Integrierte Liste",
+    refreshTeam: "Team aktualisieren",
   },
 
   // ─── Settings / Einstellungen ────────────────────────────────────────────────

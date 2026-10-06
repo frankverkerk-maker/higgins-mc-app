@@ -13,6 +13,7 @@ import { morningBriefScheduledHandler } from "../morning-brief-handler";
 import { initTaskWatcher } from "../task-watcher";
 import { getTaskStatus as manusGetTaskStatus } from "../manus-agent-service";
 import { loadPushTokensFromDb } from "../push-service";
+import { teamDirectoryHandler } from "../team-directory";
 
 // REMOVED: findAvailablePort caused port mismatch bugs
 // Server MUST always bind to port 3000 so client can reliably connect
@@ -58,6 +59,9 @@ async function startServer() {
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
   });
+
+  // Same-origin, validated directory from MC-cloud. Keep before SPA fallback.
+  app.get("/api/app/team-feed", teamDirectoryHandler);
 
   // ── Proxy Health Check — MC-cloud bereikbaarheid + circuit breaker status ──
   app.get("/api/proxy-health", async (_req, res) => {
