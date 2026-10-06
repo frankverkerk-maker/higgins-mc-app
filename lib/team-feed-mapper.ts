@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEPARTMENTS, type Agent } from "../constants/team";
+import { DEPARTMENTS, type Agent, type Edition } from "../constants/team";
 
 /** External MC records are untrusted until parsed at the boundary. */
 export const feedAgentSchema = z.object({
@@ -30,6 +30,10 @@ export const teamFeedSchema = z.object({
 
 export type FeedAgent = z.infer<typeof feedAgentSchema>;
 export type TeamFeed = z.infer<typeof teamFeedSchema>;
+
+export function effectiveTeamEdition(local: Edition, remote: Edition): Edition {
+  return local === "whitelab" || remote === "whitelab" ? "whitelab" : "internal";
+}
 
 const departmentById = new Map(DEPARTMENTS.map(dept => [dept.id, dept.name]));
 const departmentNames = new Set(DEPARTMENTS.map(dept => dept.name));

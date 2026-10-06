@@ -14,6 +14,7 @@ import { initTaskWatcher } from "../task-watcher";
 import { getTaskStatus as manusGetTaskStatus } from "../manus-agent-service";
 import { loadPushTokensFromDb } from "../push-service";
 import { teamDirectoryHandler } from "../team-directory";
+import { withWebBootShell } from "../web-boot";
 
 // REMOVED: findAvailablePort caused port mismatch bugs
 // Server MUST always bind to port 3000 so client can reliably connect
@@ -187,6 +188,7 @@ async function startServer() {
       if (!html.includes("apple-touch-icon")) {
         html = html.replace(/<\/head>/i, `${HEAD_INJECT}</head>`);
       }
+      html = withWebBootShell(html);
       htmlCache.set(filePath, html);
       return html;
     };

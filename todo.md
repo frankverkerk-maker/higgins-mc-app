@@ -407,7 +407,7 @@
 - [x] De echte live-roster-mapping rechtstreeks met regressietests afdekken, inclusief dubbel voorkomende Nathalie en onbekende agenten.
 - [x] Ingebouwde fallbackrol naar Office Manager / Receptioniste aanpassen; live UI met oude Elena-feed verifiëren zonder Elena Vasquez te wijzigen.
 - [x] Statusweergave, TypeScript en relevante tests na wijziging valideren (39 geslaagd, 1 overgeslagen; 0 TypeScript-fouten).
-- [ ] Nieuw WebDev-checkpoint bewaren en de daadwerkelijk gepubliceerde domeinversie afzonderlijk verifiëren/bijwerken.
+- [x] WebDev-checkpoint opgeslagen; op 6 oktober gepubliceerde Team Pulse-route bevestigd (HTTP 200, 91 canonieke agents).
 
 ## Fase 45: Team-directory v2 — broncontract en releasegate
 - [x] MC-cloud-feed (92 records) vergeleken: dubbele Office Manager, vier afdelingslabels, afzonderlijke JLC-identiteiten en verouderd onveilig bronmigratiescript vastgesteld.
@@ -415,4 +415,14 @@
 - [x] Team Pulse standaard aan één directory gekoppeld; mockstatus/taken verwijderd; automatisch en handmatig verversen; live/stale/builtin gescheiden.
 - [x] Werkelijke MC-directory end-to-end gecontroleerd (HTTP 200, 91 canonieke agents, alleen Nathalie als Office Manager, JLC-naam Elena Vasquez intact).
 - [x] 50 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; Expo-web- en Express-serverbuild geslaagd.
-- [ ] Productiepublicatie en MC-cloud-databasemigratie: productie-acceptatieroute gaf op 6 oktober HTTP 404. Afzonderlijke WebDev-publishfunctie en MC-bronproject zijn vanuit deze sessie niet beschikbaar; zonder live verificatie niet als voltooid markeren.
+- [x] Productiepublicatie Team Pulse bevestigd op 6 oktober: directoryroute HTTP 200, 91 agents, Nathalie Office Manager en Elena Vasquez apart in JLC.
+- [ ] MC-cloud-databasemigratie: het oude bronrecord bestaat nog in het afzonderlijke MC-project; zonder bronprojecttoegang niet uitgevoerd.
+
+## Fase 46: Productie-incident na WebDev-publicatie
+- [x] Live productiedirectory gecontroleerd: HTTP 200, 91 agents, Nathalie Office Manager, Elena Vasquez intact; gepubliceerde Tower bleek stuk (`BNaN`, 0 agents).
+- [x] Tower herbouwd voor actueel MC-gebouwcontract: drie verdiepingen met elf afdelingen; agents en echte status uit dezelfde canonieke directory als Team Pulse.
+- [x] Whitelab blijft afgeschermd bij foutieve MC-classified-vlaggen en een editiewissel; vorige live-lijst wordt begrensd en bronstatus is eerlijk.
+- [x] Zwarte opstartpagina vervangen door toegankelijke laadweergave gedurende Expo-JavaScript-initialisatie.
+- [x] Preview interactief gevalideerd: drie verdiepingen, 91 agents, elf afdelingen; JLC bevat afzonderlijk Elena Vasquez en Nathalie Vasquez.
+- [x] 58 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; web- en serverproductiebuild geslaagd.
+- [ ] Nieuwe checkpoint opslaan en na daadwerkelijke productiepublicatie live Tower plus bootweergave opnieuw controleren (een checkpoint of GitHub-push is geen deploy).

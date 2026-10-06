@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getTeam } from "../constants/team";
 import {
   canonicalizeFeedAgents,
+  effectiveTeamEdition,
   mapTeamFeedAgents,
   teamFeedSchema,
   type FeedAgent,
@@ -20,6 +21,12 @@ const mcRecords: FeedAgent[] = [
 ];
 
 describe("MC directory contract v2", () => {
+  it("never widens a local whitelab edition from a remote internal response", () => {
+    expect(effectiveTeamEdition("whitelab", "internal")).toBe("whitelab");
+    expect(effectiveTeamEdition("internal", "whitelab")).toBe("whitelab");
+    expect(effectiveTeamEdition("internal", "internal")).toBe("internal");
+  });
+
   it("selects the real Office Manager in Executive even when the old alias occurs first", () => {
     const agents = canonicalizeFeedAgents(mcRecords);
     expect(agents).toHaveLength(mcRecords.length - 2); // legacy Elena and inactive agent

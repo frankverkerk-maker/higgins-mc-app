@@ -4,7 +4,7 @@
  * The MC-cloud database remains the source of truth; the server validates and
  * normalizes its read-only feed, without changing agent identities upstream.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiBaseUrl } from "@/constants/oauth";
@@ -14,7 +14,7 @@ import {
   type DepartmentMeta,
   type Edition,
 } from "@/constants/team";
-import { mapTeamFeedAgents, teamFeedSchema, whitelabVisible } from "@/lib/team-feed-mapper";
+import { effectiveTeamEdition, mapTeamFeedAgents, teamFeedSchema, whitelabVisible } from "@/lib/team-feed-mapper";
 import type { Agent } from "@/constants/team";
 
 export const MC_TEAM_FEED_URL_KEY = "higgins_mc_team_feed_url";
@@ -53,6 +53,8 @@ export async function resolveFeedUrl(): Promise<string> {
 }
 
 export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResult {
+  const lastGoodAt = useRef(0);
+  const latestRequest = useRef(0);
   const [state, setState] = useState<Omit<TeamFeedResult, "refresh">>(() => ({
     team: getTeam(fallbackEdition),
     departments: getDepartments(fallbackEdition),
@@ -63,6 +65,7 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
   }));
 
   const load = useCallback(async () => {
+    const request = ++latestRequest.current;
     const url = await resolveFeedUrl();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 35_000);
@@ -70,7 +73,9 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
       const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const parsed = teamFeedSchema.parse(await response.json());
-      const edition: Edition = parsed.edition;
+      // Neither an MC response nor an operator override may widen a local
+      // whitelab session into the classified internal edition.
+      const edition = effectiveTeamEdition(fallbackEdition, parsed.edition);
       const permitted = edition === "whitelab" ? parsed.agents.filter(whitelabVisible) : parsed.agents;
       const team = mapTeamFeedAgents(permitted, getTeam("internal"));
       const departments = [...getDepartments(edition)];
@@ -79,6 +84,10 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
       for (const name of [...new Set(team.map(agent => agent.department))].sort()) {
         if (!known.has(name)) departments.push({ id: `external:${name}`, name, head: "—" });
       }
+      if (request !== latestRequest.current) return;
+      lastGoodAt.current = parsed.source === "stale"
+        ? Date.parse(parsed.fetchedAt ?? "") || Date.now()
+        : Date.now();
       setState({
         team,
         departments,
@@ -88,14 +97,17 @@ export function useTeamFeed(fallbackEdition: Edition = "internal"): TeamFeedResu
         error: null,
       });
     } catch (error: any) {
-      // Do not claim offline built-in records are current MC status.
-      setState({
-        team: getTeam(fallbackEdition),
-        departments: getDepartments(fallbackEdition),
-        edition: fallbackEdition,
-        source: "builtin",
-        loading: false,
-        error: error?.name === "AbortError" ? "timeout" : String(error?.message ?? error),
+      if (request !== latestRequest.current) return;
+      const message = error?.name === "AbortError" ? "timeout" : String(error?.message ?? error);
+      setState(previous => {
+        if (previous.source !== "builtin" && Date.now() - lastGoodAt.current < 10 * 60_000) {
+          return { ...previous, source: "stale", loading: false, error: message };
+        }
+        // Once expired, never claim offline built-in records are live MC data.
+        return {
+          team: getTeam(fallbackEdition), departments: getDepartments(fallbackEdition),
+          edition: fallbackEdition, source: "builtin", loading: false, error: message,
+        };
       });
     } finally {
       clearTimeout(timer);
