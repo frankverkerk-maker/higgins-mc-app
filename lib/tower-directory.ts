@@ -1,28 +1,4 @@
-import { z } from "zod";
 import { DEPARTMENTS, type Agent, type DepartmentMeta, type Edition } from "../constants/team";
-
-const departmentSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  isClassified: z.boolean().optional(),
-}).passthrough();
-const buildingSchema = z.object({
-  source: z.string().optional(),
-  floors: z.array(z.object({
-    floorNumber: z.number().int(),
-    label: z.string().min(1),
-    departments: z.array(departmentSchema),
-  })).max(100),
-});
-const legacySchema = z.object({
-  source: z.string().optional(),
-  floors: z.array(z.object({
-    floor_number: z.number().int(),
-    floor_name: z.string().min(1),
-    department_id: z.string().min(1),
-    is_restricted: z.boolean().optional(),
-  })).max(100),
-});
 
 export interface TowerDepartment {
   id: string;
@@ -38,76 +14,99 @@ export interface TowerFloor {
   departments: TowerDepartment[];
   totalAgents: number;
   activeCount: number;
-  /** A mixed-use floor is not entirely restricted. */
   restricted: boolean;
 }
 export interface TowerProjection {
   floors: TowerFloor[];
-  fromBuilding: boolean;
   totalAgents: number;
   departmentCount: number;
 }
 
-const FALLBACK_ORDER = [
-  "executive", "einstein-lab", "finance", "technology", "marketing", "enterprise",
-  "fmc", "jlc", "mtd", "uta", "task-force-ghost",
-];
+/**
+ * Higgins Tower is a product/domain model: eight public levels and three
+ * classified basements. MC's getBuilding groups these departments into three
+ * technical floors; its floor numbers are *not* the Tower's floor numbers.
+ * Only the agent directory is live. Do not change this mapping from an MC
+ * building response without an explicit versioned Tower contract.
+ */
+const TOWER_LEVELS = [
+  { id: "executive", number: 8 },
+  { id: "einstein-lab", number: 7 },
+  { id: "finance", number: 6 },
+  { id: "technology", number: 5 },
+  { id: "marketing", number: 4 },
+  { id: "enterprise", number: 3 },
+  { id: "fmc", number: 2 },
+  { id: "jlc", number: 1 },
+  { id: "mtd", number: -1 },
+  { id: "uta", number: -2 },
+  { id: "task-force-ghost", number: -3 },
+] as const;
 
-/** Convert either MC v2 grouped floors or the old one-department-per-floor data. */
 export function projectTower(
-  building: unknown,
   team: Agent[],
   departments: DepartmentMeta[],
   edition: Edition,
   freshTeam: boolean,
+  otherDepartmentsLabel = "Nieuwe afdelingen",
 ): TowerProjection {
-  const grouped = buildingSchema.safeParse(building);
-  const legacy = grouped.success ? null : legacySchema.safeParse(building);
-  const knownById = new Map(DEPARTMENTS.map(department => [department.id, department]));
+  const byId = new Map(DEPARTMENTS.map(department => [department.id, department]));
   const byName = new Map(departments.map(department => [department.name, department]));
-  const raw = grouped.success
-    ? grouped.data.floors.map(floor => ({
-        number: floor.floorNumber,
-        label: floor.label,
-        ids: floor.departments.map(department => department.id),
-      }))
-    : legacy?.success
-      ? legacy.data.floors.map(floor => ({ number: floor.floor_number, label: floor.floor_name, ids: [floor.department_id] }))
-      : FALLBACK_ORDER.map((id, index) => ({
-          number: index < 8 ? 8 - index : -(index - 7),
-          label: knownById.get(id)?.name ?? id,
-          ids: [id],
-        }));
-  const fromBuilding = grouped.success || !!legacy?.success;
-  const floors = raw.flatMap(floor => {
-    const groups: TowerDepartment[] = floor.ids.flatMap(id => {
-      const meta = knownById.get(id) ?? departments.find(dept => dept.id === id);
-      // Never expose unknown/secret departments in the client edition, even if
-      // upstream flags them public (MC currently labels MTD/UTA that way).
-      if (edition === "whitelab" && (!meta || meta.classified)) return [];
-      const name = meta?.name ?? id;
-      const agents = team.filter(agent => agent.department === name &&
-        (edition !== "whitelab" || !agent.isClassified));
-      return [{
-        id, name, agents,
-        activeCount: freshTeam ? agents.filter(agent => agent.status === "active" || agent.status === "busy").length : 0,
-        classified: !!meta?.classified,
-        head: byName.get(name)?.head ?? meta?.head,
-      }];
-    });
-    if (!groups.length) return [];
+  const floors: TowerFloor[] = TOWER_LEVELS.flatMap(level => {
+    const meta = byId.get(level.id)!;
+    if (edition === "whitelab" && meta.classified) return [];
+    const agents = team.filter(agent => agent.department === meta.name &&
+      (edition !== "whitelab" || !agent.isClassified));
+    const activeCount = freshTeam
+      ? agents.filter(agent => agent.status === "active" || agent.status === "busy").length
+      : 0;
+    const group: TowerDepartment = {
+      id: level.id,
+      name: meta.name,
+      agents,
+      activeCount,
+      classified: !!meta.classified,
+      head: byName.get(meta.name)?.head ?? meta.head,
+    };
     return [{
-      number: floor.number,
-      label: floor.label,
+      number: level.number,
+      label: meta.name,
+      departments: [group],
+      totalAgents: agents.length,
+      activeCount,
+      restricted: group.classified,
+    }];
+  });
+  // A newly introduced department remains visible internally until its Tower
+  // position is intentionally assigned. Unknown departments fail closed for
+  // whitelabel, consistent with the canonical directory boundary.
+  const otherNames = edition === "internal"
+    ? [...new Set(team.map(agent => agent.department))].filter(name =>
+        !DEPARTMENTS.some(department => department.name === name)).sort()
+    : [];
+  if (otherNames.length) {
+    const groups: TowerDepartment[] = otherNames.map(name => {
+      const agents = team.filter(agent => agent.department === name);
+      return {
+        id: byName.get(name)?.id ?? `external:${name}`,
+        name,
+        agents,
+        activeCount: freshTeam ? agents.filter(agent => agent.status === "active" || agent.status === "busy").length : 0,
+        classified: false,
+        head: byName.get(name)?.head,
+      };
+    });
+    floors.splice(8, 0, {
+      number: 0,
+      label: otherDepartmentsLabel,
       departments: groups,
       totalAgents: groups.reduce((sum, group) => sum + group.agents.length, 0),
       activeCount: groups.reduce((sum, group) => sum + group.activeCount, 0),
-      restricted: groups.every(group => group.classified),
-    }];
-  }).sort((a, b) => b.number - a.number);
+      restricted: false,
+    });
+  }
   return {
     floors,
-    fromBuilding,
     totalAgents: floors.reduce((sum, floor) => sum + floor.totalAgents, 0),
     departmentCount: floors.reduce((sum, floor) => sum + floor.departments.length, 0),
   };

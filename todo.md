@@ -420,9 +420,17 @@
 
 ## Fase 46: Productie-incident na WebDev-publicatie
 - [x] Live productiedirectory gecontroleerd: HTTP 200, 91 agents, Nathalie Office Manager, Elena Vasquez intact; gepubliceerde Tower bleek stuk (`BNaN`, 0 agents).
-- [x] Tower herbouwd voor actueel MC-gebouwcontract: drie verdiepingen met elf afdelingen; agents en echte status uit dezelfde canonieke directory als Team Pulse.
+- [x] Historische tussenstap: de drie technische MC-verdiepingen werden abusievelijk voor de elf Higgins Tower-niveaus aangezien; gecorrigeerd in Fase 47.
 - [x] Whitelab blijft afgeschermd bij foutieve MC-classified-vlaggen en een editiewissel; vorige live-lijst wordt begrensd en bronstatus is eerlijk.
 - [x] Zwarte opstartpagina vervangen door toegankelijke laadweergave gedurende Expo-JavaScript-initialisatie.
-- [x] Preview interactief gevalideerd: drie verdiepingen, 91 agents, elf afdelingen; JLC bevat afzonderlijk Elena Vasquez en Nathalie Vasquez.
+- [x] Historische Fase 46-preview (drie technische verdiepingen) getest; architectuurbeslissing is later teruggedraaid in Fase 47.
 - [x] 58 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; web- en serverproductiebuild geslaagd.
-- [ ] Nieuwe checkpoint opslaan en na daadwerkelijke productiepublicatie live Tower plus bootweergave opnieuw controleren (een checkpoint of GitHub-push is geen deploy).
+- [x] Fase 46-checkpoint c04bb1a4 opgeslagen; de productiecontrole voor de verbeterde Tower blijft in Fase 47 open.
+
+## Fase 47: Herstel van de elf vaste Higgins Tower-niveaus
+- [x] De drie technische MC-getBuilding-verdiepingen losgekoppeld van het elf-niveaus productmodel; vijf jaar oude/veranderende MC-indeling kan Tower niet meer onverwachts hernummeren.
+- [x] Acht openbare niveaus 8–1 en drie afgeschermde basements B1–B3 hersteld, met de canonieke MC-agentfeed voor aantallen en activiteit.
+- [x] Whitelabel toont uitsluitend acht openbare niveaus; nieuwe afdelingen krijgen indien nodig een apart, alleen intern zichtbaar tussenniveau zonder de elf bestaande niveaus te wijzigen.
+- [x] Preview toont elf niveaus met 91 canonieke agents en Nathalie op Executive Office; Elena Vasquez blijft JLC.
+- [x] 59 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; Expo-web- en Express-serverbuild geslaagd.
+- [ ] Nieuwe checkpoint opslaan en de productie-uitrol afzonderlijk vaststellen.

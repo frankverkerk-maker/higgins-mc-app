@@ -7,7 +7,6 @@ import { useLanguage } from "@/lib/language-provider";
 import { useEdition } from "@/lib/edition-provider";
 import { useTeamFeed } from "@/lib/team-feed";
 import { projectTower } from "@/lib/tower-directory";
-import { trpc } from "@/lib/trpc";
 
 const FLOOR_COLORS: Record<string, string> = {
   executive: "#FFD700", "einstein-lab": "#A855F7", finance: "#22C55E",
@@ -22,17 +21,12 @@ export default function TowerScreen() {
   const router = useRouter();
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null);
   const { team, departments, source, loading, refresh } = useTeamFeed(edition);
-  // The MC building API groups departments within three real floors. It is
-  // not an 11-row floor table; normalize it in the pure projectTower adapter.
-  const buildingQuery = trpc.higgins.getBuilding.useQuery(
-    {}, { staleTime: 60_000, refetchInterval: 60_000 },
-  );
   const projection = useMemo(() => projectTower(
-    buildingQuery.data, team, departments, edition, source === "live",
-  ), [buildingQuery.data, team, departments, edition, source]);
-  const live = source === "live" && projection.fromBuilding && !buildingQuery.isError;
+    team, departments, edition, source === "live", t.tower.otherDepartments,
+  ), [team, departments, edition, source, t.tower.otherDepartments]);
+  const live = source === "live";
   const sourceLabel = live ? t.tower.sourceLive : source === "stale"
-    ? t.tower.sourceStale : source === "live" ? t.tower.sourceMixed : t.tower.sourceBuiltin;
+    ? t.tower.sourceStale : t.tower.sourceBuiltin;
 
   const toggleFloor = useCallback((number: number) => {
     if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -58,12 +52,12 @@ export default function TowerScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.agents.refreshTeam}
-            onPress={() => { refresh(); void buildingQuery.refetch(); }}
+            onPress={refresh}
             style={styles.sourceRow}
           >
             <View style={[styles.sourceDot, { backgroundColor: live ? "#22C55E" : source === "stale" ? "#F59E0B" : "#9BA1A6" }]} />
             <Text style={styles.sourceText}>{sourceLabel} ↻</Text>
-            {(loading || buildingQuery.isLoading) && <ActivityIndicator size="small" color="#00D4D4" style={{ marginLeft: 8 }} />}
+            {loading && <ActivityIndicator size="small" color="#00D4D4" style={{ marginLeft: 8 }} />}
           </Pressable>
         </View>
 
