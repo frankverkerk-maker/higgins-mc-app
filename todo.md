@@ -433,4 +433,13 @@
 - [x] Whitelabel toont uitsluitend acht openbare niveaus; nieuwe afdelingen krijgen indien nodig een apart, alleen intern zichtbaar tussenniveau zonder de elf bestaande niveaus te wijzigen.
 - [x] Preview toont elf niveaus met 91 canonieke agents en Nathalie op Executive Office; Elena Vasquez blijft JLC.
 - [x] 59 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; Expo-web- en Express-serverbuild geslaagd.
-- [ ] Nieuwe checkpoint opslaan en de productie-uitrol afzonderlijk vaststellen.
+- [x] Herstelcheckpoint 7d3fc27c opgeslagen en veilig naar de GitHub-samenwerkingsbranch gepusht.
+- [ ] Productie-uitrol afzonderlijk vaststellen; checkpoint en GitHub-push zijn geen bewijs van deployment.
+
+## Fase 48: Interactieve Higgins Tower-navigatie
+- [x] Verdiepingskaart per niveau: duidelijk zichtbare afdelingskleur op hover en toetsenbordfocus, subtiele schaalvergroting en drukfeedback.
+- [x] Soepel openen en wisselen met geanimeerde hoogte, inhoudsfade en draaiende chevron; slechts één niveau tegelijk open.
+- [x] Toegankelijke buttonlabels, expanded-status en reduced-motion-ondersteuning; touchbediening en Higgins-longpress blijven behouden.
+- [x] Webpreview handmatig getest: hover border Executive Office wordt goud, achtergrond kleurt mee; wisseling Executive Office → Einstein Lab behoudt 11 niveaus en 91 agents.
+- [x] 64 tests geslaagd, 1 overgeslagen; TypeScript 0 fouten; web- en serverproductiebuild geslaagd.
+- [ ] Herstelcheckpoint opslaan en afzonderlijk controleren of de gepubliceerde versie is bijgewerkt.
